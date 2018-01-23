@@ -1,0 +1,10 @@
+C:\Users\Democke\Documents\Visual Studio 2017\Projects\SixDegrees\SixDegrees\bin\Debug\netcoreapp2.0\SixDegrees.deps.json
+C:\Users\Democke\Documents\Visual Studio 2017\Projects\SixDegrees\SixDegrees\bin\Debug\netcoreapp2.0\SixDegrees.runtimeconfig.json
+C:\Users\Democke\Documents\Visual Studio 2017\Projects\SixDegrees\SixDegrees\bin\Debug\netcoreapp2.0\SixDegrees.runtimeconfig.dev.json
+C:\Users\Democke\Documents\Visual Studio 2017\Projects\SixDegrees\SixDegrees\bin\Debug\netcoreapp2.0\SixDegrees.dll
+C:\Users\Democke\Documents\Visual Studio 2017\Projects\SixDegrees\SixDegrees\bin\Debug\netcoreapp2.0\SixDegrees.pdb
+C:\Users\Democke\Documents\Visual Studio 2017\Projects\SixDegrees\SixDegrees\obj\Debug\netcoreapp2.0\SixDegrees.csproj.CoreCompileInputs.cache
+C:\Users\Democke\Documents\Visual Studio 2017\Projects\SixDegrees\SixDegrees\obj\Debug\netcoreapp2.0\SixDegrees.AssemblyInfoInputs.cache
+C:\Users\Democke\Documents\Visual Studio 2017\Projects\SixDegrees\SixDegrees\obj\Debug\netcoreapp2.0\SixDegrees.AssemblyInfo.cs
+C:\Users\Democke\Documents\Visual Studio 2017\Projects\SixDegrees\SixDegrees\obj\Debug\netcoreapp2.0\SixDegrees.dll
+C:\Users\Democke\Documents\Visual Studio 2017\Projects\SixDegrees\SixDegrees\obj\Debug\netcoreapp2.0\SixDegrees.pdb
