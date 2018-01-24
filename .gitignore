@@ -5,7 +5,8 @@ SixDegrees/dist/*
 SixDegrees/dist-server/*
 SixDegrees/tmp/*
 SixDegrees/out-tsc/*
-
+SixDegrees/bin/*
+SixDegrees/obj/*
 # dependencies
 SixDegrees/node_modules
 
