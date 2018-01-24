@@ -23,6 +23,9 @@ SixDegrees/node_modules
 .vscode/*
 .vs/*
 
+# IDE - Visual Studio
+*.user
+
 # misc
 /.sass-cache
 /connect.lock
