@@ -28,6 +28,10 @@ Obj/
 # Visual Studio 2015 cache/options directory
 .vs/
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
