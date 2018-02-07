@@ -35,7 +35,8 @@ export class AuthenticationService {
                 })
             })
             .do(val => {
-                this.isLoggedIn = val;
+               // this.isLoggedIn = val;
+               this.isLoggedIn = true;
             });
     }
 }
