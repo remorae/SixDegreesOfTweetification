@@ -19,7 +19,7 @@ const appRoutes: Routes = [
     { path: 'login', component: LoginComponent, pathMatch: 'full' },
     { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
     { path: 'counter', component: CounterComponent, canActivate: [AuthGuard] },
-    { path: 'fetch', component: FetchDataComponent, canActivate: [AuthGuard] }
+    { path: 'fetch-data', component: FetchDataComponent, canActivate: [AuthGuard] }
 ];
 @NgModule({
     declarations: [
