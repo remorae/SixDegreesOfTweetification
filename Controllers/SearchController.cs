@@ -29,6 +29,8 @@ namespace SixDegrees.Controllers
         public async Task<IEnumerable<Status>> Tweets(string query)
         {
             string responseBody = await GetSearchResults(TweetSearchAPIUri(query));
+            if (responseBody == null)
+                return null;
             TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
             return results.Statuses;
         }
@@ -37,16 +39,35 @@ namespace SixDegrees.Controllers
         public async Task<IEnumerable<Country>> Locations(string query)
         {
             string responseBody = await GetSearchResults(TweetSearchAPIUri(query));
+            if (responseBody == null)
+                return null;
             TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
-            List<Country> countries = new List<Country>();
+            Dictionary<string, Country> countries = new Dictionary<string, Country>();
             foreach (Status status in results.Statuses)
             {
-                if (status.Coordinates != null)
+                if (status.Place != null)
                 {
-
+                    if (status.Place.PlaceType == "city")
+                    {
+                        string cityName = status.Place.Name;
+                        string countryName = status.Place.Country;
+                        if (!countries.ContainsKey(countryName))
+                            countries[countryName] = new Country(countryName);
+                        if (!countries[countryName].Cities.ContainsKey(cityName))
+                        {
+                            City toAdd = new City(cityName);
+                            toAdd.Hashtags.Add(query);
+                            countries[countryName].Cities[cityName] = toAdd;
+                        }
+                    }
+                }
+                else if (status.Coordinates != null && status.Coordinates.Type == "Point")
+                {
+                    //TODO - Look up city/country names based on longitude/latitude
                 }
             }
-            return countries;
+            //TODO - Get additional hashtags based on cities
+            return countries.Values;
         }
 
         private Uri TweetSearchAPIUri(string query)
