@@ -54,7 +54,7 @@ namespace SixDegrees.Model.JSON
         public object Geo { get; set; }
 
         [JsonProperty("coordinates")]
-        public object Coordinates { get; set; }
+        public Coordinates Coordinates { get; set; }
 
         [JsonProperty("place")]
         public Place Place { get; set; }
