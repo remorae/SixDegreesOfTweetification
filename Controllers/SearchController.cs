@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using SixDegrees.Model;
 using SixDegrees.Model.JSON;
 
 namespace SixDegrees.Controllers
@@ -27,23 +28,54 @@ namespace SixDegrees.Controllers
         [HttpGet("tweets")]
         public async Task<IEnumerable<Status>> Tweets(string query)
         {
+            string responseBody = await GetSearchResults(TweetSearchAPIUri(query));
+            TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
+            return results.Statuses;
+        }
+
+        [HttpGet("locations")]
+        public async Task<IEnumerable<Country>> Locations(string query)
+        {
+            string responseBody = await GetSearchResults(TweetSearchAPIUri(query));
+            TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
+            List<Country> countries = new List<Country>();
+            foreach (Status status in results.Statuses)
+            {
+                if (status.Coordinates != null)
+                {
+
+                }
+            }
+            return countries;
+        }
+
+        private Uri TweetSearchAPIUri(string query)
+        {
             UriBuilder bob = new UriBuilder("https://api.twitter.com/1.1/search/tweets.json")
             {
-                Query = $"q={query}&count={TWEET_COUNT}&tweet_mode={TWEET_MODE}&include_entities={INCLUDE_ENTITIES}"
+                Query = StandardSearchQuery(query)
             };
+            return bob.Uri;
+        }
+
+        private string StandardSearchQuery(string query)
+        {
+            return $"q={query}&count={TWEET_COUNT}&tweet_mode={TWEET_MODE}&include_entities={INCLUDE_ENTITIES}";
+        }
+
+        private async Task<string> GetSearchResults(Uri uri)
+        {
             try
             {
                 using (var client = new HttpClient())
                 {
-                    using (var request = new HttpRequestMessage(HttpMethod.Get, bob.Uri))
+                    using (var request = new HttpRequestMessage(HttpMethod.Get, uri))
                     {
-                        request.Headers.Add("Authorization", $"Bearer {Configuration["bearerToken"]}");
-                        using (var response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
+                        AddBearerAuth(request);
+                        using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
                         {
                             response.EnsureSuccessStatusCode();
-                            string body = await response.Content.ReadAsStringAsync();
-                            TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(body);
-                            return results.Statuses;
+                            return await response.Content.ReadAsStringAsync();
                         }
                     }
                 }
@@ -52,6 +84,11 @@ namespace SixDegrees.Controllers
             {
                 return null;
             }
+        }
+
+        private void AddBearerAuth(HttpRequestMessage request)
+        {
+            request.Headers.Add("Authorization", $"Bearer {Configuration["bearerToken"]}");
         }
     }
 }
