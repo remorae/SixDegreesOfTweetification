@@ -1,8 +1,0 @@
-<label for="hashtag">#</label>
-<input name="hashtag" [(ngModel)]="hashtag" id="hashtag" required #tagModel="ngModel">
-<button class="btn" (click)="submit()">Submit</button>
-<div *ngIf="tagModel.invalid && (tagModel.dirty || tagModel.touched)" class="alert alert-danger">
-    <div *ngIf="tagModel.errors.required">
-        Hashtag is required.
-    </div>
-</div>

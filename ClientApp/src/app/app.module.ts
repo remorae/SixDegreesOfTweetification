@@ -13,13 +13,18 @@ import { TabColumnComponent } from './tab-column/tab-column.component';
 import { LoginComponent } from './login/login.component';
 import { AuthenticationService } from './services/authentication.service';
 import { AuthGuard } from './services/auth-guard.service';
+import { UserInputComponent } from './user-input/user-input.component';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
     { path: 'login', component: LoginComponent, pathMatch: 'full' },
     { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
     { path: 'counter', component: CounterComponent, canActivate: [AuthGuard] },
-    { path: 'fetch-data', component: FetchDataComponent, canActivate: [AuthGuard] }
+    {
+        path: 'fetch-data',
+        component: FetchDataComponent,
+        canActivate: [AuthGuard]
+    }
 ];
 @NgModule({
     declarations: [
@@ -29,7 +34,8 @@ const appRoutes: Routes = [
         FetchDataComponent,
         NavbarComponent,
         TabColumnComponent,
-        LoginComponent
+        LoginComponent,
+        UserInputComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),

@@ -1,5 +1,6 @@
-Username
-<input [(ngModel)]="username" type="text"> Password
-<input [(ngModel)]="password" type="password">
+<label for="user">Username</label>
+<input [(ngModel)]="username" type="text" id="user">
+<label for="pass">Password</label>
+<input [(ngModel)]="password" type="password" id="pass">
 <button class="btn" (click)="login()">Login</button>
 {{message}}
