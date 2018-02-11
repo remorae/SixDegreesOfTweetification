@@ -1,0 +1,21 @@
+<form #inputForm="ngForm" (ngSubmit)="submit()">
+    <div class="form-group">
+        <label for="first">{{labelText}}</label>
+        <input name="first" [(ngModel)]="firstSubmission" id="first" required pattern={{regex}} #firstModel="ngModel">
+    </div>
+
+    <div class="form-group">
+        <label *ngIf=secondForm for="first">{{labelText}}</label>
+        <input *ngIf=secondForm name="second" [(ngModel)]="secondSubmission" id="second" required pattern={{regex}} #secondModel="ngModel">
+    </div>
+    <div *ngIf="firstModel.invalid && (firstModel.dirty || firstModel.touched)" class="alert alert-danger">
+        <div *ngIf="firstModel.errors.required">
+            First {{inputType}} is required.
+        </div>
+        <div *ngIf="firstModel.errors.pattern">
+            First {{inputType}} is invalid.
+        </div>
+    </div>
+
+    <button class="btn" [disabled]="inputForm.invalid" type="submit">Submit</button>
+</form>
