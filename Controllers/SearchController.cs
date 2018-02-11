@@ -59,6 +59,11 @@ namespace SixDegrees.Controllers
                             toAdd.Hashtags.Add(query);
                             countries[countryName].Cities[cityName] = toAdd;
                         }
+                        foreach (Hashtag tag in status.Entities.Hashtags)
+                        {
+                            if (!countries[countryName].Cities[cityName].Hashtags.Contains(tag.Text))
+                                countries[countryName].Cities[cityName].Hashtags.Add(tag.Text);
+                        }
                     }
                 }
                 else if (status.Coordinates != null && status.Coordinates.Type == "Point")
