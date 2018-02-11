@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -36,7 +37,7 @@ namespace SixDegrees.Controllers
         }
 
         [HttpGet("locations")]
-        public async Task<IEnumerable<Country>> Locations(string query)
+        public async Task<IEnumerable<CountryResult>> Locations(string query)
         {
             string responseBody = await GetSearchResults(TweetSearchAPIUri(query));
             if (responseBody == null)
@@ -45,34 +46,40 @@ namespace SixDegrees.Controllers
             Dictionary<string, Country> countries = new Dictionary<string, Country>();
             foreach (Status status in results.Statuses)
             {
-                if (status.Place != null)
-                {
-                    if (status.Place.PlaceType == "city")
-                    {
-                        string cityName = status.Place.Name;
-                        string countryName = status.Place.Country;
-                        if (!countries.ContainsKey(countryName))
-                            countries[countryName] = new Country(countryName);
-                        if (!countries[countryName].Cities.ContainsKey(cityName))
-                        {
-                            City toAdd = new City(cityName);
-                            toAdd.Hashtags.Add(query);
-                            countries[countryName].Cities[cityName] = toAdd;
-                        }
-                        foreach (Hashtag tag in status.Entities.Hashtags)
-                        {
-                            if (!countries[countryName].Cities[cityName].Hashtags.Contains(tag.Text))
-                                countries[countryName].Cities[cityName].Hashtags.Add(tag.Text);
-                        }
-                    }
-                }
+                if (status.Place != null && status.Place.PlaceType == "city")
+                    UpdateCountriesWithCity(countries, status);
                 else if (status.Coordinates != null && status.Coordinates.Type == "Point")
                 {
                     //TODO - Look up city/country names based on longitude/latitude
                 }
             }
-            //TODO - Get additional hashtags based on cities
-            return countries.Values;
+            return GetFormattedCountries(countries.Values);
+        }
+
+        private void UpdateCountriesWithCity(Dictionary<string, Country> countries, Status status)
+        {
+            string cityName = status.Place.Name;
+            string countryName = status.Place.Country;
+            if (!countries.ContainsKey(countryName))
+                countries[countryName] = new Country(countryName);
+            if (!countries[countryName].Cities.ContainsKey(cityName))
+            {
+                City toAdd = new City(cityName);
+                countries[countryName].Cities[cityName] = toAdd;
+            }
+            foreach (Hashtag tag in status.Entities.Hashtags)
+            {
+                if (!countries[countryName].Cities[cityName].Hashtags.Contains(tag.Text))
+                    countries[countryName].Cities[cityName].Hashtags.Add(tag.Text);
+            }
+        }
+
+        private IEnumerable<CountryResult> GetFormattedCountries(IEnumerable<Country> countries)
+        {
+            return countries.Select(country =>
+                new CountryResult(country.CountryName,
+                country.Cities.Values.Select(city =>
+                    new CityResult(city.CityName, city.Hashtags.AsEnumerable()))));
         }
 
         private Uri TweetSearchAPIUri(string query)
