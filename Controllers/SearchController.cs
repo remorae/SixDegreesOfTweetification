@@ -19,6 +19,10 @@ namespace SixDegrees.Controllers
         private const bool INCLUDE_ENTITIES = true;
         private const string CONTENT_TYPE = "application/x-www-form-urlencoded";
 
+        //@TODO Store the last query / max_id separately based on endpoint
+        private static string lastQuery = "";
+        private static string lastMaxID = "";
+
         private IConfiguration Configuration { get; }
 
         public SearchController(IConfiguration configuration)
@@ -32,7 +36,7 @@ namespace SixDegrees.Controllers
             string responseBody = await GetSearchResults(TweetSearchAPIUri(query));
             if (responseBody == null)
                 return null;
-            TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
+            TweetSearch results = DeserializeResults(responseBody);
             return results.Statuses;
         }
 
@@ -42,12 +46,12 @@ namespace SixDegrees.Controllers
             string responseBody = await GetSearchResults(TweetSearchAPIUri(query));
             if (responseBody == null)
                 return null;
-            TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
+            TweetSearch results = DeserializeResults(responseBody);
             Dictionary<string, Country> countries = new Dictionary<string, Country>();
             foreach (Status status in results.Statuses)
             {
-                if (status.Place != null && status.Place.PlaceType == "city")
-                    UpdateCountriesWithCity(countries, status);
+                if (status.Place != null)
+                    UpdateCountriesWithPlace(countries, status);
                 else if (status.Coordinates != null && status.Coordinates.Type == "Point")
                 {
                     //TODO - Look up city/country names based on longitude/latitude
@@ -56,44 +60,48 @@ namespace SixDegrees.Controllers
             return GetFormattedCountries(countries.Values);
         }
 
-        private void UpdateCountriesWithCity(Dictionary<string, Country> countries, Status status)
+        private void UpdateCountriesWithPlace(Dictionary<string, Country> countries, Status status)
         {
-            string cityName = status.Place.Name;
+            string placeName = status.Place.FullName;
+
             string countryName = status.Place.Country;
             if (!countries.ContainsKey(countryName))
                 countries[countryName] = new Country(countryName);
-            if (!countries[countryName].Cities.ContainsKey(cityName))
+            if (!countries[countryName].Places.ContainsKey(placeName))
             {
-                City toAdd = new City(cityName);
-                countries[countryName].Cities[cityName] = toAdd;
+                PlaceResult toAdd = new PlaceResult(placeName, status.Place.PlaceType.ToPlaceType());
+                countries[countryName].Places[placeName] = toAdd;
             }
+            countries[countryName].Places[placeName].Sources.Add(status.URL);
             foreach (Hashtag tag in status.Entities.Hashtags)
             {
-                if (!countries[countryName].Cities[cityName].Hashtags.Contains(tag.Text))
-                    countries[countryName].Cities[cityName].Hashtags.Add(tag.Text);
+                if (!countries[countryName].Places[placeName].Hashtags.Contains(tag.Text))
+                    countries[countryName].Places[placeName].Hashtags.Add(tag.Text);
             }
         }
 
         private IEnumerable<CountryResult> GetFormattedCountries(IEnumerable<Country> countries)
         {
             return countries.Select(country =>
-                new CountryResult(country.CountryName,
-                country.Cities.Values.Select(city =>
-                    new CityResult(city.CityName, city.Hashtags.AsEnumerable()))));
+                new CountryResult(country.CountryName, country.Places.Values));
         }
 
         private Uri TweetSearchAPIUri(string query)
         {
             UriBuilder bob = new UriBuilder("https://api.twitter.com/1.1/search/tweets.json")
             {
-                Query = StandardSearchQuery(query)
+                Query = StandardHashtagSearchQuery(query)
             };
+            lastQuery = query;
             return bob.Uri;
         }
 
-        private string StandardSearchQuery(string query)
+        private string StandardHashtagSearchQuery(string query)
         {
-            return $"q={query}&count={TWEET_COUNT}&tweet_mode={TWEET_MODE}&include_entities={INCLUDE_ENTITIES}";
+            string result = $"q=%23{query}&count={TWEET_COUNT}&tweet_mode={TWEET_MODE}&include_entities={INCLUDE_ENTITIES}";
+            if (query == lastQuery && lastMaxID != "")
+                result += $"&max_id={lastMaxID}";
+            return result;
         }
 
         private async Task<string> GetSearchResults(Uri uri)
@@ -122,6 +130,13 @@ namespace SixDegrees.Controllers
         private void AddBearerAuth(HttpRequestMessage request)
         {
             request.Headers.Add("Authorization", $"Bearer {Configuration["bearerToken"]}");
+        }
+
+        private TweetSearch DeserializeResults(string responseBody)
+        {
+            TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
+            lastMaxID = (long.Parse(results.Statuses.Min(status => status.IdStr)) - 1).ToString();
+            return results;
         }
     }
 }

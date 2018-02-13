@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 
 namespace SixDegrees.Model.JSON
@@ -97,5 +98,7 @@ namespace SixDegrees.Model.JSON
 
         [JsonProperty("quoted_status")]
         public QuotedStatus QuotedStatus { get; set; }
+
+        internal string URL { get { return $"https://www.twitter.com/{User.ScreenName}/status/{IdStr}"; } }
     }
 }
