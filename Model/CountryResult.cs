@@ -4,13 +4,13 @@ namespace SixDegrees.Model
 {
     public class CountryResult
     {
-        public string CountryName { get; }
-        public IEnumerable<CityResult> Cities { get; }
+        public string Name { get; }
+        public IEnumerable<PlaceResult> Places { get; }
 
-        public CountryResult(string countryName, IEnumerable<CityResult> cities)
+        public CountryResult(string name, IEnumerable<PlaceResult> places)
         {
-            CountryName = countryName;
-            Cities = cities;
+            Name = name;
+            Places = places;
         }
     }
 }
