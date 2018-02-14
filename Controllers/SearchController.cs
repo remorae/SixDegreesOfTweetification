@@ -69,7 +69,7 @@ namespace SixDegrees.Controllers
                 countries[countryName] = new Country(countryName);
             if (!countries[countryName].Places.ContainsKey(placeName))
             {
-                PlaceResult toAdd = new PlaceResult(placeName, status.Place.PlaceType.ToPlaceType());
+                PlaceResult toAdd = new PlaceResult(placeName, status.Place.PlaceType.ToPlaceType(), countryName);
                 countries[countryName].Places[placeName] = toAdd;
             }
             countries[countryName].Places[placeName].Sources.Add(status.URL);
@@ -83,7 +83,17 @@ namespace SixDegrees.Controllers
         private IEnumerable<CountryResult> GetFormattedCountries(IEnumerable<Country> countries)
         {
             return countries.Select(country =>
-                new CountryResult(country.CountryName, country.Places.Values));
+            {
+                Dictionary<string, List<PlaceResult>> placeCategories = new Dictionary<string, List<PlaceResult>>();
+                foreach (PlaceResult place in country.Places.Values)
+                {
+                    string placeTypeString = place.Type.ToString();
+                    if (!placeCategories.ContainsKey(placeTypeString))
+                        placeCategories.Add(placeTypeString, new List<PlaceResult>());
+                    placeCategories[placeTypeString].Add(place);
+                }
+                return new CountryResult(country.CountryName, placeCategories);
+            });
         }
 
         private Uri TweetSearchAPIUri(string query)
