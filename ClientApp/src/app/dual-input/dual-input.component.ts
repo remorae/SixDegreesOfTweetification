@@ -8,7 +8,7 @@ import {
     FormBuilder
 } from '@angular/forms';
 import { EventEmitter } from '@angular/core';
-import { UserInput } from '../models/userInput';
+import { UserInput, HashOrHandle } from '../models/userInput';
 @Component({
     selector: 'app-dual-input',
     templateUrl: './dual-input.component.html',
@@ -16,8 +16,8 @@ import { UserInput } from '../models/userInput';
 })
 export class DualInputComponent implements OnInit {
     userForm: FormGroup;
-    labelText = '';
-    @Input() inputType = 'hashtag';
+    labelText: '#' | '@';
+    @Input() inputType: HashOrHandle = 'hashtag';
     @Output()
     userSubmit: EventEmitter<UserInput> = new EventEmitter<UserInput>();
     constructor(private builder: FormBuilder) {}
