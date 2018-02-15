@@ -18,7 +18,8 @@ export class DualInputComponent implements OnInit {
     userForm: FormGroup;
     labelText = '';
     @Input() inputType = 'hashtag';
-   @Output() userSubmit: EventEmitter<UserInput> = new EventEmitter<UserInput>();
+    @Output()
+    userSubmit: EventEmitter<UserInput> = new EventEmitter<UserInput>();
     constructor(private builder: FormBuilder) {}
     get firstSub() {
         return this.userForm.get('firstSub');
