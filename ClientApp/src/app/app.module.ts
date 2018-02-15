@@ -13,10 +13,12 @@ import { TabColumnComponent } from './tab-column/tab-column.component';
 import { LoginComponent } from './login/login.component';
 import { AuthenticationService } from './services/authentication.service';
 import { AuthGuard } from './services/auth-guard.service';
+import { GeoPageComponent } from './geo-page/geo-page.component';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
     { path: 'login', component: LoginComponent, pathMatch: 'full' },
+    { path: 'geo', component: GeoPageComponent, canActivate: [AuthGuard] },
     { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
     { path: 'counter', component: CounterComponent, canActivate: [AuthGuard] },
     { path: 'fetch-data', component: FetchDataComponent, canActivate: [AuthGuard] }
@@ -29,7 +31,8 @@ const appRoutes: Routes = [
         FetchDataComponent,
         NavbarComponent,
         TabColumnComponent,
-        LoginComponent
+        LoginComponent,
+        GeoPageComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
