@@ -5,4 +5,7 @@ export class UserInput {
         this.inputType = type;
         this.inputs = inputs;
     }
+
+
 }
+export type HashOrAt = '#' | '@';

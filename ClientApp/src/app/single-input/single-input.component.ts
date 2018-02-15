@@ -1,6 +1,6 @@
 import { Component, OnInit, EventEmitter, Output, Input } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { UserInput } from '../models/userInput';
+import { UserInput, HashOrHandle } from '../models/userInput';
 
 @Component({
     selector: 'app-single-input',
@@ -9,8 +9,8 @@ import { UserInput } from '../models/userInput';
 })
 export class SingleInputComponent implements OnInit {
     userForm: FormGroup;
-    labelText = '';
-    @Input() inputType = 'hashtag';
+    labelText: '#' | '@';
+    @Input() inputType: HashOrHandle = 'hashtag';
     @Output()
     userSubmit: EventEmitter<UserInput> = new EventEmitter<UserInput>();
     constructor(private builder: FormBuilder) {}
