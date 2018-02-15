@@ -1,35 +1,14 @@
 <ul class="list-unstyled">
-  <li
-    [routerLinkActive]='["link-active"]'
-    [routerLinkActiveOptions]='{ exact: true }'
-    class="card card-primary"
-  >
-    <a [routerLink]='["/home"]' class="btn btn-primary card-block card-link text-left">
-      <p class="h5">
-        Home
-      </p>
-    </a>
-  </li>
-  <li
-    [routerLinkActive]='["link-active"]'
-    [routerLinkActiveOptions]='{ exact: true }'
-    class="card card-primary"
-  >
-    <a [routerLink]='["/counter"]' class="btn btn-primary card-block card-link text-left">
-      <p class="h5">
-        Counter
-      </p>
-    </a>
-  </li>
-  <li
-    [routerLinkActive]='["link-active"]'
-    [routerLinkActiveOptions]='{ exact: true }'
-    class="card card-primary"
-  >
-    <a [routerLink]='["/fetch-data"]' class="btn btn-primary card-block card-link text-left">
-      <p class="h5">
-        Fetch Data
-      </p>
-    </a>
-  </li>
+    <li
+      *ngFor="let page of pages"
+      [routerLinkActive]='["link-active"]'
+      [routerLinkActiveOptions]='{ exact: true }'
+      class="card card-primary"
+    >
+        <a [routerLink]='["/" + page.route]' class="btn btn-primary card-block card-link text-left">
+            <p class="h5">
+                {{ page.name }}
+            </p>
+        </a>
+    </li>
 </ul>

@@ -1,0 +1,25 @@
+<div class="card">
+    <div class="card-block">
+        <h1 class="mb-3">Geographical Stats</h1>
+        <h3>Countries:</h3>
+        <ul class="d-flex list-inline">
+            <li *ngFor="let country of testCountries" class="col list-inline-item">
+                <h4>{{ country.countryName }}</h4>
+                <ul class="list-unstyled">
+                    <li *ngFor="let place of country.places" class="card">
+                        <div class="card-block">
+                            <strong>{{ place.type }}: </strong>
+                            {{ place.name }}
+                            <h5 class="h6 mt-3 mb-1">Hashtags</h5>
+                            <ul class="list-group">
+                                <li *ngFor="let tag of place.hashtags" class="list-group-item">
+                                    {{ tag }}
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
