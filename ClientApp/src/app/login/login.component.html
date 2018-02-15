@@ -1,6 +1,16 @@
-<label for="user">Username</label>
-<input [(ngModel)]="username" type="text" id="user">
-<label for="pass">Password</label>
-<input [(ngModel)]="password" type="password" id="pass">
-<button class="btn" (click)="login()">Login</button>
-{{message}}
+<div class="card">
+  <div class="card-block">
+    <h2 class="mb-3"><i class="fa fa-user-circle mr-2"></i>Log In</h2>
+    <label class="d-block">
+      Username
+      <input class="form-control" [(ngModel)]="username" type="text">
+    </label>
+    <label class="d-block">
+      Password
+      <input class="form-control" [(ngModel)]="password" type="password">
+    </label>
+    <button class="btn btn-primary mt-3" (click)="login()" role="button">Login</button>
+    {{message}}
+  </div>
+</div>
+
