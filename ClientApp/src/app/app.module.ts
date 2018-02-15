@@ -1,6 +1,6 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { RouterModule, Routes } from '@angular/router';
 
@@ -13,7 +13,8 @@ import { TabColumnComponent } from './tab-column/tab-column.component';
 import { LoginComponent } from './login/login.component';
 import { AuthenticationService } from './services/authentication.service';
 import { AuthGuard } from './services/auth-guard.service';
-import { UserInputComponent } from './user-input/user-input.component';
+import { DualInputComponent } from './dual-input/dual-input.component';
+import { SingleInputComponent } from './single-input/single-input.component';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
@@ -35,12 +36,14 @@ const appRoutes: Routes = [
         NavbarComponent,
         TabColumnComponent,
         LoginComponent,
-        UserInputComponent
+        DualInputComponent,
+        SingleInputComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
         HttpClientModule,
         FormsModule,
+        ReactiveFormsModule,
         RouterModule.forRoot(appRoutes, { enableTracing: true })
     ],
     providers: [AuthenticationService, AuthGuard],
