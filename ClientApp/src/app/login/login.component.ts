@@ -23,6 +23,8 @@ export class LoginComponent implements OnInit {
             val => {
                 if (this.authService.isLoggedIn) {
                     this.router.navigate(['home']);
+                } else {
+                    this.message = 'Login Failed due to improper credentials';
                 }
             },
             error => {

@@ -1,6 +1,6 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { RouterModule, Routes } from '@angular/router';
 
@@ -14,6 +14,9 @@ import { LoginComponent } from './login/login.component';
 import { AuthenticationService } from './services/authentication.service';
 import { AuthGuard } from './services/auth-guard.service';
 import { GeoPageComponent } from './geo-page/geo-page.component';
+import { DualInputComponent } from './dual-input/dual-input.component';
+import { SingleInputComponent } from './single-input/single-input.component';
+
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
@@ -21,7 +24,11 @@ const appRoutes: Routes = [
     { path: 'geo', component: GeoPageComponent, canActivate: [AuthGuard] },
     { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
     { path: 'counter', component: CounterComponent, canActivate: [AuthGuard] },
-    { path: 'fetch-data', component: FetchDataComponent, canActivate: [AuthGuard] }
+    {
+        path: 'fetch-data',
+        component: FetchDataComponent,
+        canActivate: [AuthGuard]
+    }
 ];
 @NgModule({
     declarations: [
@@ -32,12 +39,16 @@ const appRoutes: Routes = [
         NavbarComponent,
         TabColumnComponent,
         LoginComponent,
-        GeoPageComponent
+        GeoPageComponent,
+        DualInputComponent,
+        SingleInputComponent
+
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
         HttpClientModule,
         FormsModule,
+        ReactiveFormsModule,
         RouterModule.forRoot(appRoutes, { enableTracing: true })
     ],
     providers: [AuthenticationService, AuthGuard],
