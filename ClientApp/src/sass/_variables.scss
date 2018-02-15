@@ -10,6 +10,10 @@ $ewu-fancy-font: 'Serpentine Bold Oblique';
 // Twitter
 $twitter-dark: #0084b4;
 $twitter-logo: #00aced;
-$twitter-verfied: #1dcaff;
+$twitter-verified: #1dcaff;
 $twitter-background: #c0deed;
 $twitter-white: #fff;
+
+// Overrides
+$brand-primary: $twitter-logo;
+$brand-secondary: $ewu-grey;
