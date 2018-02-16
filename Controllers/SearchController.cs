@@ -99,7 +99,26 @@ namespace SixDegrees.Controllers
             });
         }
 
+        [HttpGet("user")]
+        public async Task<UserSearchResults> GetUser(string screenName)
+        {
+            string responseBody = await GetSearchResults(UserSearchAPIUri(UserSearchQuery(screenName)));
+            if (responseBody == null)
+                return null;
+            var results = UserSearchResults.FromJson(responseBody);
+            return results;
+        }
+
         #region Twitter API
+        private Uri UserSearchAPIUri(string query)
+        {
+            UriBuilder bob = new UriBuilder("https://api.twitter.com/1.1/users/show.json")
+            {
+                Query = query
+            };
+            return bob.Uri;
+        }
+
         private Uri TweetSearchAPIUri(string query)
         {
             UriBuilder bob = new UriBuilder("https://api.twitter.com/1.1/search/tweets.json")
@@ -107,6 +126,11 @@ namespace SixDegrees.Controllers
                 Query = query
             };
             return bob.Uri;
+        }
+
+        private string UserSearchQuery(string screenName)
+        {
+            return $"screen_name={screenName}&include_entities={INCLUDE_ENTITIES}";
         }
 
         private string HashtagSearchQuery(string hashtag, RepeatQueryType type)
