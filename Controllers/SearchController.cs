@@ -29,32 +29,26 @@ namespace SixDegrees.Controllers
             InitHistory();
         }
 
-        private void InitHistory()
-        {
-            history.Add(RepeatQueryType.TweetsByHashtag, new QueryInfo());
-            history.Add(RepeatQueryType.LocationsByHashtag, new QueryInfo());
-        }
-
         [HttpGet("tweets")]
-        public async Task<IEnumerable<Status>> Tweets(string query)
+        public async Task<IEnumerable<Status>> Tweets(string hashtag)
         {
-            string responseBody = await GetSearchResults(TweetSearchAPIUri(query, RepeatQueryType.TweetsByHashtag));
+            string responseBody = await GetSearchResults(TweetSearchAPIUri(HashtagSearchQuery(hashtag, RepeatQueryType.TweetsByHashtag)));
             if (responseBody == null)
                 return null;
             var results = TweetSearchResults.FromJson(responseBody);
-            LogQuery(query, results, RepeatQueryType.TweetsByHashtag);
+            LogQuery(hashtag, results, RepeatQueryType.TweetsByHashtag);
 
             return results.Statuses;
         }
 
         [HttpGet("locations")]
-        public async Task<IEnumerable<CountryResult>> Locations(string query)
+        public async Task<IEnumerable<CountryResult>> Locations(string hashtag)
         {
-            string responseBody = await GetSearchResults(TweetSearchAPIUri(query, RepeatQueryType.LocationsByHashtag));
+            string responseBody = await GetSearchResults(TweetSearchAPIUri(HashtagSearchQuery(hashtag, RepeatQueryType.LocationsByHashtag)));
             if (responseBody == null)
                 return null;
             var results = TweetSearchResults.FromJson(responseBody);
-            LogQuery(query, results, RepeatQueryType.LocationsByHashtag);
+            LogQuery(hashtag, results, RepeatQueryType.LocationsByHashtag);
 
             Dictionary<string, Country> countries = new Dictionary<string, Country>();
             foreach (Status status in results.Statuses)
@@ -105,19 +99,20 @@ namespace SixDegrees.Controllers
             });
         }
 
-        private Uri TweetSearchAPIUri(string query, RepeatQueryType type)
+        #region Twitter API
+        private Uri TweetSearchAPIUri(string query)
         {
             UriBuilder bob = new UriBuilder("https://api.twitter.com/1.1/search/tweets.json")
             {
-                Query = HashtagSearchQuery(query, type)
+                Query = query
             };
             return bob.Uri;
         }
 
-        private string HashtagSearchQuery(string query, RepeatQueryType type)
+        private string HashtagSearchQuery(string hashtag, RepeatQueryType type)
         {
-            string result = $"q=%23{query}&count={TWEET_COUNT}&tweet_mode={TWEET_MODE}&include_entities={INCLUDE_ENTITIES}";
-            if (query == history[type].LastQuery && history[type].LastMaxID != "")
+            string result = $"q=%23{hashtag}&count={TWEET_COUNT}&tweet_mode={TWEET_MODE}&include_entities={INCLUDE_ENTITIES}";
+            if (hashtag == history[type].LastQuery && history[type].LastMaxID != "")
                 result += $"&max_id={history[type].LastMaxID}";
             return result;
         }
@@ -126,6 +121,8 @@ namespace SixDegrees.Controllers
         {
             request.Headers.Add("Authorization", $"Bearer {Configuration["bearerToken"]}");
         }
+        #endregion
+
         private async Task<string> GetSearchResults(Uri uri)
         {
             try
@@ -149,9 +146,17 @@ namespace SixDegrees.Controllers
             }
         }
 
+        #region History
+        private void InitHistory()
+        {
+            history.Add(RepeatQueryType.TweetsByHashtag, new QueryInfo());
+            history.Add(RepeatQueryType.LocationsByHashtag, new QueryInfo());
+        }
+
         private void LogQuery(string query, TweetSearchResults results, RepeatQueryType type)
         {
             history[type] = new QueryInfo(query, (long.Parse(results.Statuses.Min(status => status.IdStr)) - 1).ToString());
         }
+        #endregion
     }
 }
