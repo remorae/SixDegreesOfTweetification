@@ -18,35 +18,44 @@ namespace SixDegrees.Controllers
         private const string TWEET_MODE = "extended";
         private const bool INCLUDE_ENTITIES = true;
         private const string CONTENT_TYPE = "application/x-www-form-urlencoded";
-
-        //@TODO Store the last query / max_id separately based on endpoint
-        private static string lastQuery = "";
-        private static string lastMaxID = "";
+        
+        private Dictionary<RepeatQueryType, QueryInfo> history = new Dictionary<RepeatQueryType, QueryInfo>();
 
         private IConfiguration Configuration { get; }
 
         public SearchController(IConfiguration configuration)
         {
             Configuration = configuration;
+            InitHistory();
+        }
+
+        private void InitHistory()
+        {
+            history.Add(RepeatQueryType.TweetsByHashtag, new QueryInfo());
+            history.Add(RepeatQueryType.LocationsByHashtag, new QueryInfo());
         }
 
         [HttpGet("tweets")]
         public async Task<IEnumerable<Status>> Tweets(string query)
         {
-            string responseBody = await GetSearchResults(TweetSearchAPIUri(query));
+            string responseBody = await GetSearchResults(TweetSearchAPIUri(query, RepeatQueryType.TweetsByHashtag));
             if (responseBody == null)
                 return null;
-            TweetSearch results = DeserializeResults(responseBody);
+            TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
+            LogQuery(query, results, RepeatQueryType.TweetsByHashtag);
+
             return results.Statuses;
         }
 
         [HttpGet("locations")]
         public async Task<IEnumerable<CountryResult>> Locations(string query)
         {
-            string responseBody = await GetSearchResults(TweetSearchAPIUri(query));
+            string responseBody = await GetSearchResults(TweetSearchAPIUri(query, RepeatQueryType.LocationsByHashtag));
             if (responseBody == null)
                 return null;
-            TweetSearch results = DeserializeResults(responseBody);
+            TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
+            LogQuery(query, results, RepeatQueryType.LocationsByHashtag);
+
             Dictionary<string, Country> countries = new Dictionary<string, Country>();
             foreach (Status status in results.Statuses)
             {
@@ -96,24 +105,27 @@ namespace SixDegrees.Controllers
             });
         }
 
-        private Uri TweetSearchAPIUri(string query)
+        private Uri TweetSearchAPIUri(string query, RepeatQueryType type)
         {
             UriBuilder bob = new UriBuilder("https://api.twitter.com/1.1/search/tweets.json")
             {
-                Query = StandardHashtagSearchQuery(query)
+                Query = HashtagSearchQuery(query, type)
             };
-            lastQuery = query;
             return bob.Uri;
         }
 
-        private string StandardHashtagSearchQuery(string query)
+        private string HashtagSearchQuery(string query, RepeatQueryType type)
         {
             string result = $"q=%23{query}&count={TWEET_COUNT}&tweet_mode={TWEET_MODE}&include_entities={INCLUDE_ENTITIES}";
-            if (query == lastQuery && lastMaxID != "")
-                result += $"&max_id={lastMaxID}";
+            if (query == history[type].LastQuery && history[type].LastMaxID != "")
+                result += $"&max_id={history[type].LastMaxID}";
             return result;
         }
 
+        private void AddBearerAuth(HttpRequestMessage request)
+        {
+            request.Headers.Add("Authorization", $"Bearer {Configuration["bearerToken"]}");
+        }
         private async Task<string> GetSearchResults(Uri uri)
         {
             try
@@ -137,16 +149,9 @@ namespace SixDegrees.Controllers
             }
         }
 
-        private void AddBearerAuth(HttpRequestMessage request)
+        private void LogQuery(string query, TweetSearch results, RepeatQueryType type)
         {
-            request.Headers.Add("Authorization", $"Bearer {Configuration["bearerToken"]}");
-        }
-
-        private TweetSearch DeserializeResults(string responseBody)
-        {
-            TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
-            lastMaxID = (long.Parse(results.Statuses.Min(status => status.IdStr)) - 1).ToString();
-            return results;
+            history[type] = new QueryInfo(query, (long.Parse(results.Statuses.Min(status => status.IdStr)) - 1).ToString());
         }
     }
 }
