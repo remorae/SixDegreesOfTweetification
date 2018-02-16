@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace SixDegrees.Model.JSON
+﻿namespace SixDegrees.Model.JSON
 {
     public partial class Status
     {

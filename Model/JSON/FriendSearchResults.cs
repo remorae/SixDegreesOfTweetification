@@ -1,6 +1,5 @@
 ﻿namespace SixDegrees.Model.JSON
 {
-
     using Newtonsoft.Json;
 
     public partial class FriendSearchResults
