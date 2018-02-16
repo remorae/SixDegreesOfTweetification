@@ -59,7 +59,7 @@ namespace SixDegrees.Controllers
             var results = TweetSearchResults.FromJson(responseBody);
             LogQuery(query, results, RepeatQueryType.LocationsByHashtag);
 
-            Dictionary<string, Country> countries = new Dictionary<string, Country>();
+            IDictionary<string, Country> countries = new Dictionary<string, Country>();
             foreach (Status status in results.Statuses)
             {
                 if (status.Place != null)
@@ -72,7 +72,7 @@ namespace SixDegrees.Controllers
             return GetFormattedCountries(countries.Values);
         }
 
-        private void UpdateCountriesWithPlace(Dictionary<string, Country> countries, Status status)
+        private void UpdateCountriesWithPlace(IDictionary<string, Country> countries, Status status)
         {
             string placeName = status.Place.FullName;
 
@@ -94,18 +94,7 @@ namespace SixDegrees.Controllers
 
         private IEnumerable<CountryResult> GetFormattedCountries(IEnumerable<Country> countries)
         {
-            return countries.Select(country =>
-            {
-                Dictionary<string, List<PlaceResult>> placeCategories = new Dictionary<string, List<PlaceResult>>();
-                foreach (PlaceResult place in country.Places.Values)
-                {
-                    string placeTypeString = place.Type.ToString();
-                    if (!placeCategories.ContainsKey(placeTypeString))
-                        placeCategories.Add(placeTypeString, new List<PlaceResult>());
-                    placeCategories[placeTypeString].Add(place);
-                }
-                return new CountryResult(country.CountryName, placeCategories);
-            });
+            return countries.Select(country => new CountryResult(country.Name, country.Places.Values));
         }
 
         /// <summary>
@@ -193,7 +182,10 @@ namespace SixDegrees.Controllers
 
         private void LogQuery(string query, TweetSearchResults results, RepeatQueryType type)
         {
-            history[type] = new QueryInfo(query, (long.Parse(results.Statuses.Min(status => status.IdStr)) - 1).ToString());
+            string minStatusID = results.Statuses.Min(status => status.IdStr);
+            // Exclude lowest ID to prevent duplicate results
+            string lastMaxID = (long.TryParse(minStatusID, out long result)) ? (result - 1).ToString() : "";
+            history[type] = new QueryInfo(query, lastMaxID);
         }
         #endregion
     }
