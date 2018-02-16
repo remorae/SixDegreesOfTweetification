@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, isDevMode } from '@angular/core';
 import { AuthenticationService } from './authentication.service';
 import {
     ActivatedRouteSnapshot,
@@ -16,6 +16,9 @@ export class AuthGuard implements CanActivate {
     canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot) {
         const url: string = state.url;
 
+        if (isDevMode()) {
+            return true;
+        }
         if (this.authService.isLoggedIn) {
             return true;
         }
