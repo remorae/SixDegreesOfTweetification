@@ -2,7 +2,8 @@
     <div class="card-body">
         <h1 class="mb-3">Geographical Stats</h1>
         <app-single-input (userSubmit)="onUserSubmit($event)"></app-single-input>
-        <h3>Countries:</h3>
+        <h3 *ngIf="latestSearch; else fresh">Countries for #{{latestSearch}}:</h3>
+        <ng-template #fresh> <h3>Search the Globe for Hashtags!</h3></ng-template>
         <ul class="d-flex list-inline">
             <li *ngFor="let country of countries" class="col list-inline-item">
                 <h4>{{ country.name }}</h4>
