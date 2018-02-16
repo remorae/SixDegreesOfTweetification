@@ -29,26 +29,36 @@ namespace SixDegrees.Controllers
             InitHistory();
         }
 
+        /// <summary>
+        /// Returns a list of tweets containing given hashtags
+        /// </summary>
+        /// <param name="query">The hashtags to search for, separated by spaces</param>
+        /// <returns></returns>
         [HttpGet("tweets")]
-        public async Task<IEnumerable<Status>> Tweets(string hashtag)
+        public async Task<IEnumerable<Status>> Tweets(string query)
         {
-            string responseBody = await GetSearchResults(TweetSearchAPIUri(HashtagSearchQuery(hashtag, RepeatQueryType.TweetsByHashtag)));
+            string responseBody = await GetSearchResults(TweetSearchAPIUri(HashtagSearchQuery(query, RepeatQueryType.TweetsByHashtag)));
             if (responseBody == null)
                 return null;
             var results = TweetSearchResults.FromJson(responseBody);
-            LogQuery(hashtag, results, RepeatQueryType.TweetsByHashtag);
+            LogQuery(query, results, RepeatQueryType.TweetsByHashtag);
 
             return results.Statuses;
         }
 
+        /// <summary>
+        /// Returns a list of locations from tweets containing given hashtags
+        /// </summary>
+        /// <param name="query">The hashtags to search for, separated by spaces</param>
+        /// <returns></returns>
         [HttpGet("locations")]
-        public async Task<IEnumerable<CountryResult>> Locations(string hashtag)
+        public async Task<IEnumerable<CountryResult>> Locations(string query)
         {
-            string responseBody = await GetSearchResults(TweetSearchAPIUri(HashtagSearchQuery(hashtag, RepeatQueryType.LocationsByHashtag)));
+            string responseBody = await GetSearchResults(TweetSearchAPIUri(HashtagSearchQuery(query, RepeatQueryType.LocationsByHashtag)));
             if (responseBody == null)
                 return null;
             var results = TweetSearchResults.FromJson(responseBody);
-            LogQuery(hashtag, results, RepeatQueryType.LocationsByHashtag);
+            LogQuery(query, results, RepeatQueryType.LocationsByHashtag);
 
             Dictionary<string, Country> countries = new Dictionary<string, Country>();
             foreach (Status status in results.Statuses)
@@ -99,10 +109,15 @@ namespace SixDegrees.Controllers
             });
         }
 
+        /// <summary>
+        /// Returns information about a specified Twitter user
+        /// </summary>
+        /// <param name="query">The user screen name to search for</param>
+        /// <returns></returns>
         [HttpGet("user")]
-        public async Task<UserSearchResults> GetUser(string screenName)
+        public async Task<UserSearchResults> GetUser(string query)
         {
-            string responseBody = await GetSearchResults(UserSearchAPIUri(UserSearchQuery(screenName)));
+            string responseBody = await GetSearchResults(UserSearchAPIUri(UserSearchQuery(query)));
             if (responseBody == null)
                 return null;
             var results = UserSearchResults.FromJson(responseBody);
