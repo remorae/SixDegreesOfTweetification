@@ -16,6 +16,7 @@ import { AuthGuard } from './services/auth-guard.service';
 import { GeoPageComponent } from './geo-page/geo-page.component';
 import { DualInputComponent } from './dual-input/dual-input.component';
 import { SingleInputComponent } from './single-input/single-input.component';
+import { EndpointService } from './services/endpoint.service';
 
 
 const appRoutes: Routes = [
@@ -51,7 +52,7 @@ const appRoutes: Routes = [
         ReactiveFormsModule,
         RouterModule.forRoot(appRoutes, { enableTracing: true })
     ],
-    providers: [AuthenticationService, AuthGuard],
+    providers: [AuthenticationService, AuthGuard, EndpointService],
     bootstrap: [AppComponent]
 })
 export class AppModule {}
