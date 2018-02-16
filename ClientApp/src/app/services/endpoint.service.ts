@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs/Observable';
-import { CountryResult } from '../models';
+import { Country } from '../models';
 
 @Injectable()
 export class EndpointService {
@@ -10,16 +10,15 @@ export class EndpointService {
         this.baseUrl = baseUrl;
     }
 
-    public searchTweets(hashtag: string): Observable<any> {
+    public searchTweets(hashtag: string): Observable<any[]> {
         // TODO: Change type to properly match final Endpoint Version
         return this.http.get<any[]>(
             this.baseUrl + 'api/search/tweets?query=' + hashtag
         );
     }
 
-    public searchLocations(hashtag: string): Observable<any> {
-        // TODO: Change type to properly match final Endpoint Version
-        return this.http.get<CountryResult[]>(
+    public searchLocations(hashtag: string): Observable<Country[]> {
+        return this.http.get<Country[]>(
             this.baseUrl + 'api/search/locations?query=' + hashtag
         );
     }
