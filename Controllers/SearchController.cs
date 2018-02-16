@@ -84,14 +84,8 @@ namespace SixDegrees.Controllers
         {
             return countries.Select(country =>
             {
-                Dictionary<string, List<PlaceResult>> placeCategories = new Dictionary<string, List<PlaceResult>>();
-                foreach (PlaceResult place in country.Places.Values)
-                {
-                    string placeTypeString = place.Type.ToString();
-                    if (!placeCategories.ContainsKey(placeTypeString))
-                        placeCategories.Add(placeTypeString, new List<PlaceResult>());
-                    placeCategories[placeTypeString].Add(place);
-                }
+                List<PlaceResult> placeCategories = new List<PlaceResult>();
+                placeCategories.AddRange(country.Places.Values);
                 return new CountryResult(country.CountryName, placeCategories);
             });
         }
