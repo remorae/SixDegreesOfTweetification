@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { CountryResult, PlaceResult } from '../../models';
+import { CountryResult, PlaceResult } from '../models';
+import { EndpointService } from '../services/endpoint.service';
 
 @Component({
     selector: 'app-geo-page',
@@ -94,9 +95,12 @@ export class GeoPageComponent implements OnInit {
         },
     ];
 
-    constructor() { }
+    constructor(private endpoint: EndpointService) {}
 
     ngOnInit() {
+        this.endpoint.searchLocations('memes').subscribe(val => {
+            this.testCountries = val;
+        });
     }
 
 }
