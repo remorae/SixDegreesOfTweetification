@@ -1,11 +1,10 @@
 export class UserInput {
-    public inputType: string; // # | @
+    public inputType: HashOrHandle;
     inputs: string[];
-    constructor(type: string, ...inputs: string[]) {
+    constructor(type: HashOrHandle, ...inputs: string[]) {
         this.inputType = type;
         this.inputs = inputs;
     }
-
-
 }
-export type HashOrAt = '#' | '@';
+export type HashOrHandle = 'hashtag' | 'handle';
+
