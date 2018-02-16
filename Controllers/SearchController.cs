@@ -5,7 +5,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
 using SixDegrees.Model;
 using SixDegrees.Model.JSON;
 
@@ -18,7 +17,7 @@ namespace SixDegrees.Controllers
         private const string TWEET_MODE = "extended";
         private const bool INCLUDE_ENTITIES = true;
         private const string CONTENT_TYPE = "application/x-www-form-urlencoded";
-        
+
         private Dictionary<RepeatQueryType, QueryInfo> history = new Dictionary<RepeatQueryType, QueryInfo>();
 
         private IConfiguration Configuration { get; }
