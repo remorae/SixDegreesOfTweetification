@@ -41,7 +41,7 @@ namespace SixDegrees.Controllers
             string responseBody = await GetSearchResults(TweetSearchAPIUri(query, RepeatQueryType.TweetsByHashtag));
             if (responseBody == null)
                 return null;
-            TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
+            var results = TweetSearchResults.FromJson(responseBody);
             LogQuery(query, results, RepeatQueryType.TweetsByHashtag);
 
             return results.Statuses;
@@ -53,7 +53,7 @@ namespace SixDegrees.Controllers
             string responseBody = await GetSearchResults(TweetSearchAPIUri(query, RepeatQueryType.LocationsByHashtag));
             if (responseBody == null)
                 return null;
-            TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
+            var results = TweetSearchResults.FromJson(responseBody);
             LogQuery(query, results, RepeatQueryType.LocationsByHashtag);
 
             Dictionary<string, Country> countries = new Dictionary<string, Country>();
@@ -149,7 +149,7 @@ namespace SixDegrees.Controllers
             }
         }
 
-        private void LogQuery(string query, TweetSearch results, RepeatQueryType type)
+        private void LogQuery(string query, TweetSearchResults results, RepeatQueryType type)
         {
             history[type] = new QueryInfo(query, (long.Parse(results.Statuses.Min(status => status.IdStr)) - 1).ToString());
         }
