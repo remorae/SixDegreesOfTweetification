@@ -9,7 +9,7 @@ import { Router } from '@angular/router';
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import 'rxjs/operators/map';
-import { isDevMode } from '@angular/core';
+
 
 export interface Creds {
     username: string;
@@ -37,9 +37,6 @@ export class AuthenticationService {
             })
             .do(val => {
                 this.isLoggedIn = val;
-                if (isDevMode()) {
-                    this.isLoggedIn = true;
-                }
             });
     }
 }
