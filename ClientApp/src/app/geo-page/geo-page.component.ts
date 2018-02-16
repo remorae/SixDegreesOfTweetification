@@ -10,13 +10,13 @@ import { UserInput } from '../models/userInput';
 })
 export class GeoPageComponent implements OnInit {
     countries: Country[];
-
+    latestSearch: string;
     constructor(private endpoint: EndpointService) {}
 
     ngOnInit() {}
     onUserSubmit(input: UserInput) {
-        const hashtag = input.inputs[0];
-        this.endpoint.searchLocations(hashtag).subscribe((val: Country[]) => {
+        this.latestSearch = input.inputs[0];
+        this.endpoint.searchLocations(this.latestSearch).subscribe((val: Country[]) => {
             this.countries = val; // TODO: check for empty results.
         });
     }
