@@ -4,13 +4,12 @@ namespace SixDegrees.Model
 {
     public class Country
     {
-        public string CountryName { get; set; }
-        public Dictionary<string, PlaceResult> Places { get; } = new Dictionary<string, PlaceResult>();
-        public List<string> Sources { get; } = new List<string>();
+        public string Name { get; set; }
+        public IDictionary<string, PlaceResult> Places { get; } = new Dictionary<string, PlaceResult>();
 
-        public Country(string countryName)
+        public Country(string name)
         {
-            CountryName = countryName;
+            Name = name;
         }
     }
 }
