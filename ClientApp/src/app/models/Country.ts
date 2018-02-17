@@ -1,7 +1,7 @@
 import { PlaceResult } from './Place';
 
-export class CountryResult {
-    countryName: string;
+export class Country {
+    name: string;
     places: PlaceResult[];
     sources: string[];
 }
