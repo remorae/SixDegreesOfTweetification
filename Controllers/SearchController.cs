@@ -47,7 +47,7 @@ namespace SixDegrees.Controllers
             if (responseBody == null)
                 return null;
             TweetSearch results = DeserializeResults(responseBody);
-            Dictionary<string, Country> countries = new Dictionary<string, Country>();
+            IDictionary<string, Country> countries = new Dictionary<string, Country>();
             foreach (Status status in results.Statuses)
             {
                 if (status.Place != null)
@@ -60,7 +60,7 @@ namespace SixDegrees.Controllers
             return GetFormattedCountries(countries.Values);
         }
 
-        private void UpdateCountriesWithPlace(Dictionary<string, Country> countries, Status status)
+        private void UpdateCountriesWithPlace(IDictionary<string, Country> countries, Status status)
         {
             string placeName = status.Place.FullName;
 
@@ -82,18 +82,7 @@ namespace SixDegrees.Controllers
 
         private IEnumerable<CountryResult> GetFormattedCountries(IEnumerable<Country> countries)
         {
-            return countries.Select(country =>
-            {
-                Dictionary<string, List<PlaceResult>> placeCategories = new Dictionary<string, List<PlaceResult>>();
-                foreach (PlaceResult place in country.Places.Values)
-                {
-                    string placeTypeString = place.Type.ToString();
-                    if (!placeCategories.ContainsKey(placeTypeString))
-                        placeCategories.Add(placeTypeString, new List<PlaceResult>());
-                    placeCategories[placeTypeString].Add(place);
-                }
-                return new CountryResult(country.CountryName, placeCategories);
-            });
+            return countries.Select(country => new CountryResult(country.Name, country.Places.Values));
         }
 
         private Uri TweetSearchAPIUri(string query)
@@ -145,7 +134,8 @@ namespace SixDegrees.Controllers
         private TweetSearch DeserializeResults(string responseBody)
         {
             TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
-            lastMaxID = (long.Parse(results.Statuses.Min(status => status.IdStr)) - 1).ToString();
+            if (results.Statuses.Count > 0)
+                lastMaxID = (long.Parse(results.Statuses.Min(status => status.IdStr)) - 1).ToString();
             return results;
         }
     }

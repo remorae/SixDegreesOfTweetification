@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { CountryResult, PlaceResult } from '../../models';
+import { Country, PlaceResult } from '../models';
+import { EndpointService } from '../services/endpoint.service';
+import { UserInput } from '../models/userInput';
 
 @Component({
     selector: 'app-geo-page',
@@ -7,96 +9,15 @@ import { CountryResult, PlaceResult } from '../../models';
     styleUrls: ['./geo-page.component.scss']
 })
 export class GeoPageComponent implements OnInit {
-    australiaCities: PlaceResult[] = [
-        {
-            country: 'Australia',
-            hashtags: ['monitorLizard', 'blueRingOctopus', 'funnelWebSpiders'],
-            name: 'Melbourne',
-            sources: [],
-            type: 'City',
-        },
-        {
-            country: 'Australia',
-            hashtags: ['blackMamba', 'kangaroo', 'koala'],
-            name: 'Perth',
-            sources: [],
-            type: 'City',
-        },
-        {
-            country: 'Australia',
-            hashtags: ['pSherman', '42WallabeeWay', 'taipan'],
-            name: 'Sydney',
-            sources: [],
-            type: 'City',
-        },
-    ];
-    canadaCities: PlaceResult[] = [
-        {
-            country: 'Canada',
-            hashtags: ['iHeartAlberta', 'moveOverBC', 'equestrianOrBust'],
-            name: 'Calgary',
-            sources: [],
-            type: 'City',
-        },
-        {
-            country: 'Canada',
-            hashtags: ['iCanSeeNewYorkFromMyHouse', 'yeahEhDereHoser', 'zed'],
-            name: 'Toronto',
-            sources: [],
-            type: 'City',
-        },
-        {
-            country: 'Canada',
-            hashtags: ['nowBobsYourUncle', 'orcaRiding', 'likeSeattleButMoreNorth'],
-            name: 'Vancouver',
-            sources: [],
-            type: 'City',
-        },
-    ];
-    usaCities: PlaceResult[] = [
-        {
-            country: 'United States',
-            hashtags: ['floatTheRiver', 'sawtoothMountains', 'cityOfTrees'],
-            name: 'Boise',
-            sources: [],
-            type: 'City',
-        },
-        {
-            country: 'United States',
-            hashtags: ['pikesPeak', 'thunderStormAt1pm', 'hangGliding'],
-            name: 'Colorado Springs',
-            sources: [],
-            type: 'City',
-        },
-        {
-            country: 'United States',
-            hashtags: ['spokaneDoesntSuck', 'spokompton', 'helloWorld'],
-            name: 'Spokane',
-            sources: [],
-            type: 'City',
-        },
-    ];
-    testCountries: CountryResult[] = [
-        {
-            countryName: 'Australia',
-            places: this.australiaCities,
-            sources: [],
-        },
-        {
-            countryName: 'Canada',
-            places: this.canadaCities,
-            sources: [],
-        },
-        {
-            countryName: 'USA',
-            places: this.usaCities,
-            sources: [],
-        },
-    ];
+    countries: Country[];
+    latestSearch: string;
+    constructor(private endpoint: EndpointService) {}
 
-    constructor() { }
-
-    ngOnInit() {
+    ngOnInit() {}
+    onUserSubmit(input: UserInput) {
+        this.latestSearch = input.inputs[0];
+        this.endpoint.searchLocations(this.latestSearch).subscribe((val: Country[]) => {
+            this.countries = val; // TODO: check for empty results.
+        });
     }
-
 }
