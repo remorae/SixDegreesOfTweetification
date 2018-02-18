@@ -50,7 +50,7 @@ const appRoutes: Routes = [
         HttpClientModule,
         FormsModule,
         ReactiveFormsModule,
-        RouterModule.forRoot(appRoutes, { enableTracing: true })
+        RouterModule.forRoot(appRoutes, { enableTracing: false })
     ],
     providers: [AuthenticationService, AuthGuard, EndpointService],
     bootstrap: [AppComponent]
