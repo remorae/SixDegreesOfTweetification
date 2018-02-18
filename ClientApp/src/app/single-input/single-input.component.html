@@ -1,22 +1,24 @@
-<form [formGroup]="userForm" (ngSubmit)="onSubmit()" novalidate>
-    <div class="form-group">
-        <label class="center-block"> {{labelText}}
-            <input class="form-control" formControlName="firstSub">
-        </label>
+<form [formGroup]="userForm" (ngSubmit)="onSubmit()" novalidate class="d-inline-block float-right">
+    <div class="input-group"><!-- input-group input-group-lg -->
+        <div class="input-group-prepend">
+            <span class="input-group-text">{{labelText}}</span>
+        </div>
+        <input class="form-control" formControlName="firstSub">
+        <div class="input-group-append">
+            <button class="btn btn-primary" [disabled]="userForm.invalid" type="submit">Go!</button>
+        </div>
     </div>
 
-    <div>
-        <button class="btn" [disabled]="userForm.invalid" type="submit">Submit</button>
-    </div>
-    <div class="form-group">
-
-    </div>
     <div *ngIf="userForm.invalid && (userForm.dirty || userForm.touched)">
-        <div *ngIf="firstSub?.errors?.required && firstSub.touched" class="alert alert-danger">
+        <small *ngIf="firstSub?.errors?.required && firstSub.touched" class="text-danger">
             Input is Required.
-        </div>
-        <div *ngIf="firstSub?.errors?.pattern && firstSub.touched" class="alert alert-danger">
+        </small> <!-- <p></p> -->
+        <small
+            *ngIf="firstSub?.errors?.pattern && firstSub.invalid"
+            class="text-danger"
+            title="Leave out the hash (#) symbol and make sure there are no spaces in the input."
+        >
             Input is not a valid {{inputType}}
-        </div>
+        </small> <!-- <p></p> -->
     </div>
 </form>

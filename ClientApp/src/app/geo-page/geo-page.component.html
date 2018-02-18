@@ -1,10 +1,17 @@
+<div class="clearfix mb-4">
+    <h1 class="mb-3 d-inline-block align-top">Geographical Statistics</h1>
+    <app-single-input (userSubmit)="onUserSubmit($event)"></app-single-input>
+    <!-- Secondary filters -->
+</div>
+
 <div class="card">
     <div class="card-body">
-        <h1 class="mb-3">Geographical Stats</h1>
-        <app-single-input (userSubmit)="onUserSubmit($event)"></app-single-input>
-        <h3 *ngIf="latestSearch; else fresh">Countries for #{{latestSearch}}:</h3>
-        <ng-template #fresh> <h3>Search the Globe for Hashtags!</h3></ng-template>
-        <ul class="d-flex list-inline">
+        <h3 *ngIf="!latestSearch && !countries">Search the Globe for Hashtags! ---></h3>
+        <h3 *ngIf="latestSearch && !countries">
+            <i class="fa fa-spinner fa-spin mr-2"></i>Loading...
+        </h3>
+        <h3 *ngIf="countries">Countries for #{{latestSearch}}:</h3>
+        <ul *ngIf="countries && !!countries.length" class="d-flex list-inline">
             <li *ngFor="let country of countries" class="col list-inline-item">
                 <h4>{{ country.name }}</h4>
                 <ul class="list-unstyled">
@@ -23,5 +30,6 @@
                 </ul>
             </li>
         </ul>
+        <h3 *ngIf="countries && !countries.length">No results found.</h3>
     </div>
 </div>
