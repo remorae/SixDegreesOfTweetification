@@ -1,5 +1,4 @@
 language: csharp
-solution: SixDegrees.sln
 sudo: required
 mono: none
 dotnet: 1.1.5
