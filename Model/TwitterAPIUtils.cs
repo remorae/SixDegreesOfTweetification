@@ -63,7 +63,7 @@ namespace SixDegrees.Model
             request.Headers.Add("Authorization", $"Bearer {config["bearerToken"]}");
         }
 
-        public static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, Uri uri)
+        public static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, Uri uri, QueryType? type = null)
         {
             try
             {
@@ -76,6 +76,16 @@ namespace SixDegrees.Model
                         using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
                         {
                             response.EnsureSuccessStatusCode();
+                            if (type.HasValue &&
+                                response.Headers.TryGetValues("x-rate-limit-remaining", out IEnumerable<string> remaining) &&
+                                response.Headers.TryGetValues("x-rate-limit-reset", out IEnumerable<string> reset))
+                            {
+                                IList<string> remainingValues = new List<string>(remaining);
+                                IList<string> resetValues = new List<string>(reset);
+                                if (int.TryParse(remainingValues[0], out int limitRemaining) &&
+                                    double.TryParse(resetValues[0], out double secondsUntilReset))
+                                    QueryHistory.Get[type.Value].RateLimitInfo.Update(authType, limitRemaining, TimeSpan.FromSeconds(secondsUntilReset));
+                            }
                             return await response.Content.ReadAsStringAsync();
                         }
                     }
