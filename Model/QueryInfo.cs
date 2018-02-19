@@ -1,14 +1,27 @@
 ﻿namespace SixDegrees.Model
 {
-    public struct QueryInfo
+    public class QueryInfo
     {
-        public string LastQuery;
-        public string LastMaxID;
-
-        public QueryInfo(string lastQuery, string lastMaxID)
+        public static bool UsesMaxID(QueryType type)
         {
-            LastQuery = lastQuery;
-            LastMaxID = lastMaxID;
+            switch (type)
+            {
+                case QueryType.TweetsByHashtag:
+                case QueryType.LocationsByHashtag:
+                    return true;
+                case QueryType.UserByScreenName:
+                case QueryType.UserConnectionsByScreenName:
+                    return false;
+                default:
+                    return false;
+            }
+        }
+
+        public string LastQuery { get; set; } = "";
+        public string LastMaxID { get; set; } = "";
+
+        public QueryInfo(QueryType type)
+        {
         }
     }
 }
