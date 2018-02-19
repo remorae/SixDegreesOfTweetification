@@ -25,7 +25,7 @@ namespace SixDegrees.Controllers
         {
             if (Enum.TryParse(endpoint, out QueryType type))
             {
-                if (forceUpdate.ToLower() == "true" || QueryHistory.Get[type].RateLimitInfo.SinceLastUpdate > MaxRateLimitAge)
+                if (forceUpdate?.ToLower() == "true" || QueryHistory.Get[type].RateLimitInfo.SinceLastUpdate > MaxRateLimitAge)
                 {
                     (int appRemaining, int userRemaining) limits = await GetUpdatedLimits(type);
                     QueryHistory.Get[type].RateLimitInfo.Update(limits.appRemaining, limits.userRemaining);
