@@ -1,7 +1,16 @@
 @import '../../sass/styles.scss';
 
 .navbar {
-  background-color: $ewu-grey;
+  background-color: darken($ewu-grey, 10%);
+}
+
+.navbar-brand {
+  width: fit-content;
+  padding: 0;
+
+  @include hover-focus {
+    color: $primary;
+  }
 }
 
 .fa-user-circle {

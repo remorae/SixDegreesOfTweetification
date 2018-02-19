@@ -1,37 +1,14 @@
-<div class="col-sm-4">
-  <ul class="list-unstyled">
+<ul class="list-unstyled">
     <li
+      *ngFor="let page of pages"
       [routerLinkActive]='["link-active"]'
       [routerLinkActiveOptions]='{ exact: true }'
-      class="card"
+      class="card card-primary"
     >
-      <a [routerLink]='["/home"]' class="card-body">
-        <p class="card-link">
-          Home
-        </p>
-      </a>
+        <a [routerLink]='["/" + page.route]' class="btn btn-primary card-body card-link text-left">
+            <p class="h5">
+                {{ page.name }}
+            </p>
+        </a>
     </li>
-    <li
-      [routerLinkActive]='["link-active"]'
-      [routerLinkActiveOptions]='{ exact: true }'
-      class="card"
-    >
-      <a [routerLink]='["/counter"]' class="card-body">
-        <p class="card-link">
-          Counter
-        </p>
-      </a>
-    </li>
-    <li
-      [routerLinkActive]='["link-active"]'
-      [routerLinkActiveOptions]='{ exact: true }'
-      class="card"
-    >
-      <a [routerLink]='["/fetch-data"]' class="card-body">
-        <p class="card-link">
-          Fetch Data
-        </p>
-      </a>
-    </li>
-  </ul>
-</div>
+</ul>
