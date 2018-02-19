@@ -1,6 +1,6 @@
 ﻿namespace SixDegrees.Model
 {
-    enum QueryType
+    public enum QueryType
     {
         TweetsByHashtag,
         LocationsByHashtag,
