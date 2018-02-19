@@ -111,12 +111,28 @@ namespace SixDegrees.Controllers
         /// <param name="query">The user screen name to search for</param>
         /// <returns></returns>
         [HttpGet("user")]
-        public async Task<UserSearchResults> GetUser(string query)
+        public async Task<UserResult> GetUser(string screen_name)
         {
-            var results = await GetResults<UserSearchResults>(QueryType.UserByScreenName, query, AuthenticationType.Application, TwitterAPIUtils.UserSearchAPIUri, TwitterAPIUtils.UserSearchQuery);
+            var results = await GetResults<UserSearchResults>(QueryType.UserByScreenName, screen_name, AuthenticationType.Application, TwitterAPIUtils.UserSearchAPIUri, TwitterAPIUtils.UserSearchQuery);
             if (results == null)
                 return null;
-            return results;
+            return new UserResult()
+            {
+                CreatedAt = results.CreatedAt,
+                Description = results.Description,
+                FollowerCount = results.FollowersCount,
+                FriendCount = results.FriendsCount,
+                GeoEnabled = results.GeoEnabled,
+                ID = results.IdStr,
+                Lang = results.Lang,
+                Location = results.Location,
+                Name = results.Name,
+                ProfileImage = results.ProfileImageUrlHttps,
+                ScreenName = results.ScreenName,
+                StatusCount = results.StatusesCount,
+                TimeZone = results.TimeZone,
+                Verified = results.Verified
+            };
         }
     }
 }
