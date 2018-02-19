@@ -1,6 +1,6 @@
 ﻿namespace SixDegrees.Model
 {
-    class UserResult
+    public class UserResult
     {
         internal string ID { get; set; }
         internal string Name { get; set; }
