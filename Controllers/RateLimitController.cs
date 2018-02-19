@@ -19,6 +19,12 @@ namespace SixDegrees.Controllers
             Configuration = configuration;
         }
 
+        [HttpGet("all")]
+        public IDictionary<QueryType, IDictionary<AuthenticationType, int>> GetAllRateLimits()
+        {
+            return QueryHistory.Get.RateLimits;
+        }
+
         [HttpGet("status")]
         public IDictionary<AuthenticationType, int> GetRateLimitStatus(string endpoint, string forceUpdate)
         {

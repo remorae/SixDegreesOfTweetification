@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace SixDegrees.Model
 {
@@ -20,6 +21,8 @@ namespace SixDegrees.Model
 
         private QueryHistory()
         {
+            foreach (QueryType type in Enum.GetValues(typeof(QueryType)))
+                history.Add(type, new QueryInfo(type));
         }
 
         internal QueryInfo this[QueryType key]
