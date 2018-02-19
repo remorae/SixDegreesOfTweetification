@@ -22,7 +22,7 @@ namespace SixDegrees.Controllers
 
         private async Task<T> GetResults<T>(QueryType queryType, string query, AuthenticationType authType, Func<string, Uri> buildUri, Func<string, QueryType, string> buildQuery) where T : IQueryResults
         {
-            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, buildUri(buildQuery(query, queryType)));
+            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, buildUri(buildQuery(query, queryType)), queryType);
             if (responseBody == null)
                 return default(T);
             T results = JsonConvert.DeserializeObject<T>(responseBody);

@@ -21,39 +21,32 @@ namespace SixDegrees.Controllers
         }
 
         [HttpGet("status")]
-        public async Task<IEnumerable<int>> GetRateLimitStatus(string endpoint, string forceUpdate)
+        public IEnumerable<int> GetRateLimitStatus(string endpoint, string forceUpdate)
         {
             if (Enum.TryParse(endpoint, out QueryType type))
             {
-                if (forceUpdate?.ToLower() == "true" || QueryHistory.Get[type].RateLimitInfo.SinceLastUpdate > MaxRateLimitAge)
-                {
-                    (int appRemaining, int userRemaining) limits = await GetUpdatedLimits(type);
-                    QueryHistory.Get[type].RateLimitInfo.Update(limits.appRemaining, limits.userRemaining);
-                }
+                if (QueryHistory.Get[type].RateLimitInfo.SinceLastUpdate > QueryHistory.Get[type].RateLimitInfo.UntilReset)
+                    QueryHistory.Get[type].RateLimitInfo.Reset();
+                else if (forceUpdate?.ToLower() == "true" || QueryHistory.Get[type].RateLimitInfo.SinceLastUpdate > MaxRateLimitAge)
+                    GetUpdatedLimits();
                 return new int[] { QueryHistory.Get[type].RateLimitInfo.AppAuthRemaining, QueryHistory.Get[type].RateLimitInfo.UserAuthRemaining };
             }
             else
                 return new int[] { -1, -1 };
         }
 
-        private async Task<(int appRemaining, int userRemaining)> GetUpdatedLimits(QueryType type)
+        private async void GetUpdatedLimits()
         {
             string responseBody = await TwitterAPIUtils.GetResponse(Configuration, AuthenticationType.Application, TwitterAPIUtils.RateLimitAPIUri(TwitterAPIUtils.RateLimitStatusQuery(new string[] {"users", "search"})));
             if (responseBody == null)
-                return (-1, -1);
+                return;
             var appResults = RateLimitResults.FromJson(responseBody);
-            switch (type)
-            {
-                case QueryType.TweetsByHashtag:
-                case QueryType.LocationsByHashtag:
-                    return ((int)appResults.Resources.Search.SearchTweets.Remaining, 0);
-                case QueryType.UserByScreenName:
-                    return ((int)appResults.Resources.Users["/users/show/:id"].Remaining, 0);
-                case QueryType.UserConnectionsByScreenName:
-                    return ((int)appResults.Resources.Users["/users/lookup"].Remaining, 0);
-                default:
-                    return (-1, -1);
-            }
+
+            //TODO User authentication
+            QueryHistory.Get[QueryType.TweetsByHashtag].RateLimitInfo.Update((int)appResults.Resources.Search.SearchTweets.Remaining, 0);
+            QueryHistory.Get[QueryType.LocationsByHashtag].RateLimitInfo.Update((int)appResults.Resources.Search.SearchTweets.Remaining, 0);
+            QueryHistory.Get[QueryType.UserByScreenName].RateLimitInfo.Update((int)appResults.Resources.Users["/users/show/:id"].Remaining, 0);
+            QueryHistory.Get[QueryType.UserConnectionsByScreenName].RateLimitInfo.Update((int)appResults.Resources.Users["/users/lookup"].Remaining, 0);
         }
     }
 }
