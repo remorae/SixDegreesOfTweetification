@@ -7,10 +7,10 @@ namespace SixDegrees.Model
         public string Name { get; }
         public string Type { get; }
         public string Country { get; }
-        public HashSet<string> Hashtags { get; } = new HashSet<string>();
+        public ISet<string> Hashtags { get; } = new HashSet<string>();
         public ICollection<string> Sources { get; } = new List<string>();
 
-        public PlaceResult(string name, PlaceType type, string country)
+        internal PlaceResult(string name, PlaceType type, string country)
         {
             Name = name;
             Type = type.ToString();
