@@ -8,13 +8,13 @@ using System.Collections.Generic;
 namespace SixDegrees.Controllers
 {
     [Route("api/[controller]")]
-    class RateLimitController : Controller
+    public class RateLimitController : Controller
     {
         private static readonly TimeSpan MaxRateLimitAge = new TimeSpan(0, 5, 0);
 
         private IConfiguration Configuration { get; }
 
-        internal RateLimitController(IConfiguration configuration)
+        public RateLimitController(IConfiguration configuration)
         {
             Configuration = configuration;
         }
