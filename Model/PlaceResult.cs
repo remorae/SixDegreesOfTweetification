@@ -2,15 +2,15 @@
 
 namespace SixDegrees.Model
 {
-    public class PlaceResult
+    class PlaceResult
     {
-        public string Name { get; }
-        public string Type { get; }
-        public string Country { get; }
-        public ISet<string> Hashtags { get; } = new HashSet<string>();
-        public ICollection<string> Sources { get; } = new List<string>();
+        internal string Name { get; }
+        internal string Type { get; }
+        internal string Country { get; }
+        internal ISet<string> Hashtags { get; } = new HashSet<string>();
+        internal ICollection<string> Sources { get; } = new List<string>();
 
-        public PlaceResult(string name, PlaceType type, string country)
+        internal PlaceResult(string name, PlaceType type, string country)
         {
             Name = name;
             Type = type.ToString();

@@ -1,6 +1,6 @@
 ﻿namespace SixDegrees.Model
 {
-    public enum AuthenticationType
+    enum AuthenticationType
     {
         Application,
         User

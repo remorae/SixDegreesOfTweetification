@@ -11,11 +11,11 @@ using SixDegrees.Model.JSON;
 namespace SixDegrees.Controllers
 {
     [Route("api/search")]
-    public class SearchController : Controller
+    class SearchController : Controller
     {
         private IConfiguration Configuration { get; }
 
-        public SearchController(IConfiguration configuration)
+        internal SearchController(IConfiguration configuration)
         {
             Configuration = configuration;
         }
