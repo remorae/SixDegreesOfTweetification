@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace SixDegrees.Model
 {
@@ -60,6 +61,30 @@ namespace SixDegrees.Model
         public static void AddBearerAuth(IConfiguration config, HttpRequestMessage request)
         {
             request.Headers.Add("Authorization", $"Bearer {config["bearerToken"]}");
+        }
+
+        public static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, Uri uri)
+        {
+            try
+            {
+                using (var client = new HttpClient())
+                {
+                    using (var request = new HttpRequestMessage(HttpMethod.Get, uri))
+                    {
+                        if (authType == AuthenticationType.Application)
+                            AddBearerAuth(config, request);
+                        using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
+                        {
+                            response.EnsureSuccessStatusCode();
+                            return await response.Content.ReadAsStringAsync();
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
     }
 }

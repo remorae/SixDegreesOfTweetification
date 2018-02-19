@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -21,13 +20,13 @@ namespace SixDegrees.Controllers
             Configuration = configuration;
         }
 
-        private async Task<T> GetResults<T>(QueryType type, string query, Func<string, Uri> buildUri, Func<string, QueryType, string> buildQuery) where T : IQueryResults
+        private async Task<T> GetResults<T>(QueryType queryType, string query, AuthenticationType authType, Func<string, Uri> buildUri, Func<string, QueryType, string> buildQuery) where T : IQueryResults
         {
-            string responseBody = await GetResponse(buildUri(buildQuery(query, QueryType.TweetsByHashtag)));
+            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, buildUri(buildQuery(query, queryType)));
             if (responseBody == null)
                 return default(T);
             T results = JsonConvert.DeserializeObject<T>(responseBody);
-            LogQuery(query, type, results);
+            LogQuery(query, queryType, results);
             return results;
         }
 
@@ -43,29 +42,6 @@ namespace SixDegrees.Controllers
             }
         }
 
-        private async Task<string> GetResponse(Uri uri)
-        {
-            try
-            {
-                using (var client = new HttpClient())
-                {
-                    using (var request = new HttpRequestMessage(HttpMethod.Get, uri))
-                    {
-                        TwitterAPIUtils.AddBearerAuth(Configuration, request);
-                        using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
-                        {
-                            response.EnsureSuccessStatusCode();
-                            return await response.Content.ReadAsStringAsync();
-                        }
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
         /// <summary>
         /// Returns a list of tweets containing given hashtags
         /// </summary>
@@ -74,7 +50,7 @@ namespace SixDegrees.Controllers
         [HttpGet("tweets")]
         public async Task<IEnumerable<Status>> Tweets(string query)
         {
-            var results = await GetResults<TweetSearchResults>(QueryType.TweetsByHashtag, query, TwitterAPIUtils.TweetSearchAPIUri, TwitterAPIUtils.HashtagSearchQuery);
+            var results = await GetResults<TweetSearchResults>(QueryType.TweetsByHashtag, query, AuthenticationType.Application, TwitterAPIUtils.TweetSearchAPIUri, TwitterAPIUtils.HashtagSearchQuery);
             if (results == null)
                 return null;
             return results.Statuses;
@@ -88,7 +64,7 @@ namespace SixDegrees.Controllers
         [HttpGet("locations")]
         public async Task<IEnumerable<CountryResult>> Locations(string query)
         {
-            var results = await GetResults<TweetSearchResults>(QueryType.LocationsByHashtag, query, TwitterAPIUtils.TweetSearchAPIUri, TwitterAPIUtils.HashtagSearchQuery);
+            var results = await GetResults<TweetSearchResults>(QueryType.LocationsByHashtag, query, AuthenticationType.Application, TwitterAPIUtils.TweetSearchAPIUri, TwitterAPIUtils.HashtagSearchQuery);
             if (results == null)
                 return null;
             IDictionary<string, Country> countries = new Dictionary<string, Country>();
@@ -137,7 +113,7 @@ namespace SixDegrees.Controllers
         [HttpGet("user")]
         public async Task<UserSearchResults> GetUser(string query)
         {
-            var results = await GetResults<UserSearchResults>(QueryType.UserByScreenName, query, TwitterAPIUtils.UserSearchAPIUri, TwitterAPIUtils.UserSearchQuery);
+            var results = await GetResults<UserSearchResults>(QueryType.UserByScreenName, query, AuthenticationType.Application, TwitterAPIUtils.UserSearchAPIUri, TwitterAPIUtils.UserSearchQuery);
             if (results == null)
                 return null;
             return results;

@@ -47,11 +47,11 @@ namespace SixDegrees.Model
             }
         }
 
-        private DateTime lastUpdated = DateTime.Now;
+        private DateTime? lastUpdated = null;
 
         public int AppAuthRemaining { get; private set; }
         public int UserAuthRemaining { get; private set; }
-        public TimeSpan SinceLastUpdate => DateTime.Now - lastUpdated;
+        public TimeSpan SinceLastUpdate => (lastUpdated.HasValue) ? DateTime.Now - lastUpdated.Value : TimeSpan.MaxValue;
 
         public RateLimitInfo(QueryType type)
         {
