@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -14,15 +13,6 @@ namespace SixDegrees.Controllers
     [Route("api/search")]
     public class SearchController : Controller
     {
-        private const int TWEET_COUNT = 100;
-        private const string TWEET_MODE = "extended";
-        private const bool INCLUDE_ENTITIES = true;
-        private const string CONTENT_TYPE = "application/x-www-form-urlencoded";
-
-        //@TODO Store the last query / max_id separately based on endpoint
-        private static string lastQuery = "";
-        private static string lastMaxID = "";
-
         private IConfiguration Configuration { get; }
 
         public SearchController(IConfiguration configuration)
@@ -30,23 +20,53 @@ namespace SixDegrees.Controllers
             Configuration = configuration;
         }
 
+        private async Task<T> GetResults<T>(QueryType queryType, string query, AuthenticationType authType, Func<string, Uri> buildUri, Func<string, QueryType, string> buildQuery) where T : IQueryResults
+        {
+            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, buildUri(buildQuery(query, queryType)));
+            if (responseBody == null)
+                return default(T);
+            T results = JsonConvert.DeserializeObject<T>(responseBody);
+            LogQuery(query, queryType, results);
+            return results;
+        }
+
+        private void LogQuery(string query, QueryType type, IQueryResults results)
+        {
+            QueryHistory.Get[type].LastQuery = query;
+            if (QueryInfo.UsesMaxID(type))
+            {
+                TweetSearchResults statusResults = results as TweetSearchResults;
+                // Exclude lowest ID to prevent duplicate results
+                string lastMaxID = (long.TryParse(statusResults.MinStatusID, out long result)) ? (result - 1).ToString() : "";
+                QueryHistory.Get[type].LastQuery = lastMaxID;
+            }
+        }
+
+        /// <summary>
+        /// Returns a list of tweets containing given hashtags
+        /// </summary>
+        /// <param name="query">The hashtags to search for, separated by spaces</param>
+        /// <returns></returns>
         [HttpGet("tweets")]
         public async Task<IEnumerable<Status>> Tweets(string query)
         {
-            string responseBody = await GetSearchResults(TweetSearchAPIUri(query));
-            if (responseBody == null)
+            var results = await GetResults<TweetSearchResults>(QueryType.TweetsByHashtag, query, AuthenticationType.Application, TwitterAPIUtils.TweetSearchAPIUri, TwitterAPIUtils.HashtagSearchQuery);
+            if (results == null)
                 return null;
-            TweetSearch results = DeserializeResults(responseBody);
             return results.Statuses;
         }
 
+        /// <summary>
+        /// Returns a list of locations from tweets containing given hashtags
+        /// </summary>
+        /// <param name="query">The hashtags to search for, separated by spaces</param>
+        /// <returns></returns>
         [HttpGet("locations")]
         public async Task<IEnumerable<CountryResult>> Locations(string query)
         {
-            string responseBody = await GetSearchResults(TweetSearchAPIUri(query));
-            if (responseBody == null)
+            var results = await GetResults<TweetSearchResults>(QueryType.LocationsByHashtag, query, AuthenticationType.Application, TwitterAPIUtils.TweetSearchAPIUri, TwitterAPIUtils.HashtagSearchQuery);
+            if (results == null)
                 return null;
-            TweetSearch results = DeserializeResults(responseBody);
             IDictionary<string, Country> countries = new Dictionary<string, Country>();
             foreach (Status status in results.Statuses)
             {
@@ -85,58 +105,34 @@ namespace SixDegrees.Controllers
             return countries.Select(country => new CountryResult(country.Name, country.Places.Values));
         }
 
-        private Uri TweetSearchAPIUri(string query)
+        /// <summary>
+        /// Returns information about a specified Twitter user
+        /// </summary>
+        /// <param name="query">The user screen name to search for</param>
+        /// <returns></returns>
+        [HttpGet("user")]
+        public async Task<UserResult> GetUser(string screen_name)
         {
-            UriBuilder bob = new UriBuilder("https://api.twitter.com/1.1/search/tweets.json")
-            {
-                Query = StandardHashtagSearchQuery(query)
-            };
-            lastQuery = query;
-            return bob.Uri;
-        }
-
-        private string StandardHashtagSearchQuery(string query)
-        {
-            string result = $"q=%23{query}&count={TWEET_COUNT}&tweet_mode={TWEET_MODE}&include_entities={INCLUDE_ENTITIES}";
-            if (query == lastQuery && lastMaxID != "")
-                result += $"&max_id={lastMaxID}";
-            return result;
-        }
-
-        private async Task<string> GetSearchResults(Uri uri)
-        {
-            try
-            {
-                using (var client = new HttpClient())
-                {
-                    using (var request = new HttpRequestMessage(HttpMethod.Get, uri))
-                    {
-                        AddBearerAuth(request);
-                        using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
-                        {
-                            response.EnsureSuccessStatusCode();
-                            return await response.Content.ReadAsStringAsync();
-                        }
-                    }
-                }
-            }
-            catch (Exception)
-            {
+            var results = await GetResults<UserSearchResults>(QueryType.UserByScreenName, screen_name, AuthenticationType.Application, TwitterAPIUtils.UserSearchAPIUri, TwitterAPIUtils.UserSearchQuery);
+            if (results == null)
                 return null;
-            }
-        }
-
-        private void AddBearerAuth(HttpRequestMessage request)
-        {
-            request.Headers.Add("Authorization", $"Bearer {Configuration["bearerToken"]}");
-        }
-
-        private TweetSearch DeserializeResults(string responseBody)
-        {
-            TweetSearch results = JsonConvert.DeserializeObject<TweetSearch>(responseBody);
-            if (results.Statuses.Count > 0)
-                lastMaxID = (long.Parse(results.Statuses.Min(status => status.IdStr)) - 1).ToString();
-            return results;
+            return new UserResult()
+            {
+                CreatedAt = results.CreatedAt,
+                Description = results.Description,
+                FollowerCount = results.FollowersCount,
+                FriendCount = results.FriendsCount,
+                GeoEnabled = results.GeoEnabled,
+                ID = results.IdStr,
+                Lang = results.Lang,
+                Location = results.Location,
+                Name = results.Name,
+                ProfileImage = results.ProfileImageUrlHttps,
+                ScreenName = results.ScreenName,
+                StatusCount = results.StatusesCount,
+                TimeZone = results.TimeZone,
+                Verified = results.Verified
+            };
         }
     }
 }
