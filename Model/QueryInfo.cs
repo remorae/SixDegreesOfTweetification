@@ -19,9 +19,11 @@
 
         public string LastQuery { get; set; } = "";
         public string LastMaxID { get; set; } = "";
+        public RateLimitInfo RateLimitInfo { get; }
 
         public QueryInfo(QueryType type)
         {
+            RateLimitInfo = new RateLimitInfo(type);
         }
     }
 }
