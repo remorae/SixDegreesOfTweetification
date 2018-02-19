@@ -2,8 +2,8 @@
 {
     using Newtonsoft.Json;
 
-    public partial class UserSearchResults
+    public partial class UserSearchResults : IQueryResults
     {
-        public static UserSearchResults FromJson(string json) => JsonConvert.DeserializeObject<UserSearchResults>(json, SixDegrees.Model.JSON.Converter.Settings);
+        public static UserSearchResults FromJson(string json) => JsonConvert.DeserializeObject<UserSearchResults>(json, Converter.Settings);
     }
 }

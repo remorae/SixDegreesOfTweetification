@@ -1,8 +1,13 @@
-﻿namespace SixDegrees.Model
+﻿using SixDegrees.Model.JSON;
+using System;
+
+namespace SixDegrees.Model
 {
-    public enum RepeatQueryType
+    public enum QueryType
     {
         TweetsByHashtag,
-        LocationsByHashtag
+        LocationsByHashtag,
+        UserByScreenName,
+        UserConnectionsByScreenName
     }
 }
