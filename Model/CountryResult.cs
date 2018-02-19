@@ -2,7 +2,7 @@
 
 namespace SixDegrees.Model
 {
-    class CountryResult
+    public class CountryResult
     {
         internal string Name { get; }
         internal IEnumerable<PlaceResult> Places { get; }
