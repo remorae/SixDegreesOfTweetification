@@ -2,11 +2,11 @@
 
 namespace SixDegrees.Model
 {
-    public class QueryHistory
+    class QueryHistory
     {
         private static QueryHistory instance;
 
-        public static QueryHistory Get
+        internal static QueryHistory Get
         {
             get
             {
@@ -18,13 +18,28 @@ namespace SixDegrees.Model
 
         private IDictionary<QueryType, QueryInfo> history = new Dictionary<QueryType, QueryInfo>();
 
-        public QueryInfo this[QueryType key]
+        private QueryHistory()
+        {
+        }
+
+        internal QueryInfo this[QueryType key]
         {
             get
             {
                 if (!history.ContainsKey(key))
                     history.Add(key, new QueryInfo(key));
                 return history[key];
+            }
+        }
+
+        internal IDictionary<QueryType, IDictionary<AuthenticationType, int>> RateLimits
+        {
+            get
+            {
+                var result = new Dictionary<QueryType, IDictionary<AuthenticationType, int>>();
+                foreach (var queryPair in history)
+                    result.Add(queryPair.Key, queryPair.Value.RateLimitInfo.ToDictionary());
+                return result;
             }
         }
     }
