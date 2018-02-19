@@ -10,7 +10,7 @@ os:
   - osx
 osx_image: xcode7.1
 before_install:
-  - if test "$TRAVIS_OS_NAME" == "osx"; then brew update;
+  - if test "$TRAVIS_OS_NAME" == "osx"; then brew update
 script:
  - dotnet restore
  - dotnet build
