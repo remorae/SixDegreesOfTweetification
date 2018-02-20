@@ -14,4 +14,10 @@ before_install:
 script:
  - dotnet restore
  - dotnet build
- 
+branches:
+  only:
+    - master
+notifications:
+  email:
+    on-success: change
+    on-failure: always  
