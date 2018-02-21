@@ -18,28 +18,22 @@ namespace SixDegrees.Model
             }
         }
 
-        internal RateLimitInfo this[TwitterAPIEndpoint type]
-        {
-            get
-            {
-                if (!cache.ContainsKey(type))
-                    cache.Add(type, new RateLimitInfo(type));
-                return cache[type];
-            }
-        }
+        internal RateLimitInfo this[TwitterAPIEndpoint type] => cache[type];
 
         private IDictionary<TwitterAPIEndpoint, RateLimitInfo> cache;
 
         private RateLimitCache()
         {
             cache = new Dictionary<TwitterAPIEndpoint, RateLimitInfo>();
-            foreach (var endpoint in Enum.GetValues(typeof(TwitterAPIEndpoint)).Cast<TwitterAPIEndpoint>()
-                    .Where(endpoint => endpoint != TwitterAPIEndpoint.RateLimitStatus))
+            foreach (var endpoint in Enum.GetValues(typeof(TwitterAPIEndpoint)).Cast<TwitterAPIEndpoint>())
                 cache.Add(endpoint, new RateLimitInfo(endpoint));
         }
 
         internal IDictionary<QueryType, IDictionary<AuthenticationType, int>> CurrentRateLimits
-            => Enum.GetValues(typeof(QueryType)).Cast<QueryType>().ToDictionary(type => type, type => MinimumRateLimits(type));
+            => Enum.GetValues(typeof(QueryType)).Cast<QueryType>()
+            .ToDictionary(type => type, type => MinimumRateLimits(type));
+
+        internal bool HasEndpoint(QueryType type) => Endpoints(type).Count() > 0;
 
         internal void Reset(QueryType type)
         {
@@ -47,39 +41,34 @@ namespace SixDegrees.Model
                 cache[endpoint].Reset();
         }
 
-        internal TimeSpan? UntilReset(QueryType type) => Endpoints(type)?.Max(endpoint => cache[endpoint].UntilReset) ?? null;
+        internal TimeSpan? UntilReset(QueryType type) => Endpoints(type).Max(endpoint => cache[endpoint.Value].UntilReset as TimeSpan?) ?? null;
 
-        internal TimeSpan? SinceLastUpdate(QueryType type) => Endpoints(type)?.Max(endpoint => cache[endpoint].SinceLastUpdate) ?? null;
+        internal TimeSpan? SinceLastUpdate(QueryType type) => Endpoints(type).Max(endpoint => cache[endpoint.Value].SinceLastUpdate as TimeSpan?) ?? null;
 
         internal IDictionary<AuthenticationType, int> MinimumRateLimits(QueryType type)
-            => new Dictionary<AuthenticationType, int>(
-                Enum.GetValues(typeof(AuthenticationType)).Cast<AuthenticationType>()
-                .ToDictionary(authType => authType, authType => Endpoints(type)?.Min(endpoint => cache[endpoint][authType]) ?? -1)
-            );
+            => Enum.GetValues(typeof(AuthenticationType)).Cast<AuthenticationType>()
+            .ToDictionary(authType => authType, authType => Endpoints(type).Min(endpoint => cache[endpoint.Value][authType] as int?) ?? -1);
 
         internal static IDictionary<AuthenticationType, int> BadRateLimit()
-            => new Dictionary<AuthenticationType, int>()
-            {
-                { AuthenticationType.Application, -1 },
-                { AuthenticationType.User, -1 }
-            };
+            => Enum.GetValues(typeof(AuthenticationType)).Cast<AuthenticationType>()
+            .ToDictionary(authType => authType, authType => -1);
 
-        private IEnumerable<TwitterAPIEndpoint> Endpoints(QueryType type)
+        private IEnumerable<TwitterAPIEndpoint?> Endpoints(QueryType type)
         {
             switch (type)
             {
                 case QueryType.TweetsByHashtag:
                 case QueryType.LocationsByHashtag:
                     yield return TwitterAPIEndpoint.SearchTweets;
-                    break;
+                    yield break;
                 case QueryType.UserByScreenName:
                     yield return TwitterAPIEndpoint.UserShow;
-                    break;
+                    yield break;
                 case QueryType.UserConnectionsByScreenName:
                     yield return TwitterAPIEndpoint.UserLookup;
-                    break;
+                    yield break;
                 default:
-                    break;
+                    yield break;
             }
         }
     }

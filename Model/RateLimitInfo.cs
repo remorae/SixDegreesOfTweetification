@@ -12,8 +12,8 @@ namespace SixDegrees.Model
             { TwitterAPIEndpoint.SearchTweets,
                 new Dictionary<AuthenticationType, int>()
                 {
-                    { AuthenticationType.Application, 180 },
-                    { AuthenticationType.User, 450 }
+                    { AuthenticationType.Application, 450 },
+                    { AuthenticationType.User, 180 }
                 }
             },
             { TwitterAPIEndpoint.UserShow,
@@ -26,43 +26,27 @@ namespace SixDegrees.Model
             { TwitterAPIEndpoint.UserLookup,
                 new Dictionary<AuthenticationType, int>()
                 {
-                    { AuthenticationType.Application, 900 },
+                    { AuthenticationType.Application, 300 },
                     { AuthenticationType.User, 900 }
+                }
+            },
+            { TwitterAPIEndpoint.RateLimitStatus,
+                new Dictionary<AuthenticationType, int>()
+                {
+                    { AuthenticationType.Application, 180 },
+                    { AuthenticationType.User, 180 }
                 }
             }
         };
-        
-        internal static bool SupportsAppAuth(TwitterAPIEndpoint type)
-        {
-            switch (type)
-            {
-                default:
-                    return true;
-            }
-        }
 
-        internal static bool SupportsUserAuth(TwitterAPIEndpoint type)
-        {
-            switch (type)
-            {
-                default:
-                    return false;
-            }
-        }
+        internal static bool SupportsAppAuth(TwitterAPIEndpoint type) => AuthLimits[type][AuthenticationType.Application] > 0;
+        internal static bool SupportsUserAuth(TwitterAPIEndpoint type) => AuthLimits[type][AuthenticationType.User] > 0;
 
         private readonly TwitterAPIEndpoint type;
         private DateTime lastUpdated = DateTime.Now;
         private IDictionary<AuthenticationType, int> currentLimits = new Dictionary<AuthenticationType, int>();
 
-        internal int this[AuthenticationType type]
-        {
-            get
-            {
-                if (!currentLimits.ContainsKey(type))
-                    currentLimits.Add(type, AuthLimits[this.type][type]);
-                return currentLimits[type];
-            }
-        }
+        internal int this[AuthenticationType type] => currentLimits[type];
 
         internal TimeSpan SinceLastUpdate => DateTime.Now - lastUpdated;
         internal TimeSpan UntilReset { get; private set; } = new TimeSpan(0, 15, 0);
@@ -70,14 +54,14 @@ namespace SixDegrees.Model
         internal RateLimitInfo(TwitterAPIEndpoint type)
         {
             this.type = type;
-            currentLimits.Add(AuthenticationType.Application, AuthLimits[type][AuthenticationType.Application]);
-            currentLimits.Add(AuthenticationType.User, AuthLimits[type][AuthenticationType.User]);
+            foreach (AuthenticationType authType in Enum.GetValues(typeof(AuthenticationType)))
+                currentLimits.Add(authType, AuthLimits[type][authType]);
         }
 
         internal void Reset()
         {
-            currentLimits[AuthenticationType.Application] = AuthLimits[type][AuthenticationType.Application];
-            currentLimits[AuthenticationType.User] = AuthLimits[type][AuthenticationType.User];
+            foreach (AuthenticationType authType in Enum.GetValues(typeof(AuthenticationType)))
+                currentLimits[authType] = AuthLimits[type][authType];
         }
 
         internal void Update(int appAuthRemaining, int userAuthRemaining)
@@ -91,6 +75,7 @@ namespace SixDegrees.Model
         {
             currentLimits[authType] = remaining;
             lastUpdated = DateTime.Now;
+            UntilReset = untilReset;
         }
     }
 }

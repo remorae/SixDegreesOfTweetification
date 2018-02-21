@@ -20,19 +20,17 @@ namespace SixDegrees.Controllers
         }
 
         [HttpGet("all")]
-        public IDictionary<QueryType, IDictionary<AuthenticationType, int>> GetAllRateLimits()
-        {
-            return RateLimitCache.Get.CurrentRateLimits;
-        }
+        public IDictionary<QueryType, IDictionary<AuthenticationType, int>> GetAllRateLimits() => RateLimitCache.Get.CurrentRateLimits;
 
         [HttpGet("status")]
         public IDictionary<AuthenticationType, int> GetRateLimitStatus(string endpoint, string forceUpdate)
         {
             if (Enum.TryParse(endpoint, out QueryType type))
             {
-                if (RateLimitCache.Get.SinceLastUpdate(type) > RateLimitCache.Get.UntilReset(type))
+                TimeSpan? timeSinceLastUpdate = RateLimitCache.Get.SinceLastUpdate(type);
+                if (timeSinceLastUpdate > RateLimitCache.Get.UntilReset(type))
                     RateLimitCache.Get.Reset(type);
-                else if (forceUpdate?.ToLower() == "true" || RateLimitCache.Get.SinceLastUpdate(type) > MaxRateLimitAge)
+                else if (forceUpdate?.ToLower() == "true" || timeSinceLastUpdate > MaxRateLimitAge)
                     GetUpdatedLimits();
                 return RateLimitCache.Get.MinimumRateLimits(type);
             }
