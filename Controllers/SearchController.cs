@@ -54,10 +54,6 @@ namespace SixDegrees.Controllers
 
         private async Task<T> GetResults<T>(QueryType queryType, string query, AuthenticationType authType, Func<string, QueryType, string> buildQuery, TwitterAPIEndpoint endpoint) where T : IQueryResults
         {
-            RateLimitInfo endpointStatus = RateLimitCache.Get[endpoint];
-            if (!endpointStatus.Available)
-                return default(T);
-            endpointStatus.ResetIfNeeded();
             string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, endpoint, buildQuery(query, queryType));
             if (responseBody == null)
                 return default(T);

@@ -56,6 +56,10 @@ namespace SixDegrees.Model
 
         internal static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, TwitterAPIEndpoint endpoint, string query)
         {
+            RateLimitInfo endpointStatus = RateLimitCache.Get[endpoint];
+            if (!endpointStatus.Available)
+                return null;
+            endpointStatus.ResetIfNeeded();
             try
             {
                 using (var client = new HttpClient())
