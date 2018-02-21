@@ -13,11 +13,8 @@ namespace SixDegrees.Model
         private const string TweetMode = "extended";
         private const bool IncludeEntities = true;
         private const string ContentType = "application/x-www-form-urlencoded";
-        
-        internal static Uri GetUri(TwitterAPIEndpoint endpoint, string query)
-        {
-            return new UriBuilder(GetUriString(endpoint)) { Query = query }.Uri;
-        }
+
+        internal static Uri GetUri(TwitterAPIEndpoint endpoint, string query) => new UriBuilder(GetUriString(endpoint)) { Query = query }.Uri;
 
         private static string GetUriString(TwitterAPIEndpoint endpoint)
         {
