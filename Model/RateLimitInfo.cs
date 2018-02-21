@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace SixDegrees.Model
 {
-    public class RateLimitInfo
+    class RateLimitInfo
     {
         //TODO: Get and store limits by Twitter API endpoint to support multiple-endpoint operations
-        public static bool SupportsAppAuth(QueryType type)
+        internal static bool SupportsAppAuth(QueryType type)
         {
             switch (type)
             {
@@ -14,7 +15,7 @@ namespace SixDegrees.Model
             }
         }
 
-        public static bool SupportsUserAuth(QueryType type)
+        internal static bool SupportsUserAuth(QueryType type)
         {
             switch (type)
             {
@@ -23,7 +24,7 @@ namespace SixDegrees.Model
             }
         }
 
-        public static (int User, int Application) AuthLimits(QueryType type)
+        internal static (int User, int Application) AuthLimits(QueryType type)
         {
             switch (type)
             {
@@ -39,23 +40,49 @@ namespace SixDegrees.Model
             }
         }
 
+        private readonly QueryType type;
         private DateTime lastUpdated = DateTime.Now;
+        private int appAuthRemaining;
+        private int userAuthRemaining;
 
-        public int AppAuthRemaining { get; private set; }
-        public int UserAuthRemaining { get; private set; }
-        public TimeSpan SinceLastUpdate => DateTime.Now - lastUpdated;
+        internal TimeSpan SinceLastUpdate => DateTime.Now - lastUpdated;
+        internal TimeSpan UntilReset { get; private set; } = new TimeSpan(0, 15, 0);
 
-        public RateLimitInfo(QueryType type)
+        internal RateLimitInfo(QueryType type)
         {
-            AppAuthRemaining = AuthLimits(type).Application;
-            UserAuthRemaining = AuthLimits(type).User;
+            this.type = type;
+            Reset();
         }
 
-        public void Update(int appAuthRemaining, int userAuthRemaining)
+        internal void Reset()
         {
-            AppAuthRemaining = appAuthRemaining;
-            UserAuthRemaining = userAuthRemaining;
+            appAuthRemaining = AuthLimits(type).Application;
+            userAuthRemaining = AuthLimits(type).User;
+        }
+
+        internal void Update(int appAuthRemaining, int userAuthRemaining)
+        {
+            this.appAuthRemaining = appAuthRemaining;
+            this.userAuthRemaining = userAuthRemaining;
             lastUpdated = DateTime.Now;
+        }
+
+        internal void Update(AuthenticationType authType, int remaining, TimeSpan untilReset)
+        {
+            if (authType == AuthenticationType.Application)
+                appAuthRemaining = remaining;
+            else
+                userAuthRemaining = remaining;
+            lastUpdated = DateTime.Now;
+        }
+
+        internal IDictionary<AuthenticationType, int> ToDictionary()
+        {
+            return new Dictionary<AuthenticationType, int>()
+            {
+                { AuthenticationType.Application, appAuthRemaining },
+                { AuthenticationType.User, userAuthRemaining }
+            };
         }
     }
 }

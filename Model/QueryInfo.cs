@@ -1,8 +1,8 @@
 ﻿namespace SixDegrees.Model
 {
-    public class QueryInfo
+    class QueryInfo
     {
-        public static bool UsesMaxID(QueryType type)
+        internal static bool UsesMaxID(QueryType type)
         {
             switch (type)
             {
@@ -17,11 +17,11 @@
             }
         }
 
-        public string LastQuery { get; set; } = "";
-        public string LastMaxID { get; set; } = "";
-        public RateLimitInfo RateLimitInfo { get; }
+        internal string LastQuery { get; set; } = "";
+        internal string LastMaxID { get; set; } = "";
+        internal RateLimitInfo RateLimitInfo { get; }
 
-        public QueryInfo(QueryType type)
+        internal QueryInfo(QueryType type)
         {
             RateLimitInfo = new RateLimitInfo(type);
         }
