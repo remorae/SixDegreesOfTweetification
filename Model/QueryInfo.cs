@@ -19,11 +19,5 @@
 
         internal string LastQuery { get; set; } = "";
         internal string LastMaxID { get; set; } = "";
-        internal RateLimitInfo RateLimitInfo { get; }
-
-        internal QueryInfo(QueryType type)
-        {
-            RateLimitInfo = new RateLimitInfo(type);
-        }
     }
 }
