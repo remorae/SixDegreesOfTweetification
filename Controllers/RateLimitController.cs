@@ -35,7 +35,7 @@ namespace SixDegrees.Controllers
                 return RateLimitCache.Get.MinimumRateLimits(type);
             }
             else
-                return RateLimitCache.BadRateLimit();
+                return RateLimitCache.BadRateLimit;
         }
 
         private async void GetUpdatedLimits()
