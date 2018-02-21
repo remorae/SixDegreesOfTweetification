@@ -13,6 +13,38 @@ namespace SixDegrees.Controllers
     [Route("api/search")]
     public class SearchController : Controller
     {
+        private static void LogQuery(string query, QueryType type, IQueryResults results)
+        {
+            QueryHistory.Get[type].LastQuery = query;
+            if (QueryInfo.UsesMaxID(type))
+            {
+                TweetSearchResults statusResults = results as TweetSearchResults;
+                // Exclude lowest ID to prevent duplicate results
+                string lastMaxID = (long.TryParse(statusResults.MinStatusID, out long result)) ? (result - 1).ToString() : "";
+                QueryHistory.Get[type].LastQuery = lastMaxID;
+            }
+        }
+
+        private static void UpdateCountriesWithPlace(IDictionary<string, Country> countries, Status status)
+        {
+            string placeName = status.Place.FullName;
+
+            string countryName = status.Place.Country;
+            if (!countries.ContainsKey(countryName))
+                countries[countryName] = new Country(countryName);
+            if (!countries[countryName].Places.ContainsKey(placeName))
+            {
+                PlaceResult toAdd = new PlaceResult(placeName, status.Place.PlaceType.ToPlaceType(), countryName);
+                countries[countryName].Places[placeName] = toAdd;
+            }
+            countries[countryName].Places[placeName].Sources.Add(status.URL);
+            foreach (Hashtag tag in status.Entities.Hashtags)
+            {
+                if (!countries[countryName].Places[placeName].Hashtags.Contains(tag.Text))
+                    countries[countryName].Places[placeName].Hashtags.Add(tag.Text);
+            }
+        }
+
         private IConfiguration Configuration { get; }
 
         public SearchController(IConfiguration configuration)
@@ -28,18 +60,6 @@ namespace SixDegrees.Controllers
             T results = JsonConvert.DeserializeObject<T>(responseBody);
             LogQuery(query, queryType, results);
             return results;
-        }
-
-        private void LogQuery(string query, QueryType type, IQueryResults results)
-        {
-            QueryHistory.Get[type].LastQuery = query;
-            if (QueryInfo.UsesMaxID(type))
-            {
-                TweetSearchResults statusResults = results as TweetSearchResults;
-                // Exclude lowest ID to prevent duplicate results
-                string lastMaxID = (long.TryParse(statusResults.MinStatusID, out long result)) ? (result - 1).ToString() : "";
-                QueryHistory.Get[type].LastQuery = lastMaxID;
-            }
         }
 
         /// <summary>
@@ -78,26 +98,6 @@ namespace SixDegrees.Controllers
                 }
             }
             return GetFormattedCountries(countries.Values);
-        }
-
-        private void UpdateCountriesWithPlace(IDictionary<string, Country> countries, Status status)
-        {
-            string placeName = status.Place.FullName;
-
-            string countryName = status.Place.Country;
-            if (!countries.ContainsKey(countryName))
-                countries[countryName] = new Country(countryName);
-            if (!countries[countryName].Places.ContainsKey(placeName))
-            {
-                PlaceResult toAdd = new PlaceResult(placeName, status.Place.PlaceType.ToPlaceType(), countryName);
-                countries[countryName].Places[placeName] = toAdd;
-            }
-            countries[countryName].Places[placeName].Sources.Add(status.URL);
-            foreach (Hashtag tag in status.Entities.Hashtags)
-            {
-                if (!countries[countryName].Places[placeName].Hashtags.Contains(tag.Text))
-                    countries[countryName].Places[placeName].Hashtags.Add(tag.Text);
-            }
         }
 
         private IEnumerable<CountryResult> GetFormattedCountries(IEnumerable<Country> countries)
