@@ -67,12 +67,11 @@ namespace SixDegrees.Model
                         using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
                         {
                             response.EnsureSuccessStatusCode();
-                            if (endpoint != TwitterAPIEndpoint.RateLimitStatus &&
-                                response.Headers.TryGetValues("x-rate-limit-remaining", out IEnumerable<string> remaining) &&
+                            if (response.Headers.TryGetValues("x-rate-limit-remaining", out IEnumerable<string> remaining) &&
                                 response.Headers.TryGetValues("x-rate-limit-reset", out IEnumerable<string> reset))
                             {
-                                if (int.TryParse(remaining.First(), out int limitRemaining) &&
-                                    double.TryParse(reset.First(), out double secondsUntilReset))
+                                if (int.TryParse(remaining.FirstOrDefault(), out int limitRemaining) &&
+                                    double.TryParse(reset.FirstOrDefault(), out double secondsUntilReset))
                                     RateLimitCache.Get[endpoint].Update(authType, limitRemaining, TimeSpan.FromSeconds(secondsUntilReset));
                             }
                             return await response.Content.ReadAsStringAsync();
