@@ -59,7 +59,7 @@ namespace SixDegrees.Model
         internal void Reset(QueryType type)
         {
             foreach (TwitterAPIEndpoint endpoint in Endpoints(type))
-                cache[endpoint].Reset();
+                cache[endpoint].ResetIfNeeded();
         }
 
         internal TimeSpan? UntilReset(QueryType type) => Endpoints(type).Max(endpoint => cache[endpoint.Value].UntilReset as TimeSpan?) ?? null;

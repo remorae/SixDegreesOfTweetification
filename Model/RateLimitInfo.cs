@@ -48,8 +48,10 @@ namespace SixDegrees.Model
 
         internal int this[AuthenticationType type] => currentLimits[type];
 
+        internal bool NeedsReset => SinceLastUpdate > UntilReset;
         internal TimeSpan SinceLastUpdate => DateTime.Now - lastUpdated;
         internal TimeSpan UntilReset { get; private set; } = new TimeSpan(0, 15, 0);
+        internal bool Available => NeedsReset || Enum.GetValues(typeof(AuthenticationType)).Cast<AuthenticationType>().Any(authType => currentLimits[authType] > 0);
 
         internal RateLimitInfo(TwitterAPIEndpoint type)
         {
@@ -62,6 +64,12 @@ namespace SixDegrees.Model
         {
             foreach (AuthenticationType authType in Enum.GetValues(typeof(AuthenticationType)))
                 currentLimits[authType] = AuthLimits[type][authType];
+        }
+
+        internal void ResetIfNeeded()
+        {
+            if (NeedsReset)
+                Reset();
         }
 
         internal void Update(int appAuthRemaining, int userAuthRemaining)

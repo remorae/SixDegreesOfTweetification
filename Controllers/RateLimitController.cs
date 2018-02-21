@@ -30,7 +30,7 @@ namespace SixDegrees.Controllers
                 TimeSpan? timeSinceLastUpdate = RateLimitCache.Get.SinceLastUpdate(type);
                 if (timeSinceLastUpdate > RateLimitCache.Get.UntilReset(type))
                     RateLimitCache.Get.Reset(type);
-                else if (forceUpdate?.ToLower() == "true" || timeSinceLastUpdate > MaxRateLimitAge)
+                else if ((forceUpdate?.ToLower() == "true" || timeSinceLastUpdate > MaxRateLimitAge) && RateLimitCache.Get[TwitterAPIEndpoint.RateLimitStatus].Available)
                     GetUpdatedLimits();
                 return RateLimitCache.Get.MinimumRateLimits(type);
             }
@@ -40,6 +40,7 @@ namespace SixDegrees.Controllers
 
         private async void GetUpdatedLimits()
         {
+            RateLimitCache.Get[TwitterAPIEndpoint.RateLimitStatus].ResetIfNeeded();
             string responseBody = await TwitterAPIUtils.GetResponse(Configuration, AuthenticationType.Application, TwitterAPIEndpoint.RateLimitStatus, TwitterAPIUtils.RateLimitStatusQuery(new string[] {"users", "search"}));
             if (responseBody == null)
                 return;
