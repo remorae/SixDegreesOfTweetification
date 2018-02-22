@@ -52,9 +52,9 @@ namespace SixDegrees.Controllers
             Configuration = configuration;
         }
 
-        private async Task<T> GetResults<T>(QueryType queryType, string query, AuthenticationType authType, Func<string, QueryType, string> buildQuery, TwitterAPIEndpoint endpoint) where T : IQueryResults
+        private async Task<T> GetResults<T>(QueryType queryType, string query, AuthenticationType authType, Func<string, QueryType, string> buildQuery, TwitterAPIEndpoint endpoint, string token) where T : IQueryResults
         {
-            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, endpoint, buildQuery(query, queryType));
+            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, endpoint, buildQuery(query, queryType), token);
             if (responseBody == null)
                 return default(T);
             T results = JsonConvert.DeserializeObject<T>(responseBody);
@@ -70,7 +70,8 @@ namespace SixDegrees.Controllers
         [HttpGet("tweets")]
         public async Task<IEnumerable<Status>> Tweets(string query)
         {
-            var results = await GetResults<TweetSearchResults>(QueryType.TweetsByHashtag, query, AuthenticationType.Application, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets);
+            //TODO Use user token
+            var results = await GetResults<TweetSearchResults>(QueryType.TweetsByHashtag, query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
             if (results == null)
                 return null;
             return results.Statuses;
@@ -84,9 +85,10 @@ namespace SixDegrees.Controllers
         [HttpGet("locations")]
         public async Task<IEnumerable<CountryResult>> Locations(string query)
         {
-            var results = await GetResults<TweetSearchResults>(QueryType.LocationsByHashtag, query, AuthenticationType.Application, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets);
+            //TODO Use user token
+            var results = await GetResults<TweetSearchResults>(QueryType.LocationsByHashtag, query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
             if (results == null)
-                return null;
+                return Enumerable.Empty<CountryResult>();
             IDictionary<string, Country> countries = new Dictionary<string, Country>();
             foreach (Status status in results.Statuses)
             {
@@ -113,7 +115,8 @@ namespace SixDegrees.Controllers
         [HttpGet("user")]
         public async Task<UserResult> GetUser(string screen_name)
         {
-            var results = await GetResults<UserSearchResults>(QueryType.UserByScreenName, screen_name, AuthenticationType.Application, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UserShow);
+            //TODO Use user token
+            var results = await GetResults<UserSearchResults>(QueryType.UserByScreenName, screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UserShow, null);
             if (results == null)
                 return null;
             return new UserResult()
