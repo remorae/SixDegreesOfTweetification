@@ -3,12 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs/Observable';
 import { Country } from '../models';
 import { Subject } from 'rxjs/Subject';
+import 'rxjs/add/operator/finally';
 
 export enum QueryType {
-    'TweetsByHashtag',
-    'LocationsByHashtag',
-    'UserByScreenName',
-    'UserConnectionsByScreenName'
+    TweetsByHashtag = 'TweetsByHashtag',
+    LocationsByHashtag = 'LocationsByHashtag',
+    UserByScreenName = 'UserByScreenName',
+    UserConnectionsByScreenName = 'UserConnectionsByScreenName'
 }
 export class AuthPair {
     Application: number;
@@ -27,7 +28,7 @@ export class EndpointService {
     private hitBackend: Subject<any> = new Subject<any>();
     pushLatest = () => {
         this.hitBackend.next();
-    };
+    }
 
     constructor(private http: HttpClient, @Inject('BASE_URL') baseUrl: string) {
         this.baseUrl = baseUrl;
@@ -43,7 +44,7 @@ export class EndpointService {
         // TODO: Change type to properly match final Endpoint Version
         return this.http
             .get<any[]>(this.baseUrl + 'api/search/tweets?query=' + hashtag)
-            .do(this.pushLatest);
+            .finally(this.pushLatest);
     }
 
     public searchLocations(hashtag: string): Observable<Country[]> {
@@ -51,7 +52,7 @@ export class EndpointService {
             .get<Country[]>(
                 this.baseUrl + 'api/search/locations?query=' + hashtag
             )
-            .do(this.pushLatest);
+            .finally(this.pushLatest);
     }
 
     public getSelectedRateLimit(type: QueryType) {
