@@ -5,6 +5,7 @@
         SearchTweets,
         UserShow,
         UserLookup,
-        RateLimitStatus
+        RateLimitStatus,
+        OAuthAuthorize
     }
 }
