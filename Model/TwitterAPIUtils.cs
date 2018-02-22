@@ -29,6 +29,10 @@ namespace SixDegrees.Model
                     return "https://api.twitter.com/1.1/users/show.json";
                 case TwitterAPIEndpoint.RateLimitStatus:
                     return "https://api.twitter.com/1.1/application/rate_limit_status.json";
+                case TwitterAPIEndpoint.UserLookup:
+                    return "https://api.twitter.com/1.1/users/lookup.json";
+                case TwitterAPIEndpoint.OAuthAuthorize:
+                    return "https://api.twitter.com/oauth/request_token";
                 default:
                     return "";
             }
