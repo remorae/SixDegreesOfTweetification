@@ -18,7 +18,12 @@ namespace SixDegrees.Model
             }
         }
 
-        internal static readonly IDictionary<AuthenticationType, int> BadRateLimit = Enum.GetValues(typeof(AuthenticationType)).Cast<AuthenticationType>().ToDictionary(authType => authType, authType => -1);
+        internal static readonly IDictionary<AuthenticationType, int> BadRateLimit
+            = new Dictionary<AuthenticationType, int>()
+            {
+                { AuthenticationType.Application, -1 },
+                { AuthenticationType.User, -1 }
+            };
 
         private static IEnumerable<TwitterAPIEndpoint?> Endpoints(QueryType type)
         {
@@ -46,7 +51,7 @@ namespace SixDegrees.Model
         private RateLimitCache()
         {
             cache = new Dictionary<TwitterAPIEndpoint, RateLimitInfo>();
-            foreach (var endpoint in Enum.GetValues(typeof(TwitterAPIEndpoint)).Cast<TwitterAPIEndpoint>())
+            foreach (TwitterAPIEndpoint endpoint in Enum.GetValues(typeof(TwitterAPIEndpoint)))
                 cache.Add(endpoint, new RateLimitInfo(endpoint));
         }
 
@@ -67,7 +72,6 @@ namespace SixDegrees.Model
         internal TimeSpan? SinceLastUpdate(QueryType type) => Endpoints(type).Max(endpoint => cache[endpoint.Value].SinceLastUpdate as TimeSpan?) ?? null;
 
         internal IDictionary<AuthenticationType, int> MinimumRateLimits(QueryType type)
-            => Enum.GetValues(typeof(AuthenticationType)).Cast<AuthenticationType>()
-            .ToDictionary(authType => authType, authType => Endpoints(type).Min(endpoint => cache[endpoint.Value][authType] as int?) ?? -1);
+            => RateLimitInfo.UseableAuthTypes.ToDictionary(authType => authType, authType => Endpoints(type).Min(endpoint => cache[endpoint.Value][authType] as int?) ?? -1);
     }
 }
