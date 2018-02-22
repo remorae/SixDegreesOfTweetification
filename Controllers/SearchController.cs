@@ -13,24 +13,7 @@ namespace SixDegrees.Controllers
     [Route("api/search")]
     public class SearchController : Controller
     {
-        private IConfiguration Configuration { get; }
-
-        public SearchController(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
-
-        private async Task<T> GetResults<T>(QueryType queryType, string query, AuthenticationType authType, Func<string, Uri> buildUri, Func<string, QueryType, string> buildQuery) where T : IQueryResults
-        {
-            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, buildUri(buildQuery(query, queryType)), queryType);
-            if (responseBody == null)
-                return default(T);
-            T results = JsonConvert.DeserializeObject<T>(responseBody);
-            LogQuery(query, queryType, results);
-            return results;
-        }
-
-        private void LogQuery(string query, QueryType type, IQueryResults results)
+        private static void LogQuery(string query, QueryType type, IQueryResults results)
         {
             QueryHistory.Get[type].LastQuery = query;
             if (QueryInfo.UsesMaxID(type))
@@ -42,45 +25,7 @@ namespace SixDegrees.Controllers
             }
         }
 
-        /// <summary>
-        /// Returns a list of tweets containing given hashtags
-        /// </summary>
-        /// <param name="query">The hashtags to search for, separated by spaces</param>
-        /// <returns></returns>
-        [HttpGet("tweets")]
-        public async Task<IEnumerable<Status>> Tweets(string query)
-        {
-            var results = await GetResults<TweetSearchResults>(QueryType.TweetsByHashtag, query, AuthenticationType.Application, TwitterAPIUtils.TweetSearchAPIUri, TwitterAPIUtils.HashtagSearchQuery);
-            if (results == null)
-                return null;
-            return results.Statuses;
-        }
-
-        /// <summary>
-        /// Returns a list of locations from tweets containing given hashtags
-        /// </summary>
-        /// <param name="query">The hashtags to search for, separated by spaces</param>
-        /// <returns></returns>
-        [HttpGet("locations")]
-        public async Task<IEnumerable<CountryResult>> Locations(string query)
-        {
-            var results = await GetResults<TweetSearchResults>(QueryType.LocationsByHashtag, query, AuthenticationType.Application, TwitterAPIUtils.TweetSearchAPIUri, TwitterAPIUtils.HashtagSearchQuery);
-            if (results == null)
-                return null;
-            IDictionary<string, Country> countries = new Dictionary<string, Country>();
-            foreach (Status status in results.Statuses)
-            {
-                if (status.Place != null)
-                    UpdateCountriesWithPlace(countries, status);
-                else if (status.Coordinates != null && status.Coordinates.Type == "Point")
-                {
-                    //TODO - Look up city/country names based on longitude/latitude
-                }
-            }
-            return GetFormattedCountries(countries.Values);
-        }
-
-        private void UpdateCountriesWithPlace(IDictionary<string, Country> countries, Status status)
+        private static void UpdateCountriesWithPlace(IDictionary<string, Country> countries, Status status)
         {
             string placeName = status.Place.FullName;
 
@@ -100,6 +45,61 @@ namespace SixDegrees.Controllers
             }
         }
 
+        private IConfiguration Configuration { get; }
+
+        public SearchController(IConfiguration configuration)
+        {
+            Configuration = configuration;
+        }
+
+        private async Task<T> GetResults<T>(QueryType queryType, string query, AuthenticationType authType, Func<string, QueryType, string> buildQuery, TwitterAPIEndpoint endpoint) where T : IQueryResults
+        {
+            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, endpoint, buildQuery(query, queryType));
+            if (responseBody == null)
+                return default(T);
+            T results = JsonConvert.DeserializeObject<T>(responseBody);
+            LogQuery(query, queryType, results);
+            return results;
+        }
+
+        /// <summary>
+        /// Returns a list of tweets containing given hashtags
+        /// </summary>
+        /// <param name="query">The hashtags to search for, separated by spaces</param>
+        /// <returns></returns>
+        [HttpGet("tweets")]
+        public async Task<IEnumerable<Status>> Tweets(string query)
+        {
+            var results = await GetResults<TweetSearchResults>(QueryType.TweetsByHashtag, query, AuthenticationType.Application, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets);
+            if (results == null)
+                return null;
+            return results.Statuses;
+        }
+
+        /// <summary>
+        /// Returns a list of locations from tweets containing given hashtags
+        /// </summary>
+        /// <param name="query">The hashtags to search for, separated by spaces</param>
+        /// <returns></returns>
+        [HttpGet("locations")]
+        public async Task<IEnumerable<CountryResult>> Locations(string query)
+        {
+            var results = await GetResults<TweetSearchResults>(QueryType.LocationsByHashtag, query, AuthenticationType.Application, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets);
+            if (results == null)
+                return null;
+            IDictionary<string, Country> countries = new Dictionary<string, Country>();
+            foreach (Status status in results.Statuses)
+            {
+                if (status.Place != null)
+                    UpdateCountriesWithPlace(countries, status);
+                else if (status.Coordinates != null && status.Coordinates.Type == "Point")
+                {
+                    //TODO - Look up city/country names based on longitude/latitude
+                }
+            }
+            return GetFormattedCountries(countries.Values);
+        }
+
         private IEnumerable<CountryResult> GetFormattedCountries(IEnumerable<Country> countries)
         {
             return countries.Select(country => new CountryResult(country.Name, country.Places.Values));
@@ -113,7 +113,7 @@ namespace SixDegrees.Controllers
         [HttpGet("user")]
         public async Task<UserResult> GetUser(string screen_name)
         {
-            var results = await GetResults<UserSearchResults>(QueryType.UserByScreenName, screen_name, AuthenticationType.Application, TwitterAPIUtils.UserSearchAPIUri, TwitterAPIUtils.UserSearchQuery);
+            var results = await GetResults<UserSearchResults>(QueryType.UserByScreenName, screen_name, AuthenticationType.Application, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UserShow);
             if (results == null)
                 return null;
             return new UserResult()

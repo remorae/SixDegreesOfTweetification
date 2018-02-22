@@ -22,7 +22,7 @@ namespace SixDegrees.Model
         private QueryHistory()
         {
             foreach (QueryType type in Enum.GetValues(typeof(QueryType)))
-                history.Add(type, new QueryInfo(type));
+                history.Add(type, new QueryInfo());
         }
 
         internal QueryInfo this[QueryType key]
@@ -30,19 +30,8 @@ namespace SixDegrees.Model
             get
             {
                 if (!history.ContainsKey(key))
-                    history.Add(key, new QueryInfo(key));
+                    history.Add(key, new QueryInfo());
                 return history[key];
-            }
-        }
-
-        internal IDictionary<QueryType, IDictionary<AuthenticationType, int>> RateLimits
-        {
-            get
-            {
-                var result = new Dictionary<QueryType, IDictionary<AuthenticationType, int>>();
-                foreach (var queryPair in history)
-                    result.Add(queryPair.Key, queryPair.Value.RateLimitInfo.ToDictionary());
-                return result;
             }
         }
     }
