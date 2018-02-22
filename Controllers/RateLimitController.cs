@@ -20,47 +20,36 @@ namespace SixDegrees.Controllers
         }
 
         [HttpGet("all")]
-        public IDictionary<QueryType, IDictionary<AuthenticationType, int>> GetAllRateLimits()
-        {
-            return QueryHistory.Get.RateLimits;
-        }
+        public IDictionary<QueryType, IDictionary<AuthenticationType, int>> GetAllRateLimits() => RateLimitCache.Get.CurrentRateLimits;
 
         [HttpGet("status")]
         public IDictionary<AuthenticationType, int> GetRateLimitStatus(string endpoint, string forceUpdate)
         {
             if (Enum.TryParse(endpoint, out QueryType type))
             {
-                if (QueryHistory.Get[type].RateLimitInfo.SinceLastUpdate > QueryHistory.Get[type].RateLimitInfo.UntilReset)
-                    QueryHistory.Get[type].RateLimitInfo.Reset();
-                else if (forceUpdate?.ToLower() == "true" || QueryHistory.Get[type].RateLimitInfo.SinceLastUpdate > MaxRateLimitAge)
+                TimeSpan? timeSinceLastUpdate = RateLimitCache.Get.SinceLastUpdate(type);
+                if (timeSinceLastUpdate > RateLimitCache.Get.UntilReset(type))
+                    RateLimitCache.Get.Reset(type);
+                else if ((forceUpdate?.ToLower() == "true" || timeSinceLastUpdate > MaxRateLimitAge) && RateLimitCache.Get[TwitterAPIEndpoint.RateLimitStatus].Available)
                     GetUpdatedLimits();
-                return QueryHistory.Get[type].RateLimitInfo.ToDictionary();
+                return RateLimitCache.Get.MinimumRateLimits(type);
             }
             else
-                return BadRateLimit();
+                return RateLimitCache.BadRateLimit;
         }
 
         private async void GetUpdatedLimits()
         {
-            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, AuthenticationType.Application, TwitterAPIUtils.RateLimitAPIUri(TwitterAPIUtils.RateLimitStatusQuery(new string[] {"users", "search"})));
+            RateLimitCache.Get[TwitterAPIEndpoint.RateLimitStatus].ResetIfNeeded();
+            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, AuthenticationType.Application, TwitterAPIEndpoint.RateLimitStatus, TwitterAPIUtils.RateLimitStatusQuery(new string[] {"users", "search"}));
             if (responseBody == null)
                 return;
             var appResults = RateLimitResults.FromJson(responseBody);
 
             //TODO User authentication
-            QueryHistory.Get[QueryType.TweetsByHashtag].RateLimitInfo.Update((int)appResults.Resources.Search.SearchTweets.Remaining, 0);
-            QueryHistory.Get[QueryType.LocationsByHashtag].RateLimitInfo.Update((int)appResults.Resources.Search.SearchTweets.Remaining, 0);
-            QueryHistory.Get[QueryType.UserByScreenName].RateLimitInfo.Update((int)appResults.Resources.Users["/users/show/:id"].Remaining, 0);
-            QueryHistory.Get[QueryType.UserConnectionsByScreenName].RateLimitInfo.Update((int)appResults.Resources.Users["/users/lookup"].Remaining, 0);
-        }
-
-        private IDictionary<AuthenticationType, int> BadRateLimit()
-        {
-            return new Dictionary<AuthenticationType, int>()
-            {
-                { AuthenticationType.Application, -1 },
-                { AuthenticationType.User, -1 }
-            };
+            RateLimitCache.Get[TwitterAPIEndpoint.SearchTweets].Update((int)appResults.Resources.Search.SearchTweets.Remaining, 0);
+            RateLimitCache.Get[TwitterAPIEndpoint.UserShow].Update((int)appResults.Resources.Users["/users/show/:id"].Remaining, 0);
+            RateLimitCache.Get[TwitterAPIEndpoint.UserLookup].Update((int)appResults.Resources.Users["/users/lookup"].Remaining, 0);
         }
     }
 }

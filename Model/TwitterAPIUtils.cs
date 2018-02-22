@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -13,31 +14,21 @@ namespace SixDegrees.Model
         private const bool IncludeEntities = true;
         private const string ContentType = "application/x-www-form-urlencoded";
 
-        internal static Uri UserSearchAPIUri(string query)
-        {
-            UriBuilder bob = new UriBuilder("https://api.twitter.com/1.1/users/show.json")
-            {
-                Query = query
-            };
-            return bob.Uri;
-        }
+        internal static Uri GetUri(TwitterAPIEndpoint endpoint, string query) => new UriBuilder(GetUriString(endpoint)) { Query = query }.Uri;
 
-        internal static Uri TweetSearchAPIUri(string query)
+        private static string GetUriString(TwitterAPIEndpoint endpoint)
         {
-            UriBuilder bob = new UriBuilder("https://api.twitter.com/1.1/search/tweets.json")
+            switch (endpoint)
             {
-                Query = query
-            };
-            return bob.Uri;
-        }
-
-        internal static Uri RateLimitAPIUri(string query)
-        {
-            UriBuilder bob = new UriBuilder("https://api.twitter.com/1.1/application/rate_limit_status.json")
-            {
-                Query = query
-            };
-            return bob.Uri;
+                case TwitterAPIEndpoint.SearchTweets:
+                    return "https://api.twitter.com/1.1/search/tweets.json";
+                case TwitterAPIEndpoint.UserShow:
+                    return "https://api.twitter.com/1.1/users/show.json";
+                case TwitterAPIEndpoint.RateLimitStatus:
+                    return "https://api.twitter.com/1.1/application/rate_limit_status.json";
+                default:
+                    return "";
+            }
         }
 
         internal static string UserSearchQuery(string screenName, QueryType type)
@@ -63,28 +54,29 @@ namespace SixDegrees.Model
             request.Headers.Add("Authorization", $"Bearer {config["bearerToken"]}");
         }
 
-        internal static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, Uri uri, QueryType? type = null)
+        internal static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, TwitterAPIEndpoint endpoint, string query)
         {
+            RateLimitInfo endpointStatus = RateLimitCache.Get[endpoint];
+            if (!endpointStatus.Available)
+                return null;
+            endpointStatus.ResetIfNeeded();
             try
             {
                 using (var client = new HttpClient())
                 {
-                    using (var request = new HttpRequestMessage(HttpMethod.Get, uri))
+                    using (var request = new HttpRequestMessage(HttpMethod.Get, GetUri(endpoint, query)))
                     {
                         if (authType == AuthenticationType.Application)
                             AddBearerAuth(config, request);
                         using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
                         {
                             response.EnsureSuccessStatusCode();
-                            if (type.HasValue &&
-                                response.Headers.TryGetValues("x-rate-limit-remaining", out IEnumerable<string> remaining) &&
+                            if (response.Headers.TryGetValues("x-rate-limit-remaining", out IEnumerable<string> remaining) &&
                                 response.Headers.TryGetValues("x-rate-limit-reset", out IEnumerable<string> reset))
                             {
-                                IList<string> remainingValues = new List<string>(remaining);
-                                IList<string> resetValues = new List<string>(reset);
-                                if (int.TryParse(remainingValues[0], out int limitRemaining) &&
-                                    double.TryParse(resetValues[0], out double secondsUntilReset))
-                                    QueryHistory.Get[type.Value].RateLimitInfo.Update(authType, limitRemaining, TimeSpan.FromSeconds(secondsUntilReset));
+                                if (int.TryParse(remaining.FirstOrDefault(), out int limitRemaining) &&
+                                    double.TryParse(reset.FirstOrDefault(), out double secondsUntilReset))
+                                    RateLimitCache.Get[endpoint].Update(authType, limitRemaining, TimeSpan.FromSeconds(secondsUntilReset));
                             }
                             return await response.Content.ReadAsStringAsync();
                         }
