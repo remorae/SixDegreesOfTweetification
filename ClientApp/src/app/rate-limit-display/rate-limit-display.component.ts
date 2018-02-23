@@ -20,6 +20,10 @@ export class RateLimitDisplayComponent implements OnInit {
     currentPagesRates: any[];
     constructor(private endpoint: EndpointService, private router: Router) {}
     ngOnInit() {
+        this.endpoint.getAllRateLimits().subscribe(rates => {
+            this.translateRates(rates);
+            this.displayCurrentRates(this.currentComponentName);
+        });
         this.router.events
             .filter(event => event instanceof NavigationEnd)
             .map((event: NavigationEnd) =>
@@ -27,48 +31,37 @@ export class RateLimitDisplayComponent implements OnInit {
             )
             .subscribe((componentName: string) => {
                 this.currentComponentName = componentName;
-                this.requestRelatedRates(componentName);
+                this.displayCurrentRates(componentName);
             });
-
-        this.endpoint.getAllRateLimits().subscribe(rates => {
-            this.translateRates(rates);
-        });
 
         this.endpoint.watchEndPoints().subscribe(() => {
             this.endpoint.getAllRateLimits().subscribe(rates => {
                 this.translateRates(rates);
+                this.displayCurrentRates(this.currentComponentName);
             });
-            this.requestRelatedRates(this.currentComponentName);
         });
     }
 
-    public mapComponentToQueryType(componentName: string): [QueryType] {
+    public mapComponentToQueryType(componentName: string): QueryType[] {
         switch (componentName) {
             case 'geo':
-                return [QueryType.LocationsByHashtag];
+                return [QueryType.LocationsByHashtag]; // TODO: update when adding components
 
             default:
                 return null;
         }
     }
 
-    public requestRelatedRates(componentName: string) {
+    public displayCurrentRates(componentName: string) {
         const types: QueryType[] = this.mapComponentToQueryType(componentName);
 
-        if (types) {
+        if (types && this.allRates) {
             this.currentPagesRates = types.map(type => {
                 const rateName = type.replace(/([A-Z])/g, ' $1').substring(1);
-                this.endpoint
-                    .getSelectedRateLimit(type)
-                    .subscribe((auths: AuthPair) => {
-                        this.currentPagesRates.find(
-                            element => element[rateName]
-                        )[rateName] = auths;
-                    });
-
-                return { [rateName]: 'placeholder' };
+                return { [rateName]: this.allRates[type] };
             });
         } else {
+            this.currentPagesRates = [];
         }
     }
 
