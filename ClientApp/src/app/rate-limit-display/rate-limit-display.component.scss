@@ -3,13 +3,12 @@
 .rate-text {
     color: $white;
     background-color: darken($ewu-grey, 20%);
-    border-radius: .5rem;
-    padding-left: .33rem;
-    padding-right: .33rem;
-
+    border-radius: 0.5rem;
+    padding-left: 0.33rem;
+    padding-right: 0.33rem;
 }
 span {
     display: block;
-    font-size: .60rem;
+    font-size: 0.6rem;
     text-align: center;
 }
