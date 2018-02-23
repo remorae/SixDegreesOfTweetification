@@ -58,7 +58,7 @@ export class RateLimitDisplayComponent implements OnInit {
         if (types && this.allRates) {
             this.currentPagesRates = types.map(type => {
                 const rateName = type.replace(/([A-Z])/g, ' $1').substring(1);
-                return { [rateName]: this.allRates[type] };
+                return { name: rateName, auths : this.allRates[type] };
             });
         } else {
             this.currentPagesRates = [];

@@ -1,6 +1,5 @@
-<div class="navbar-text rate-text">
-{{currentPagesRates | json}}
-   <!-- Rate Limits (App/User): Tweets By Location: 450/180  User Connections By Screen Name: 160/90 -->
+<div  class="navbar-text rate-text" *ngFor="let rate of this.currentPagesRates">
+    <span>{{rate.name}}</span><span> App {{rate.auths.Application}} User {{rate.auths.User}}</span>
 </div>
 
 

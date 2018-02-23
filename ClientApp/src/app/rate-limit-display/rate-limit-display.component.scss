@@ -2,4 +2,14 @@
 
 .rate-text {
     color: $white;
+    background-color: darken($ewu-grey, 20%);
+    border-radius: .5rem;
+    padding-left: .33rem;
+    padding-right: .33rem;
+
+}
+span {
+    display: block;
+    font-size: .60rem;
+    text-align: center;
 }
