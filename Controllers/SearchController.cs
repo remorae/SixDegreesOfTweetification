@@ -21,7 +21,7 @@ namespace SixDegrees.Controllers
                 TweetSearchResults statusResults = results as TweetSearchResults;
                 // Exclude lowest ID to prevent duplicate results
                 string lastMaxID = (long.TryParse(statusResults.MinStatusID, out long result)) ? (result - 1).ToString() : "";
-                QueryHistory.Get[type].LastQuery = lastMaxID;
+                QueryHistory.Get[type].LastMaxID = lastMaxID;
             }
         }
 
