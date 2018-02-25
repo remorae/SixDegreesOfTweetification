@@ -1,0 +1,14 @@
+@import '../../sass/styles.scss';
+
+.rate-text {
+    color: $white;
+    background-color: darken($ewu-grey, 20%);
+    border-radius: 0.5rem;
+    padding-left: 0.3215rem;
+    padding-right: 0.3215rem;
+}
+span {
+    display: block;
+    font-size: 0.625rem;
+    text-align: center;
+}
