@@ -2,16 +2,12 @@
 {
     class QueryInfo
     {
-        internal static bool UsesMaxID(QueryType type)
+        internal static bool UsesMaxID(TwitterAPIEndpoint endpoint)
         {
-            switch (type)
+            switch (endpoint)
             {
-                case QueryType.TweetsByHashtag:
-                case QueryType.LocationsByHashtag:
+                case TwitterAPIEndpoint.SearchTweets:
                     return true;
-                case QueryType.UserByScreenName:
-                case QueryType.UserConnectionsByScreenName:
-                    return false;
                 default:
                     return false;
             }
