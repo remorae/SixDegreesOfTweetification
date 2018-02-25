@@ -9,7 +9,7 @@ import { HomeComponent } from './home/home.component';
 import { CounterComponent } from './counter/counter.component';
 import { FetchDataComponent } from './fetch-data/fetch-data.component';
 import { NavbarComponent } from './navbar/navbar.component';
-import { TabColumnComponent } from './tab-column/tab-column.component';
+import { TileColumnComponent } from './tile-column/tile-column.component';
 import { LoginComponent } from './login/login.component';
 import { AuthenticationService } from './services/authentication.service';
 import { AuthGuard } from './services/auth-guard.service';
@@ -17,6 +17,8 @@ import { GeoPageComponent } from './geo-page/geo-page.component';
 import { DualInputComponent } from './dual-input/dual-input.component';
 import { SingleInputComponent } from './single-input/single-input.component';
 import { EndpointService } from './services/endpoint.service';
+import { SectionTileComponent } from './section-tile/section-tile.component';
+import { SelectGeoFilterComponent } from './select-geo-filter/select-geo-filter.component';
 
 
 const appRoutes: Routes = [
@@ -38,11 +40,13 @@ const appRoutes: Routes = [
         CounterComponent,
         FetchDataComponent,
         NavbarComponent,
-        TabColumnComponent,
+        TileColumnComponent,
         LoginComponent,
         GeoPageComponent,
         DualInputComponent,
-        SingleInputComponent
+        SingleInputComponent,
+        SectionTileComponent,
+        SelectGeoFilterComponent
 
     ],
     imports: [
