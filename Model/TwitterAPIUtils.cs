@@ -66,11 +66,12 @@ namespace SixDegrees.Model
             if (!endpointStatus.Available)
                 return null;
             endpointStatus.ResetIfNeeded();
+            HttpMethod method = HttpMethod(endpoint);
             try
             {
                 using (var client = new HttpClient())
                 {
-                    using (var request = new HttpRequestMessage(HttpMethod.Get, GetUri(endpoint, query)))
+                    using (var request = new HttpRequestMessage(method, GetUri(endpoint, query)))
                     {
                         if (!TryAuthorize(request, config, authType, config["userToken"], endpointStatus, out AuthenticationType? authTypeUsed)) //TODO remove test user token
                             return null;
@@ -92,6 +93,24 @@ namespace SixDegrees.Model
             catch (Exception)
             {
                 return null;
+            }
+        }
+
+        private static HttpMethod HttpMethod(TwitterAPIEndpoint endpoint)
+        {
+            switch (endpoint)
+            {
+                case TwitterAPIEndpoint.SearchTweets:
+                case TwitterAPIEndpoint.UsersShow:
+                case TwitterAPIEndpoint.RateLimitStatus:
+                case TwitterAPIEndpoint.OAuthAuthorize:
+                case TwitterAPIEndpoint.FriendsIDs:
+                case TwitterAPIEndpoint.FollowersIDs:
+                    return System.Net.Http.HttpMethod.Get;
+                case TwitterAPIEndpoint.UsersLookup:
+                    return System.Net.Http.HttpMethod.Post;
+                default:
+                    throw new Exception("Unimplemented TwitterAPIEndpoint");
             }
         }
 
