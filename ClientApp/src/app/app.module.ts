@@ -6,8 +6,6 @@ import { RouterModule, Routes } from '@angular/router';
 
 import { AppComponent } from './app.component';
 import { HomeComponent } from './home/home.component';
-import { CounterComponent } from './counter/counter.component';
-import { FetchDataComponent } from './fetch-data/fetch-data.component';
 import { NavbarComponent } from './navbar/navbar.component';
 import { TileColumnComponent } from './tile-column/tile-column.component';
 import { LoginComponent } from './login/login.component';
@@ -27,19 +25,11 @@ const appRoutes: Routes = [
     { path: 'login', component: LoginComponent, pathMatch: 'full' },
     { path: 'geo', component: GeoPageComponent, canActivate: [AuthGuard] },
     { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
-    { path: 'counter', component: CounterComponent, canActivate: [AuthGuard] },
-    {
-        path: 'fetch-data',
-        component: FetchDataComponent,
-        canActivate: [AuthGuard]
-    }
 ];
 @NgModule({
     declarations: [
         AppComponent,
         HomeComponent,
-        CounterComponent,
-        FetchDataComponent,
         NavbarComponent,
         TileColumnComponent,
         LoginComponent,
