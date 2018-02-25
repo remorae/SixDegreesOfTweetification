@@ -93,7 +93,7 @@ namespace SixDegrees.Controllers
             //TODO Use user token
             var results = await GetResults<TweetSearchResults>(query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
             if (results == null)
-                return null;
+                return Enumerable.Empty<Status>();
             return results.Statuses;
         }
 
