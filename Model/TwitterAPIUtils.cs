@@ -50,8 +50,8 @@ namespace SixDegrees.Model
         internal static string HashtagSearchQuery(string hashtag, TwitterAPIEndpoint endpoint)
         {
             string result = $"q=%23{hashtag}&count={TweetCount}&tweet_mode={TweetMode}&include_entities={IncludeEntities}";
-            if (hashtag == QueryHistory.Get[endpoint].LastQuery && QueryHistory.Get[endpoint].LastMaxID != "")
-                result += $"&max_id={QueryHistory.Get[endpoint].LastMaxID}";
+            if (hashtag == QueryHistory.Get[endpoint].LastQuery && QueryHistory.Get[endpoint].NextMaxID != "")
+                result += $"&max_id={QueryHistory.Get[endpoint].NextMaxID}";
             return result;
         }
 
