@@ -197,8 +197,11 @@ namespace SixDegrees.Controllers
             ICollection<UserResult> results = new List<UserResult>();
             while (limit > 0 && ids.Count > 0)
             {
-                IEnumerable<long> toLookup = ids.Take(Math.Max(results.Count, limit));
-                limit -= toLookup.Count();
+                IEnumerable<long> toLookup = ids.Take(Math.Min(ids.Count, limit)).ToList();
+                int lookupCount = toLookup.Count();
+                limit -= lookupCount;
+                for (int i = 0; i < lookupCount; ++i)
+                    ids.Dequeue();
                 var userResults = await GetResultCollection<UserSearchResults>(toLookup.Select(id => id.ToString()), AuthenticationType.Both, TwitterAPIUtils.UserLookupQuery, TwitterAPIEndpoint.UsersLookup, null);
                 foreach (var user in userResults)
                     results.Add(ToUserResult(user));
