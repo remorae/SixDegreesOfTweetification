@@ -1,6 +1,6 @@
 ﻿namespace SixDegrees.Model
 {
-    public enum PlaceType
+    enum PlaceType
     {
         POI,
         Neighborhood,
@@ -11,7 +11,7 @@
 
     static class PlaceTypeMethods
     {
-        public static PlaceType ToPlaceType(this string str)
+        internal static PlaceType ToPlaceType(this string str)
         {
             switch (str)
             {

@@ -1,0 +1,23 @@
+language: csharp
+sudo: required
+mono: none
+dotnet: 2.0.0
+dist: trusty
+env:
+  - CLI_VERSION=latest
+os:
+  - linux
+  - osx
+osx_image: xcode7.1
+before_install:
+  - if test "$TRAVIS_OS_NAME" == "osx"; then brew update; fi
+script:
+ - dotnet restore
+ - dotnet build
+branches:
+  only:
+    - master
+notifications:
+  email:
+    on-success: change
+    on-failure: always  
