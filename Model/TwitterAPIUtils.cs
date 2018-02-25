@@ -38,20 +38,20 @@ namespace SixDegrees.Model
                 case TwitterAPIEndpoint.FriendsIDs:
                     return "https://api.twitter.com/1.1/friends/ids.json";
                 default:
-                    return "";
+                    throw new Exception("Unimplemented TwitterAPIEndpoint");
             }
         }
 
-        internal static string UserSearchQuery(string screenName, QueryType type)
+        internal static string UserSearchQuery(string screenName, TwitterAPIEndpoint endpoint)
         {
             return $"screen_name={screenName}&include_entities={IncludeEntities}";
         }
 
-        internal static string HashtagSearchQuery(string hashtag, QueryType type)
+        internal static string HashtagSearchQuery(string hashtag, TwitterAPIEndpoint endpoint)
         {
             string result = $"q=%23{hashtag}&count={TweetCount}&tweet_mode={TweetMode}&include_entities={IncludeEntities}";
-            if (hashtag == QueryHistory.Get[type].LastQuery && QueryHistory.Get[type].LastMaxID != "")
-                result += $"&max_id={QueryHistory.Get[type].LastMaxID}";
+            if (hashtag == QueryHistory.Get[endpoint].LastQuery && QueryHistory.Get[endpoint].LastMaxID != "")
+                result += $"&max_id={QueryHistory.Get[endpoint].LastMaxID}";
             return result;
         }
 

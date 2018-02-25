@@ -13,15 +13,15 @@ namespace SixDegrees.Controllers
     [Route("api/search")]
     public class SearchController : Controller
     {
-        private static void LogQuery(string query, QueryType type, IQueryResults results)
+        private static void LogQuery(string query, TwitterAPIEndpoint endpoint, IQueryResults results)
         {
-            QueryHistory.Get[type].LastQuery = query;
-            if (QueryInfo.UsesMaxID(type))
+            QueryHistory.Get[endpoint].LastQuery = query;
+            if (QueryInfo.UsesMaxID(endpoint))
             {
                 TweetSearchResults statusResults = results as TweetSearchResults;
                 // Exclude lowest ID to prevent duplicate results
                 string lastMaxID = (long.TryParse(statusResults.MinStatusID, out long result)) ? (result - 1).ToString() : "";
-                QueryHistory.Get[type].LastMaxID = lastMaxID;
+                QueryHistory.Get[endpoint].LastMaxID = lastMaxID;
             }
         }
 
@@ -52,13 +52,13 @@ namespace SixDegrees.Controllers
             Configuration = configuration;
         }
 
-        private async Task<T> GetResults<T>(QueryType queryType, string query, AuthenticationType authType, Func<string, QueryType, string> buildQuery, TwitterAPIEndpoint endpoint, string token) where T : IQueryResults
+        private async Task<T> GetResults<T>(string query, AuthenticationType authType, Func<string, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint, string token) where T : IQueryResults
         {
-            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, endpoint, buildQuery(query, queryType), token);
+            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, endpoint, buildQueryString(query, endpoint), token);
             if (responseBody == null)
                 return default(T);
             T results = JsonConvert.DeserializeObject<T>(responseBody);
-            LogQuery(query, queryType, results);
+            LogQuery(query, endpoint, results);
             return results;
         }
 
@@ -71,7 +71,7 @@ namespace SixDegrees.Controllers
         public async Task<IEnumerable<Status>> Tweets(string query)
         {
             //TODO Use user token
-            var results = await GetResults<TweetSearchResults>(QueryType.TweetsByHashtag, query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
+            var results = await GetResults<TweetSearchResults>(query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
             if (results == null)
                 return null;
             return results.Statuses;
@@ -86,7 +86,7 @@ namespace SixDegrees.Controllers
         public async Task<IEnumerable<CountryResult>> Locations(string query)
         {
             //TODO Use user token
-            var results = await GetResults<TweetSearchResults>(QueryType.LocationsByHashtag, query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
+            var results = await GetResults<TweetSearchResults>(query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
             if (results == null)
                 return Enumerable.Empty<CountryResult>();
             IDictionary<string, Country> countries = new Dictionary<string, Country>();
@@ -116,7 +116,7 @@ namespace SixDegrees.Controllers
         public async Task<UserResult> GetUser(string screen_name)
         {
             //TODO Use user token
-            var results = await GetResults<UserSearchResults>(QueryType.UserByScreenName, screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UsersShow, null);
+            var results = await GetResults<UserSearchResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UsersShow, null);
             if (results == null)
                 return null;
             return new UserResult()
