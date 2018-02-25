@@ -10,43 +10,13 @@
         public RateLimitContext RateLimitContext { get; set; }
 
         [JsonProperty("resources")]
-        public Resources Resources { get; set; }
+        public Dictionary<string, Dictionary<string, HelpConfiguration>> Resources { get; set; }
     }
 
     public partial class RateLimitContext
     {
         [JsonProperty("access_token")]
         public string AccessToken { get; set; }
-    }
-
-    public partial class Resources
-    {
-        [JsonProperty("users")]
-        public Dictionary<string, HelpConfiguration> Users { get; set; }
-
-        [JsonProperty("statuses")]
-        public Dictionary<string, HelpConfiguration> Statuses { get; set; }
-
-        [JsonProperty("help")]
-        public Help Help { get; set; }
-
-        [JsonProperty("search")]
-        public Search Search { get; set; }
-    }
-
-    public partial class Help
-    {
-        [JsonProperty("/help/privacy")]
-        public HelpConfiguration HelpPrivacy { get; set; }
-
-        [JsonProperty("/help/tos")]
-        public HelpConfiguration HelpTos { get; set; }
-
-        [JsonProperty("/help/configuration")]
-        public HelpConfiguration HelpConfiguration { get; set; }
-
-        [JsonProperty("/help/languages")]
-        public HelpConfiguration HelpLanguages { get; set; }
     }
 
     public partial class HelpConfiguration
@@ -59,12 +29,6 @@
 
         [JsonProperty("reset")]
         public long Reset { get; set; }
-    }
-
-    public partial class Search
-    {
-        [JsonProperty("/search/tweets")]
-        public HelpConfiguration SearchTweets { get; set; }
     }
 
     public partial class Status
