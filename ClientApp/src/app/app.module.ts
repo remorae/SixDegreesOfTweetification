@@ -17,6 +17,7 @@ import { GeoPageComponent } from './geo-page/geo-page.component';
 import { DualInputComponent } from './dual-input/dual-input.component';
 import { SingleInputComponent } from './single-input/single-input.component';
 import { EndpointService } from './services/endpoint.service';
+import { RateLimitDisplayComponent } from './rate-limit-display/rate-limit-display.component';
 
 
 const appRoutes: Routes = [
@@ -42,7 +43,8 @@ const appRoutes: Routes = [
         LoginComponent,
         GeoPageComponent,
         DualInputComponent,
-        SingleInputComponent
+        SingleInputComponent,
+        RateLimitDisplayComponent
 
     ],
     imports: [
@@ -50,7 +52,7 @@ const appRoutes: Routes = [
         HttpClientModule,
         FormsModule,
         ReactiveFormsModule,
-        RouterModule.forRoot(appRoutes, { enableTracing: true })
+        RouterModule.forRoot(appRoutes) //, { enableTracing: true })
     ],
     providers: [AuthenticationService, AuthGuard, EndpointService],
     bootstrap: [AppComponent]

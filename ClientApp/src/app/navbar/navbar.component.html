@@ -1,9 +1,12 @@
-<nav class="navbar mb-3">
+<nav class="navbar mb-3 justify-content-between">
   <a [routerLink]='["/home"]' class="navbar-brand">
     <img alt="EWU Logo" src="assets/EWU_Twitter.png" width="45" height="45" />
     Six Degrees of Tweetification
   </a>
+  <div>
+  <app-rate-limit-display></app-rate-limit-display>
   <a [routerLink]='["/login"]'>
     <i class="fa fa-user-circle fa-2x"></i>
   </a>
+</div>
 </nav>
