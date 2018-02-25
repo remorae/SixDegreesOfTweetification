@@ -19,6 +19,7 @@ import { SingleInputComponent } from './single-input/single-input.component';
 import { EndpointService } from './services/endpoint.service';
 import { SectionTileComponent } from './section-tile/section-tile.component';
 import { SelectGeoFilterComponent } from './select-geo-filter/select-geo-filter.component';
+import { RateLimitDisplayComponent } from './rate-limit-display/rate-limit-display.component';
 
 
 const appRoutes: Routes = [
@@ -46,15 +47,15 @@ const appRoutes: Routes = [
         DualInputComponent,
         SingleInputComponent,
         SectionTileComponent,
-        SelectGeoFilterComponent
-
+        SelectGeoFilterComponent,
+        RateLimitDisplayComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
         HttpClientModule,
         FormsModule,
         ReactiveFormsModule,
-        RouterModule.forRoot(appRoutes, { enableTracing: false })
+        RouterModule.forRoot(appRoutes) // , { enableTracing: true })
     ],
     providers: [AuthenticationService, AuthGuard, EndpointService],
     bootstrap: [AppComponent]
