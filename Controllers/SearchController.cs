@@ -13,6 +13,8 @@ namespace SixDegrees.Controllers
     [Route("api/search")]
     public class SearchController : Controller
     {
+        private const int MaxUserLookupCount = 100;
+
         private static void LogQuery(string query, TwitterAPIEndpoint endpoint, IQueryResults results)
         {
             QueryHistory.Get[endpoint].LastQuery = query;
@@ -139,6 +141,11 @@ namespace SixDegrees.Controllers
             var results = await GetResults<UserSearchResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UsersShow, null);
             if (results == null)
                 return null;
+            return ToUserResult(results);
+        }
+
+        private static UserResult ToUserResult(UserSearchResults results)
+        {
             return new UserResult()
             {
                 CreatedAt = results.CreatedAt,
@@ -156,6 +163,47 @@ namespace SixDegrees.Controllers
                 TimeZone = results.TimeZone,
                 Verified = results.Verified
             };
+        }
+
+        /// <summary>
+        /// Returns users that are friends or followers of the specified Twitter user.
+        /// </summary>
+        /// <param name="screen_name">The user to get connections for.</param>
+        /// <param name="limit">The maximum number of users to return.</param>
+        /// <returns></returns>
+        [HttpGet("user/connections")]
+        public async Task<IEnumerable<UserResult>> GetUserConnections(string screen_name, int limit = MaxUserLookupCount)
+        {
+            if (QueryHistory.Get[TwitterAPIEndpoint.FollowersIDs].LastQuery == screen_name)
+                return Enumerable.Empty<UserResult>(); //TODO Cache results and return those?
+
+            int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName).Values.Min();
+            limit = Math.Min(limit, maxLookupCount * MaxUserLookupCount);
+
+            //TODO Use user token
+            var followerResults = await GetResults<UserIdsResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.FollowersFriendsIDsQuery, TwitterAPIEndpoint.FollowersIDs, null);
+            ISet<long> uniqueIds = new HashSet<long>(followerResults?.Ids ?? Enumerable.Empty<long>());
+
+            if (followerResults != null && followerResults.Ids.Count() < limit)
+            {
+                var friendResults = await GetResults<UserIdsResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.FollowersFriendsIDsQuery, TwitterAPIEndpoint.FriendsIDs, null);
+                if (friendResults != null)
+                    foreach (long id in friendResults.Ids)
+                        if (!uniqueIds.Contains(id))
+                            uniqueIds.Add(id);
+            }
+
+            Queue<long> ids = new Queue<long>(uniqueIds);
+            ICollection<UserResult> results = new List<UserResult>();
+            while (limit > 0 && ids.Count > 0)
+            {
+                IEnumerable<long> toLookup = ids.Take(Math.Max(results.Count, limit));
+                limit -= toLookup.Count();
+                var userResults = await GetResultCollection<UserSearchResults>(toLookup.Select(id => id.ToString()), AuthenticationType.Both, TwitterAPIUtils.UserLookupQuery, TwitterAPIEndpoint.UsersLookup, null);
+                foreach (var user in userResults)
+                    results.Add(ToUserResult(user));
+            }
+            return results;
         }
     }
 }
