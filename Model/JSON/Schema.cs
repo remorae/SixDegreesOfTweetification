@@ -67,24 +67,6 @@
         public HelpConfiguration SearchTweets { get; set; }
     }
 
-    public partial class FriendSearchResults
-    {
-        [JsonProperty("previous_cursor")]
-        public long PreviousCursor { get; set; }
-
-        [JsonProperty("previous_cursor_str")]
-        public string PreviousCursorStr { get; set; }
-
-        [JsonProperty("next_cursor")]
-        public long NextCursor { get; set; }
-
-        [JsonProperty("users")]
-        public List<UserSearchResults> Users { get; set; }
-
-        [JsonProperty("next_cursor_str")]
-        public string NextCursorStr { get; set; }
-    }
-
     public partial class Status
     {
         [JsonProperty("coordinates")]
@@ -473,5 +455,23 @@
 
         [JsonProperty("max_id_str")]
         public string MaxIdStr { get; set; }
+    }
+
+    public partial class UserIdsResults
+    {
+        [JsonProperty("previous_cursor")]
+        public long PreviousCursor { get; set; }
+
+        [JsonProperty("ids")]
+        public long[] Ids { get; set; }
+
+        [JsonProperty("previous_cursor_str")]
+        public string PreviousCursorStr { get; set; }
+
+        [JsonProperty("next_cursor")]
+        public long NextCursor { get; set; }
+
+        [JsonProperty("next_cursor_str")]
+        public string NextCursorStr { get; set; }
     }
 }

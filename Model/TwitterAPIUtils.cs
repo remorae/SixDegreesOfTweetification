@@ -60,6 +60,19 @@ namespace SixDegrees.Model
             return $"resources={string.Join(',', resources)}";
         }
 
+        internal static string FollowersFriendsIDsQuery(string screenName, TwitterAPIEndpoint endpoint)
+        {
+            string result = $"screen_name={screenName}";
+            if (screenName == QueryHistory.Get[endpoint].LastQuery && QueryHistory.Get[endpoint].NextCursor != "")
+                result += $"&cursor={QueryHistory.Get[endpoint].NextCursor}";
+            return result;
+        }
+
+        internal static string UserLookupQuery(IEnumerable<string> userIds, TwitterAPIEndpoint endpoint)
+        {
+            return $"user_id={string.Join(",", userIds)}";
+        }
+
         internal static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, TwitterAPIEndpoint endpoint, string query, string token)
         {
             RateLimitInfo endpointStatus = RateLimitCache.Get[endpoint];
