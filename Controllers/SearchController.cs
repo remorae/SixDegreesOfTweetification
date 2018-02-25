@@ -83,9 +83,9 @@ namespace SixDegrees.Controllers
         }
 
         /// <summary>
-        /// Returns a list of tweets containing given hashtags
+        /// Returns a list of tweets containing given hashtags.
         /// </summary>
-        /// <param name="query">The hashtags to search for, separated by spaces</param>
+        /// <param name="query">The hashtags to search for, separated by spaces.</param>
         /// <returns></returns>
         [HttpGet("tweets")]
         public async Task<IEnumerable<Status>> Tweets(string query)
@@ -98,9 +98,9 @@ namespace SixDegrees.Controllers
         }
 
         /// <summary>
-        /// Returns a list of locations from tweets containing given hashtags
+        /// Returns a list of locations from tweets containing given hashtags.
         /// </summary>
-        /// <param name="query">The hashtags to search for, separated by spaces</param>
+        /// <param name="query">The hashtags to search for, separated by spaces.</param>
         /// <returns></returns>
         [HttpGet("locations")]
         public async Task<IEnumerable<CountryResult>> Locations(string query)
@@ -128,9 +128,9 @@ namespace SixDegrees.Controllers
         }
 
         /// <summary>
-        /// Returns information about a specified Twitter user
+        /// Returns information about a specified Twitter user.
         /// </summary>
-        /// <param name="query">The user screen name to search for</param>
+        /// <param name="screen_name">The user screen name to search for.</param>
         /// <returns></returns>
         [HttpGet("user")]
         public async Task<UserResult> GetUser(string screen_name)
