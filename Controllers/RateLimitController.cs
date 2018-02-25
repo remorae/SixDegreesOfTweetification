@@ -50,10 +50,10 @@ namespace SixDegrees.Controllers
             RateLimitCache.Get[TwitterAPIEndpoint.SearchTweets].Update(
                 (int)(appResults?.Resources.Search.SearchTweets.Remaining ?? 0),
                 (int)(userResults?.Resources.Search.SearchTweets.Remaining ?? 0));
-            RateLimitCache.Get[TwitterAPIEndpoint.UserShow].Update(
+            RateLimitCache.Get[TwitterAPIEndpoint.UsersShow].Update(
                 GetLimit(appResults, "/users/show/:id"),
                 GetLimit(userResults, "/users/show/:id"));
-            RateLimitCache.Get[TwitterAPIEndpoint.UserLookup].Update(
+            RateLimitCache.Get[TwitterAPIEndpoint.UsersLookup].Update(
                 GetLimit(appResults, "/users/lookup"),
                 GetLimit(userResults, "/users/lookup"));
         }

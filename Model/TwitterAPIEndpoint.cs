@@ -3,9 +3,11 @@
     enum TwitterAPIEndpoint
     {
         SearchTweets,
-        UserShow,
-        UserLookup,
+        UsersShow,
+        UsersLookup,
         RateLimitStatus,
-        OAuthAuthorize
+        OAuthAuthorize,
+        FriendsIDs,
+        FollowersIDs
     }
 }
