@@ -77,7 +77,7 @@ namespace SixDegrees.Model
         {
             RateLimitInfo endpointStatus = RateLimitCache.Get[endpoint];
             if (!endpointStatus.Available)
-                return null;
+                throw new Exception($"Endpoint {endpoint} currently unavailable due to rate limits. Time until reset: {endpointStatus.UntilReset}");
             endpointStatus.ResetIfNeeded();
             HttpMethod method = HttpMethod(endpoint);
             try
@@ -87,7 +87,7 @@ namespace SixDegrees.Model
                     using (var request = new HttpRequestMessage(method, GetUri(endpoint, query)))
                     {
                         if (!TryAuthorize(request, config, authType, config["userToken"], endpointStatus, out AuthenticationType? authTypeUsed)) //TODO remove test user token
-                            return null;
+                            throw new Exception($"Unable to authenticate Twitter API call of type {authType}, endpoint {endpoint}.");
                         using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
                         {
                             response.EnsureSuccessStatusCode();
@@ -103,9 +103,9 @@ namespace SixDegrees.Model
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return null;
+                throw new Exception($"Twitter API call failed: {ex.Message}");
             }
         }
 

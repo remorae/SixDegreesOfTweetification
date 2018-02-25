@@ -67,8 +67,6 @@ namespace SixDegrees.Controllers
         private async Task<T> GetResults<T>(string query, AuthenticationType authType, Func<string, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint, string token) where T : IQueryResults
         {
             string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, endpoint, buildQueryString(query, endpoint), token);
-            if (responseBody == null)
-                return default(T);
             T results = JsonConvert.DeserializeObject<T>(responseBody);
             LogQuery(query, endpoint, results);
             return results;
@@ -77,8 +75,6 @@ namespace SixDegrees.Controllers
         private async Task<IEnumerable<T>> GetResultCollection<T>(IEnumerable<string> queries, AuthenticationType authType, Func<IEnumerable<string>, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint, string token) where T : IQueryResults
         {
             string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, endpoint, buildQueryString(queries, endpoint), token);
-            if (responseBody == null)
-                return Enumerable.Empty<T>();
             T[] results = JsonConvert.DeserializeObject<T[]>(responseBody);
             LogQuerySet(queries, endpoint, results.Cast<IQueryResults>());
             return results;
@@ -90,13 +86,18 @@ namespace SixDegrees.Controllers
         /// <param name="query">The hashtags to search for, separated by spaces.</param>
         /// <returns></returns>
         [HttpGet("tweets")]
-        public async Task<IEnumerable<Status>> Tweets(string query)
+        public async Task<IActionResult> Tweets(string query)
         {
             //TODO Use user token
-            var results = await GetResults<TweetSearchResults>(query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
-            if (results == null)
-                return Enumerable.Empty<Status>();
-            return results.Statuses;
+            try
+            {
+                var results = await GetResults<TweetSearchResults>(query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
+                return Ok(results.Statuses);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -105,23 +106,28 @@ namespace SixDegrees.Controllers
         /// <param name="query">The hashtags to search for, separated by spaces.</param>
         /// <returns></returns>
         [HttpGet("locations")]
-        public async Task<IEnumerable<CountryResult>> Locations(string query)
+        public async Task<IActionResult> Locations(string query)
         {
-            //TODO Use user token
-            var results = await GetResults<TweetSearchResults>(query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
-            if (results == null)
-                return Enumerable.Empty<CountryResult>();
-            IDictionary<string, Country> countries = new Dictionary<string, Country>();
-            foreach (Status status in results.Statuses)
+            try
             {
-                if (status.Place != null)
-                    UpdateCountriesWithPlace(countries, status);
-                else if (status.Coordinates != null && status.Coordinates.Type == "Point")
+                //TODO Use user token
+                var results = await GetResults<TweetSearchResults>(query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
+                IDictionary<string, Country> countries = new Dictionary<string, Country>();
+                foreach (Status status in results.Statuses)
                 {
-                    //TODO - Look up city/country names based on longitude/latitude
+                    if (status.Place != null)
+                        UpdateCountriesWithPlace(countries, status);
+                    else if (status.Coordinates != null && status.Coordinates.Type == "Point")
+                    {
+                        //TODO - Look up city/country names based on longitude/latitude
+                    }
                 }
+                return Ok(GetFormattedCountries(countries.Values));
             }
-            return GetFormattedCountries(countries.Values);
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         private IEnumerable<CountryResult> GetFormattedCountries(IEnumerable<Country> countries)
@@ -135,13 +141,18 @@ namespace SixDegrees.Controllers
         /// <param name="screen_name">The user screen name to search for.</param>
         /// <returns></returns>
         [HttpGet("user")]
-        public async Task<UserResult> GetUser(string screen_name)
+        public async Task<IActionResult> GetUser(string screen_name)
         {
-            //TODO Use user token
-            var results = await GetResults<UserSearchResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UsersShow, null);
-            if (results == null)
-                return null;
-            return ToUserResult(results);
+            try
+            {
+                //TODO Use user token
+                var results = await GetResults<UserSearchResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UsersShow, null);
+                return Ok(ToUserResult(results));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         private static UserResult ToUserResult(UserSearchResults results)
@@ -172,41 +183,48 @@ namespace SixDegrees.Controllers
         /// <param name="limit">The maximum number of users to return.</param>
         /// <returns></returns>
         [HttpGet("user/connections")]
-        public async Task<IEnumerable<UserResult>> GetUserConnections(string screen_name, int limit = MaxUserLookupCount)
+        public async Task<IActionResult> GetUserConnections(string screen_name, int limit = MaxUserLookupCount)
         {
-            if (QueryHistory.Get[TwitterAPIEndpoint.FollowersIDs].LastQuery == screen_name)
-                return Enumerable.Empty<UserResult>(); //TODO Cache results and return those?
-
-            int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName).Values.Min();
-            limit = Math.Min(limit, maxLookupCount * MaxUserLookupCount);
-
-            //TODO Use user token
-            var followerResults = await GetResults<UserIdsResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.FollowersFriendsIDsQuery, TwitterAPIEndpoint.FollowersIDs, null);
-            ISet<long> uniqueIds = new HashSet<long>(followerResults?.Ids ?? Enumerable.Empty<long>());
-
-            if (followerResults != null && followerResults.Ids.Count() < limit)
+            try
             {
-                var friendResults = await GetResults<UserIdsResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.FollowersFriendsIDsQuery, TwitterAPIEndpoint.FriendsIDs, null);
-                if (friendResults != null)
-                    foreach (long id in friendResults.Ids)
-                        if (!uniqueIds.Contains(id))
-                            uniqueIds.Add(id);
-            }
+                if (QueryHistory.Get[TwitterAPIEndpoint.FollowersIDs].LastQuery == screen_name)
+                    return BadRequest("Cannot repeat user connection queries."); //TODO Cache results and return those?
 
-            Queue<long> ids = new Queue<long>(uniqueIds);
-            ICollection<UserResult> results = new List<UserResult>();
-            while (limit > 0 && ids.Count > 0)
-            {
-                IEnumerable<long> toLookup = ids.Take(Math.Min(ids.Count, limit)).ToList();
-                int lookupCount = toLookup.Count();
-                limit -= lookupCount;
-                for (int i = 0; i < lookupCount; ++i)
-                    ids.Dequeue();
-                var userResults = await GetResultCollection<UserSearchResults>(toLookup.Select(id => id.ToString()), AuthenticationType.Both, TwitterAPIUtils.UserLookupQuery, TwitterAPIEndpoint.UsersLookup, null);
-                foreach (var user in userResults)
-                    results.Add(ToUserResult(user));
+                int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName).Values.Min();
+                limit = Math.Min(limit, maxLookupCount * MaxUserLookupCount);
+
+                //TODO Use user token
+                var followerResults = await GetResults<UserIdsResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.FollowersFriendsIDsQuery, TwitterAPIEndpoint.FollowersIDs, null);
+                ISet<long> uniqueIds = new HashSet<long>(followerResults?.Ids ?? Enumerable.Empty<long>());
+
+                if (followerResults != null && followerResults.Ids.Count() < limit)
+                {
+                    var friendResults = await GetResults<UserIdsResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.FollowersFriendsIDsQuery, TwitterAPIEndpoint.FriendsIDs, null);
+                    if (friendResults != null)
+                        foreach (long id in friendResults.Ids)
+                            if (!uniqueIds.Contains(id))
+                                uniqueIds.Add(id);
+                }
+
+                Queue<long> ids = new Queue<long>(uniqueIds);
+                ICollection<UserResult> results = new List<UserResult>();
+                while (limit > 0 && ids.Count > 0)
+                {
+                    IEnumerable<long> toLookup = ids.Take(Math.Min(ids.Count, limit)).ToList();
+                    int lookupCount = toLookup.Count();
+                    limit -= lookupCount;
+                    for (int i = 0; i < lookupCount; ++i)
+                        ids.Dequeue();
+                    var userResults = await GetResultCollection<UserSearchResults>(toLookup.Select(id => id.ToString()), AuthenticationType.Both, TwitterAPIUtils.UserLookupQuery, TwitterAPIEndpoint.UsersLookup, null);
+                    foreach (var user in userResults)
+                        results.Add(ToUserResult(user));
+                }
+                return Ok(results);
             }
-            return results;
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }
