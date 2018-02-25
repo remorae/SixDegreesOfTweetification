@@ -30,6 +30,11 @@ namespace SixDegrees.Controllers
             }
         }
 
+        private static void LogQuerySet(IEnumerable<string> querySet, TwitterAPIEndpoint endpoint, IEnumerable<IQueryResults> resultSet)
+        {
+            QueryHistory.Get[endpoint].LastQuerySet = querySet;
+        }
+
         private static void UpdateCountriesWithPlace(IDictionary<string, Country> countries, Status status)
         {
             string placeName = status.Place.FullName;
@@ -64,6 +69,16 @@ namespace SixDegrees.Controllers
                 return default(T);
             T results = JsonConvert.DeserializeObject<T>(responseBody);
             LogQuery(query, endpoint, results);
+            return results;
+        }
+
+        private async Task<IEnumerable<T>> GetResultCollection<T>(IEnumerable<string> queries, AuthenticationType authType, Func<IEnumerable<string>, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint, string token) where T : IQueryResults
+        {
+            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, endpoint, buildQueryString(queries, endpoint), token);
+            if (responseBody == null)
+                return Enumerable.Empty<T>();
+            T[] results = JsonConvert.DeserializeObject<T[]>(responseBody);
+            LogQuerySet(queries, endpoint, results.Cast<IQueryResults>());
             return results;
         }
 
