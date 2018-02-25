@@ -34,10 +34,12 @@ namespace SixDegrees.Model
                     yield return TwitterAPIEndpoint.SearchTweets;
                     yield break;
                 case QueryType.UserByScreenName:
-                    yield return TwitterAPIEndpoint.UserShow;
+                    yield return TwitterAPIEndpoint.UsersShow;
                     yield break;
                 case QueryType.UserConnectionsByScreenName:
-                    yield return TwitterAPIEndpoint.UserLookup;
+                    yield return TwitterAPIEndpoint.FollowersIDs;
+                    yield return TwitterAPIEndpoint.FriendsIDs;
+                    yield return TwitterAPIEndpoint.UsersLookup;
                     yield break;
                 default:
                     yield break;

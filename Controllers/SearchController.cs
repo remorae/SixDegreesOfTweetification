@@ -116,7 +116,7 @@ namespace SixDegrees.Controllers
         public async Task<UserResult> GetUser(string screen_name)
         {
             //TODO Use user token
-            var results = await GetResults<UserSearchResults>(QueryType.UserByScreenName, screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UserShow, null);
+            var results = await GetResults<UserSearchResults>(QueryType.UserByScreenName, screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UsersShow, null);
             if (results == null)
                 return null;
             return new UserResult()

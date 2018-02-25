@@ -17,14 +17,14 @@ namespace SixDegrees.Model
                     { AuthenticationType.User, 180 }
                 }
             },
-            { TwitterAPIEndpoint.UserShow,
+            { TwitterAPIEndpoint.UsersShow,
                 new Dictionary<AuthenticationType, int>()
                 {
                     { AuthenticationType.Application, 900 },
                     { AuthenticationType.User, 900 }
                 }
             },
-            { TwitterAPIEndpoint.UserLookup,
+            { TwitterAPIEndpoint.UsersLookup,
                 new Dictionary<AuthenticationType, int>()
                 {
                     { AuthenticationType.Application, 300 },
@@ -43,6 +43,20 @@ namespace SixDegrees.Model
                 {
                     { AuthenticationType.Application, 1 },
                     { AuthenticationType.User, 1 }
+                }
+            },
+            { TwitterAPIEndpoint.FollowersIDs,
+                new Dictionary<AuthenticationType, int>()
+                {
+                    { AuthenticationType.Application, 15 },
+                    { AuthenticationType.User, 15 }
+                }
+            },
+            { TwitterAPIEndpoint.FriendsIDs,
+                new Dictionary<AuthenticationType, int>()
+                {
+                    { AuthenticationType.Application, 15 },
+                    { AuthenticationType.User, 15 }
                 }
             }
         };
