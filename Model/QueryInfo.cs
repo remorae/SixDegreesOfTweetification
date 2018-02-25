@@ -1,4 +1,8 @@
-﻿namespace SixDegrees.Model
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace SixDegrees.Model
 {
     class QueryInfo
     {
@@ -13,7 +17,27 @@
             }
         }
 
+        internal static bool UsesCursor(TwitterAPIEndpoint endpoint)
+        {
+            switch (endpoint)
+            {
+                case TwitterAPIEndpoint.SearchTweets:
+                case TwitterAPIEndpoint.UsersShow:
+                case TwitterAPIEndpoint.UsersLookup:
+                case TwitterAPIEndpoint.RateLimitStatus:
+                case TwitterAPIEndpoint.OAuthAuthorize:
+                    return false;
+                case TwitterAPIEndpoint.FriendsIDs:
+                case TwitterAPIEndpoint.FollowersIDs:
+                    return true;
+                default:
+                    throw new Exception("Unimplemented TwitterAPIEndpoint");
+            }
+        }
+
+        internal IEnumerable<string> LastQuerySet { get; set; } = Enumerable.Empty<string>();
         internal string LastQuery { get; set; } = "";
-        internal string LastMaxID { get; set; } = "";
+        internal string NextMaxID { get; set; } = "";
+        internal string NextCursor { get; set; } = "";
     }
 }

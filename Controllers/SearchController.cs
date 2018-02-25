@@ -23,6 +23,11 @@ namespace SixDegrees.Controllers
                 string lastMaxID = (long.TryParse(statusResults.MinStatusID, out long result)) ? (result - 1).ToString() : "";
                 QueryHistory.Get[endpoint].LastMaxID = lastMaxID;
             }
+            if (QueryInfo.UsesCursor(endpoint))
+            {
+                UserIdsResults idResults = results as UserIdsResults;
+                QueryHistory.Get[endpoint].NextCursor = idResults.NextCursorStr;
+            }
         }
 
         private static void UpdateCountriesWithPlace(IDictionary<string, Country> countries, Status status)
