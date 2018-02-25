@@ -5,6 +5,7 @@ using SixDegrees.Model.JSON;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace SixDegrees.Controllers
 {
@@ -25,7 +26,7 @@ namespace SixDegrees.Controllers
         public IDictionary<QueryType, IDictionary<AuthenticationType, int>> GetAllRateLimits() => RateLimitCache.Get.CurrentRateLimits;
 
         [HttpGet("status")]
-        public IDictionary<AuthenticationType, int> GetRateLimitStatus(string endpoint, string forceUpdate)
+        public async Task<IDictionary<AuthenticationType, int>> GetRateLimitStatus(string endpoint, string forceUpdate)
         {
             if (Enum.TryParse(endpoint, out QueryType type))
             {
@@ -33,14 +34,14 @@ namespace SixDegrees.Controllers
                 if (timeSinceLastUpdate > RateLimitCache.Get.UntilReset(type))
                     RateLimitCache.Get.Reset(type);
                 else if ((forceUpdate?.ToLower() == "true" || timeSinceLastUpdate > MaxRateLimitAge) && RateLimitCache.Get[TwitterAPIEndpoint.RateLimitStatus].Available)
-                    GetUpdatedLimits(null); //TODO Use user token
+                    await GetUpdatedLimits(null); //TODO Use user token
                 return RateLimitCache.Get.MinimumRateLimits(type);
             }
             else
                 return RateLimitCache.BadRateLimit;
         }
 
-        private async void GetUpdatedLimits(string token)
+        private async Task GetUpdatedLimits(string token)
         {
             RateLimitCache.Get[TwitterAPIEndpoint.RateLimitStatus].ResetIfNeeded();
 
