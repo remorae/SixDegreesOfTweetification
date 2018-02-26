@@ -10,43 +10,13 @@
         public RateLimitContext RateLimitContext { get; set; }
 
         [JsonProperty("resources")]
-        public Resources Resources { get; set; }
+        public Dictionary<string, Dictionary<string, HelpConfiguration>> Resources { get; set; }
     }
 
     public partial class RateLimitContext
     {
         [JsonProperty("access_token")]
         public string AccessToken { get; set; }
-    }
-
-    public partial class Resources
-    {
-        [JsonProperty("users")]
-        public Dictionary<string, HelpConfiguration> Users { get; set; }
-
-        [JsonProperty("statuses")]
-        public Dictionary<string, HelpConfiguration> Statuses { get; set; }
-
-        [JsonProperty("help")]
-        public Help Help { get; set; }
-
-        [JsonProperty("search")]
-        public Search Search { get; set; }
-    }
-
-    public partial class Help
-    {
-        [JsonProperty("/help/privacy")]
-        public HelpConfiguration HelpPrivacy { get; set; }
-
-        [JsonProperty("/help/tos")]
-        public HelpConfiguration HelpTos { get; set; }
-
-        [JsonProperty("/help/configuration")]
-        public HelpConfiguration HelpConfiguration { get; set; }
-
-        [JsonProperty("/help/languages")]
-        public HelpConfiguration HelpLanguages { get; set; }
     }
 
     public partial class HelpConfiguration
@@ -59,30 +29,6 @@
 
         [JsonProperty("reset")]
         public long Reset { get; set; }
-    }
-
-    public partial class Search
-    {
-        [JsonProperty("/search/tweets")]
-        public HelpConfiguration SearchTweets { get; set; }
-    }
-
-    public partial class FriendSearchResults
-    {
-        [JsonProperty("previous_cursor")]
-        public long PreviousCursor { get; set; }
-
-        [JsonProperty("previous_cursor_str")]
-        public string PreviousCursorStr { get; set; }
-
-        [JsonProperty("next_cursor")]
-        public long NextCursor { get; set; }
-
-        [JsonProperty("users")]
-        public List<UserSearchResults> Users { get; set; }
-
-        [JsonProperty("next_cursor_str")]
-        public string NextCursorStr { get; set; }
     }
 
     public partial class Status
@@ -473,5 +419,23 @@
 
         [JsonProperty("max_id_str")]
         public string MaxIdStr { get; set; }
+    }
+
+    public partial class UserIdsResults
+    {
+        [JsonProperty("previous_cursor")]
+        public long PreviousCursor { get; set; }
+
+        [JsonProperty("ids")]
+        public long[] Ids { get; set; }
+
+        [JsonProperty("previous_cursor_str")]
+        public string PreviousCursorStr { get; set; }
+
+        [JsonProperty("next_cursor")]
+        public long NextCursor { get; set; }
+
+        [JsonProperty("next_cursor_str")]
+        public string NextCursorStr { get; set; }
     }
 }
