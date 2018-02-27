@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Country, PlaceResult } from '../models';
+import { Country } from '../models';
 import { EndpointService } from '../services/endpoint.service';
 import { UserInput } from '../models/userInput';
 
@@ -16,8 +16,9 @@ export class GeoPageComponent implements OnInit {
     ngOnInit() {}
     onUserSubmit(input: UserInput) {
         this.latestSearch = input.inputs[0];
+        this.countries = undefined;
         this.endpoint.searchLocations(this.latestSearch).subscribe((val: Country[]) => {
-            this.countries = val; // TODO: check for empty results.
+            this.countries = val;
         });
     }
 }
