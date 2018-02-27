@@ -17,14 +17,14 @@ namespace SixDegrees.Model
                     { AuthenticationType.User, 180 }
                 }
             },
-            { TwitterAPIEndpoint.UserShow,
+            { TwitterAPIEndpoint.UsersShow,
                 new Dictionary<AuthenticationType, int>()
                 {
                     { AuthenticationType.Application, 900 },
                     { AuthenticationType.User, 900 }
                 }
             },
-            { TwitterAPIEndpoint.UserLookup,
+            { TwitterAPIEndpoint.UsersLookup,
                 new Dictionary<AuthenticationType, int>()
                 {
                     { AuthenticationType.Application, 300 },
@@ -37,27 +37,50 @@ namespace SixDegrees.Model
                     { AuthenticationType.Application, 180 },
                     { AuthenticationType.User, 180 }
                 }
+            },
+            { TwitterAPIEndpoint.OAuthAuthorize,
+                new Dictionary<AuthenticationType, int>()
+                {
+                    { AuthenticationType.Application, 1 },
+                    { AuthenticationType.User, 1 }
+                }
+            },
+            { TwitterAPIEndpoint.FollowersIDs,
+                new Dictionary<AuthenticationType, int>()
+                {
+                    { AuthenticationType.Application, 15 },
+                    { AuthenticationType.User, 15 }
+                }
+            },
+            { TwitterAPIEndpoint.FriendsIDs,
+                new Dictionary<AuthenticationType, int>()
+                {
+                    { AuthenticationType.Application, 15 },
+                    { AuthenticationType.User, 15 }
+                }
             }
         };
+        private static readonly IEnumerable<AuthenticationType> useableAuthTypes = new AuthenticationType[] { AuthenticationType.Application, AuthenticationType.User };
 
         internal static bool SupportsAppAuth(TwitterAPIEndpoint type) => AuthLimits[type][AuthenticationType.Application] > 0;
         internal static bool SupportsUserAuth(TwitterAPIEndpoint type) => AuthLimits[type][AuthenticationType.User] > 0;
+        internal static IEnumerable<AuthenticationType> UseableAuthTypes => useableAuthTypes;
 
         private readonly TwitterAPIEndpoint type;
         private DateTime lastUpdated = DateTime.Now;
         private IDictionary<AuthenticationType, int> currentLimits = new Dictionary<AuthenticationType, int>();
 
-        internal int this[AuthenticationType type] => currentLimits[type];
+        internal int this[AuthenticationType type] => (UseableAuthTypes.Contains(type) ? currentLimits[type] : -1);
 
         internal bool NeedsReset => SinceLastUpdate > UntilReset;
         internal TimeSpan SinceLastUpdate => DateTime.Now - lastUpdated;
         internal TimeSpan UntilReset { get; private set; } = TimeSpan.FromMilliseconds(TwitterAPIResetIntervalMillis);
-        internal bool Available => NeedsReset || Enum.GetValues(typeof(AuthenticationType)).Cast<AuthenticationType>().Any(authType => currentLimits[authType] > 0);
+        internal bool Available => NeedsReset || UseableAuthTypes.Any(authType => currentLimits[authType] > 0);
 
         internal RateLimitInfo(TwitterAPIEndpoint type)
         {
             this.type = type;
-            foreach (AuthenticationType authType in Enum.GetValues(typeof(AuthenticationType)))
+            foreach (AuthenticationType authType in UseableAuthTypes)
                 currentLimits.Add(authType, AuthLimits[type][authType]);
         }
 
@@ -69,7 +92,7 @@ namespace SixDegrees.Model
 
         private void Reset()
         {
-            foreach (AuthenticationType authType in Enum.GetValues(typeof(AuthenticationType)))
+            foreach (AuthenticationType authType in UseableAuthTypes)
                 currentLimits[authType] = AuthLimits[type][authType];
             UntilReset = TimeSpan.FromMilliseconds((SinceLastUpdate - UntilReset).TotalMilliseconds % TwitterAPIResetIntervalMillis);
             lastUpdated = DateTime.Now;
@@ -88,5 +111,7 @@ namespace SixDegrees.Model
             UntilReset = untilReset;
             lastUpdated = DateTime.Now;
         }
+
+        internal bool IsAvailable(AuthenticationType type) => this[type] > 0;
     }
 }

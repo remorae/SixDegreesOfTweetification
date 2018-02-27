@@ -17,15 +17,15 @@ namespace SixDegrees.Model
             }
         }
 
-        private IDictionary<QueryType, QueryInfo> history = new Dictionary<QueryType, QueryInfo>();
+        private IDictionary<TwitterAPIEndpoint, QueryInfo> history = new Dictionary<TwitterAPIEndpoint, QueryInfo>();
 
         private QueryHistory()
         {
-            foreach (QueryType type in Enum.GetValues(typeof(QueryType)))
-                history.Add(type, new QueryInfo());
+            foreach (TwitterAPIEndpoint endpoint in Enum.GetValues(typeof(TwitterAPIEndpoint)))
+                history.Add(endpoint, new QueryInfo());
         }
 
-        internal QueryInfo this[QueryType key]
+        internal QueryInfo this[TwitterAPIEndpoint key]
         {
             get
             {
