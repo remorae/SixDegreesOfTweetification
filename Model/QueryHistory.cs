@@ -17,32 +17,21 @@ namespace SixDegrees.Model
             }
         }
 
-        private IDictionary<QueryType, QueryInfo> history = new Dictionary<QueryType, QueryInfo>();
+        private IDictionary<TwitterAPIEndpoint, QueryInfo> history = new Dictionary<TwitterAPIEndpoint, QueryInfo>();
 
         private QueryHistory()
         {
-            foreach (QueryType type in Enum.GetValues(typeof(QueryType)))
-                history.Add(type, new QueryInfo(type));
+            foreach (TwitterAPIEndpoint endpoint in Enum.GetValues(typeof(TwitterAPIEndpoint)))
+                history.Add(endpoint, new QueryInfo());
         }
 
-        internal QueryInfo this[QueryType key]
+        internal QueryInfo this[TwitterAPIEndpoint key]
         {
             get
             {
                 if (!history.ContainsKey(key))
-                    history.Add(key, new QueryInfo(key));
+                    history.Add(key, new QueryInfo());
                 return history[key];
-            }
-        }
-
-        internal IDictionary<QueryType, IDictionary<AuthenticationType, int>> RateLimits
-        {
-            get
-            {
-                var result = new Dictionary<QueryType, IDictionary<AuthenticationType, int>>();
-                foreach (var queryPair in history)
-                    result.Add(queryPair.Key, queryPair.Value.RateLimitInfo.ToDictionary());
-                return result;
             }
         }
     }
