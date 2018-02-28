@@ -18,6 +18,7 @@ script:
 branches:
   only:
     - master
+    - Travis
 notifications:
   email:
     on-success: change
