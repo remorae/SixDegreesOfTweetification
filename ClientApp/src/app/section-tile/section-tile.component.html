@@ -1,0 +1,13 @@
+<div class="card card-primary">
+    <a
+        [routerLink]="['/' + route]"
+        class="btn btn-primary card-body card-link text-left"
+        routerLinkActive="link-active"
+        [routerLinkActiveOptions]='{ exact: true }'
+    >
+        <img [src]="iconPath" role="presentation" />
+        <h2 class="text-center">{{ title }}</h2>
+        <span>{{ description }}</span>
+        <i class="fas fa-arrow-alt-circle-right float-right"></i>
+    </a>
+</div>
