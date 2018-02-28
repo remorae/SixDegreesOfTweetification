@@ -46,7 +46,7 @@ namespace SixDegrees.Controllers
                 countries[countryName] = new Country(countryName);
             if (!countries[countryName].Places.ContainsKey(placeName))
             {
-                PlaceResult toAdd = new PlaceResult(placeName, status.Place.PlaceType.ToPlaceType(), countryName);
+                PlaceResult toAdd = new PlaceResult() { Name = placeName, Type = status.Place.PlaceType, Country = countryName };
                 countries[countryName].Places[placeName] = toAdd;
             }
             countries[countryName].Places[placeName].Sources.Add(status.URL);
@@ -132,7 +132,7 @@ namespace SixDegrees.Controllers
 
         private IEnumerable<CountryResult> GetFormattedCountries(IEnumerable<Country> countries)
         {
-            return countries.Select(country => new CountryResult(country.Name, country.Places.Values));
+            return countries.Select(country => new CountryResult() { Name = country.Name, Places = country.Places.Values });
         }
 
         /// <summary>

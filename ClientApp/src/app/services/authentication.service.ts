@@ -12,8 +12,9 @@ import 'rxjs/operators/map';
 
 
 export interface Creds {
-    username: string;
-    password: string;
+    Email: string;
+    Password: string;
+    RememberMe: boolean;
 }
 @Injectable()
 export class AuthenticationService {
@@ -24,19 +25,20 @@ export class AuthenticationService {
     isLoggedIn = false;
     redirectUrl: string;
     private baseUrl: string;
-    login(user: string, pass: string): Observable<boolean> {
+    login(user: string, pass: string): Observable<Object> {
         const creds: Creds = {
-            username: user,
-            password: pass
+            Email: user,
+            Password: pass,
+            RememberMe: false
         };
         return this.http
-            .post<boolean>(this.baseUrl + 'api/Authentication/Login', creds, {
+            .post(this.baseUrl + 'api/Authentication/Login', creds, {
                 headers: new HttpHeaders({
                     'Content-Type': 'application/json; charset=utf-8'
                 })
             })
-            .do(val => {
-                this.isLoggedIn = val;
+            .do(next => {
+                this.isLoggedIn = true;
             });
     }
 }
