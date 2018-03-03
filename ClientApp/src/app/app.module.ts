@@ -18,6 +18,7 @@ import { EndpointService } from './services/endpoint.service';
 import { SectionTileComponent } from './section-tile/section-tile.component';
 import { SelectGeoFilterComponent } from './select-geo-filter/select-geo-filter.component';
 import { RateLimitDisplayComponent } from './rate-limit-display/rate-limit-display.component';
+import { CanvasComponent } from './canvas/canvas.component';
 
 
 const appRoutes: Routes = [
@@ -38,7 +39,8 @@ const appRoutes: Routes = [
         SingleInputComponent,
         SectionTileComponent,
         SelectGeoFilterComponent,
-        RateLimitDisplayComponent
+        RateLimitDisplayComponent,
+        CanvasComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
