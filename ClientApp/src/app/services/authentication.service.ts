@@ -16,6 +16,13 @@ export interface Creds {
     Password: string;
     RememberMe: boolean;
 }
+
+export interface RegistrationInfo {
+    Email: string;
+    Password: string;
+    ConfirmPassword: string;
+}
+
 @Injectable()
 export class AuthenticationService {
     constructor(private http: HttpClient, @Inject('BASE_URL') baseUrl: string) {
@@ -25,10 +32,11 @@ export class AuthenticationService {
     isLoggedIn = false;
     redirectUrl: string;
     private baseUrl: string;
-    login(user: string, pass: string): Observable<Object> {
+
+    login(email: string, password: string): Observable<Object> {
         const creds: Creds = {
-            Email: user,
-            Password: pass,
+            Email: email,
+            Password: password,
             RememberMe: false
         };
         return this.http
@@ -39,6 +47,22 @@ export class AuthenticationService {
             })
             .do(next => {
                 this.isLoggedIn = true;
+            });
+    }
+
+    register(email: string, password: string, confirmPassword: string): Observable<Object> {
+        if (password !== confirmPassword)
+            throw new Error("Passwords do not match.");
+        const info: RegistrationInfo = {
+                Email: email,
+                Password: password,
+                ConfirmPassword: confirmPassword
+            };
+        return this.http
+            .post(this.baseUrl + 'api/Authentication/Register', info, {
+                headers: new HttpHeaders({
+                    'Content-Type': 'application/json; charset=utf-8'
+                })
             });
     }
 }
