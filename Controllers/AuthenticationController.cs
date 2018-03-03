@@ -107,13 +107,14 @@ namespace SixDegrees.Controllers
 
                     await signInManager.SignInAsync(user, isPersistent: false);
                     logger.LogInformation("User created a new account with password.");
+                    await signInManager.SignOutAsync();
                     return RedirectToLocal(returnUrl);
                 }
 
                 return BadRequest($"Error during registration:\n{string.Join("\n", result.Errors.Select(error => $"{error.Code}: {error.Description}"))}");
             }
             
-            return BadRequest("Invalid registration info.");
+            return BadRequest($"Invalid registration info: {string.Join(";", ModelState.Values.SelectMany(v => v.Errors.Select(b => b.ErrorMessage)))}");
         }
 
         [HttpPost]
