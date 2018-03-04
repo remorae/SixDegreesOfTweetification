@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using SixDegrees.Extensions;
 using SixDegrees.Model;
 using SixDegrees.Model.JSON;
 
@@ -64,17 +65,29 @@ namespace SixDegrees.Controllers
             Configuration = configuration;
         }
 
-        private async Task<T> GetResults<T>(string query, AuthenticationType authType, Func<string, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint, string token) where T : IQueryResults
+        private async Task<T> GetResults<T>(string query, AuthenticationType authType, Func<string, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint) where T : IQueryResults
         {
-            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, endpoint, buildQueryString(query, endpoint), token);
+            string responseBody = await TwitterAPIUtils.GetResponse(
+                Configuration,
+                authType,
+                endpoint,
+                buildQueryString(query, endpoint),
+                User.GetTwitterAccessToken(),
+                User.GetTwitterAccessTokenSecret());
             T results = JsonConvert.DeserializeObject<T>(responseBody);
             LogQuery(query, endpoint, results);
             return results;
         }
 
-        private async Task<IEnumerable<T>> GetResultCollection<T>(IEnumerable<string> queries, AuthenticationType authType, Func<IEnumerable<string>, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint, string token) where T : IQueryResults
+        private async Task<IEnumerable<T>> GetResultCollection<T>(IEnumerable<string> queries, AuthenticationType authType, Func<IEnumerable<string>, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint) where T : IQueryResults
         {
-            string responseBody = await TwitterAPIUtils.GetResponse(Configuration, authType, endpoint, buildQueryString(queries, endpoint), token);
+            string responseBody = await TwitterAPIUtils.GetResponse(
+                Configuration,
+                authType,
+                endpoint,
+                buildQueryString(queries, endpoint),
+                User.GetTwitterAccessToken(),
+                User.GetTwitterAccessTokenSecret());
             T[] results = JsonConvert.DeserializeObject<T[]>(responseBody);
             LogQuerySet(queries, endpoint, results.Cast<IQueryResults>());
             return results;
@@ -88,10 +101,13 @@ namespace SixDegrees.Controllers
         [HttpGet("tweets")]
         public async Task<IActionResult> Tweets(string query)
         {
-            //TODO Use user token
             try
             {
-                var results = await GetResults<TweetSearchResults>(query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
+                var results = await GetResults<TweetSearchResults>(
+                    query,
+                    AuthenticationType.Both,
+                    TwitterAPIUtils.HashtagSearchQuery,
+                    TwitterAPIEndpoint.SearchTweets);
                 return Ok(results.Statuses);
             }
             catch (Exception ex)
@@ -110,8 +126,11 @@ namespace SixDegrees.Controllers
         {
             try
             {
-                //TODO Use user token
-                var results = await GetResults<TweetSearchResults>(query, AuthenticationType.Both, TwitterAPIUtils.HashtagSearchQuery, TwitterAPIEndpoint.SearchTweets, null);
+                var results = await GetResults<TweetSearchResults>(
+                    query,
+                    AuthenticationType.Both,
+                    TwitterAPIUtils.HashtagSearchQuery,
+                    TwitterAPIEndpoint.SearchTweets);
                 IDictionary<string, Country> countries = new Dictionary<string, Country>();
                 foreach (Status status in results.Statuses)
                 {
@@ -145,8 +164,11 @@ namespace SixDegrees.Controllers
         {
             try
             {
-                //TODO Use user token
-                var results = await GetResults<UserSearchResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UsersShow, null);
+                var results = await GetResults<UserSearchResults>(
+                    screen_name,
+                    AuthenticationType.Both,
+                    TwitterAPIUtils.UserSearchQuery,
+                    TwitterAPIEndpoint.UsersShow);
                 return Ok(ToUserResult(results));
             }
             catch (Exception ex)
@@ -192,14 +214,21 @@ namespace SixDegrees.Controllers
 
                 int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName).Values.Min();
                 limit = Math.Min(limit, maxLookupCount * MaxUserLookupCount);
-
-                //TODO Use user token
-                var followerResults = await GetResults<UserIdsResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.FollowersFriendsIDsQuery, TwitterAPIEndpoint.FollowersIDs, null);
+                
+                var followerResults = await GetResults<UserIdsResults>(
+                    screen_name,
+                    AuthenticationType.Both,
+                    TwitterAPIUtils.FollowersFriendsIDsQuery,
+                    TwitterAPIEndpoint.FollowersIDs);
                 ISet<long> uniqueIds = new HashSet<long>(followerResults?.Ids ?? Enumerable.Empty<long>());
 
                 if (followerResults != null && followerResults.Ids.Count() < limit)
                 {
-                    var friendResults = await GetResults<UserIdsResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.FollowersFriendsIDsQuery, TwitterAPIEndpoint.FriendsIDs, null);
+                    var friendResults = await GetResults<UserIdsResults>(
+                        screen_name,
+                        AuthenticationType.Both,
+                        TwitterAPIUtils.FollowersFriendsIDsQuery,
+                        TwitterAPIEndpoint.FriendsIDs);
                     if (friendResults != null)
                         foreach (long id in friendResults.Ids)
                             if (!uniqueIds.Contains(id))
@@ -215,7 +244,11 @@ namespace SixDegrees.Controllers
                     limit -= lookupCount;
                     for (int i = 0; i < lookupCount; ++i)
                         ids.Dequeue();
-                    var userResults = await GetResultCollection<UserSearchResults>(toLookup.Select(id => id.ToString()), AuthenticationType.Both, TwitterAPIUtils.UserLookupQuery, TwitterAPIEndpoint.UsersLookup, null);
+                    var userResults = await GetResultCollection<UserSearchResults>(
+                        toLookup.Select(id => id.ToString()),
+                        AuthenticationType.Both,
+                        TwitterAPIUtils.UserLookupQuery,
+                        TwitterAPIEndpoint.UsersLookup);
                     foreach (var user in userResults)
                         results.Add(ToUserResult(user));
                 }

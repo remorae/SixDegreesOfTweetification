@@ -180,8 +180,12 @@ namespace SixDegrees.Controllers
                     result = await userManager.AddLoginAsync(user, info);
                     if (result.Succeeded)
                     {
-                        await signInManager.SignInAsync(user, isPersistent: false);
-                        return RedirectToLocal(returnUrl);
+                        result = await userManager.AddClaimsAsync(user, info.Principal.Claims);
+                        if (result.Succeeded)
+                        {
+                            await signInManager.SignInAsync(user, isPersistent: false);
+                            return RedirectToLocal(returnUrl);
+                        }
                     }
                 }
 

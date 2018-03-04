@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Twitter;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -11,11 +12,16 @@ using SixDegrees.Data;
 using SixDegrees.Model;
 using SixDegrees.Services;
 using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace SixDegrees
 {
     public class Startup
     {
+        internal const string AccessTokenClaim = "urn:tokens:twitter:accesstoken";
+        internal const string AccessTokenSecretClaim = "urn:tokens:twitter:accesstokensecret";
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -61,11 +67,23 @@ namespace SixDegrees
 
             services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
 
-            services.AddAuthentication().AddTwitter(twitterOptions =>
-            {
-                twitterOptions.ConsumerKey = Configuration["consumerKey"];
-                twitterOptions.ConsumerSecret = Configuration["consumerSecret"];
-            });
+            services
+                .AddAuthentication()
+                .AddTwitter(twitterOptions =>
+                {
+                    twitterOptions.ConsumerKey = Configuration["consumerKey"];
+                    twitterOptions.ConsumerSecret = Configuration["consumerSecret"];
+                    twitterOptions.Events = new TwitterEvents()
+                    {
+                        OnCreatingTicket = context =>
+                        {
+                            var identity = (ClaimsIdentity)context.Principal.Identity;
+                            identity.AddClaim(new Claim(AccessTokenClaim, context.AccessToken));
+                            identity.AddClaim(new Claim(AccessTokenSecretClaim, context.AccessTokenSecret));
+                            return Task.CompletedTask;
+                        }
+                    };
+                });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
