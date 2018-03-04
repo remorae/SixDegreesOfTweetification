@@ -9,7 +9,7 @@ namespace SixDegrees.Extensions
         {
             return urlHelper.Action(
                 action: nameof(AuthenticationController.ConfirmEmail),
-                controller: "Account",
+                controller: "Authentication",
                 values: new { userId, code },
                 protocol: scheme);
         }
