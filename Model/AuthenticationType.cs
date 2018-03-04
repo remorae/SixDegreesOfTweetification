@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace SixDegrees.Model
+﻿namespace SixDegrees.Model
 {
     public enum AuthenticationType
     {

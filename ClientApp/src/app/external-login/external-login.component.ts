@@ -1,0 +1,30 @@
+import { Component, OnInit } from '@angular/core';
+import { AuthenticationService } from '../services/authentication.service';
+import { Router } from '@angular/router';
+
+@Component({
+    selector: 'app-external-login',
+    templateUrl: './external-login.component.html',
+    styleUrls: ['./external-login.component.scss']
+})
+export class ExternalLoginComponent implements OnInit {
+    email = '';
+    message = '';
+    constructor(
+        private router: Router,
+        private authService: AuthenticationService
+    ) { }
+
+    ngOnInit() { }
+
+    register() {
+        this.authService.registerExternal(this.email).subscribe(
+            val => {
+                this.router.navigate(['home']);
+            },
+            error => {
+                this.message = error.error;
+            }
+        );
+    }
+}
