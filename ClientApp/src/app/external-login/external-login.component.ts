@@ -3,14 +3,12 @@ import { AuthenticationService } from '../services/authentication.service';
 import { Router } from '@angular/router';
 
 @Component({
-    selector: 'app-register',
-    templateUrl: './register.component.html',
-    styleUrls: ['./register.component.scss']
+    selector: 'app-external-login',
+    templateUrl: './external-login.component.html',
+    styleUrls: ['./external-login.component.scss']
 })
-export class RegisterComponent implements OnInit {
+export class ExternalLoginComponent implements OnInit {
     email = '';
-    password = '';
-    confirmPassword = '';
     message = '';
     constructor(
         private router: Router,
@@ -20,7 +18,7 @@ export class RegisterComponent implements OnInit {
     ngOnInit() { }
 
     register() {
-        this.authService.register(this.email, this.password, this.confirmPassword).subscribe(
+        this.authService.registerExternal(this.email).subscribe(
             val => {
                 this.router.navigate(['home']);
             },
@@ -28,9 +26,5 @@ export class RegisterComponent implements OnInit {
                 this.message = error.error;
             }
         );
-    }
-
-    navToLogin() {
-        this.router.navigate(['login']);
     }
 }

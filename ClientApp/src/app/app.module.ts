@@ -20,10 +20,12 @@ import { SelectGeoFilterComponent } from './select-geo-filter/select-geo-filter.
 import { RateLimitDisplayComponent } from './rate-limit-display/rate-limit-display.component';
 import { HttpXsrfInterceptorService } from './services/http-xsrfinterceptor.service';
 import { RegisterComponent } from './register/register.component';
+import { ExternalLoginComponent } from './external-login/external-login.component';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
     { path: 'login', component: LoginComponent, pathMatch: 'full' },
+    { path: 'externallogin', component: ExternalLoginComponent, pathMatch: 'full' },
     { path: 'register', component: RegisterComponent, pathMatch: 'full' },
     { path: 'geo', component: GeoPageComponent, canActivate: [AuthGuard] },
     { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
@@ -41,7 +43,8 @@ const appRoutes: Routes = [
         SectionTileComponent,
         SelectGeoFilterComponent,
         RateLimitDisplayComponent,
-        RegisterComponent
+        RegisterComponent,
+        ExternalLoginComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),

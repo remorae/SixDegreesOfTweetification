@@ -5,22 +5,25 @@ import { of } from 'rxjs/Observable/of';
 import 'rxjs/add/observable/of';
 import 'rxjs/add/operator/do';
 import 'rxjs/add/operator/delay';
-import { Router } from '@angular/router';
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import 'rxjs/operators/map';
 
 
-export interface Creds {
+export interface Login {
     Email: string;
     Password: string;
     RememberMe: boolean;
 }
 
-export interface RegistrationInfo {
+export interface Registration {
     Email: string;
     Password: string;
     ConfirmPassword: string;
+}
+
+export interface ExternalLogin {
+    Email: string;
 }
 
 @Injectable()
@@ -34,13 +37,13 @@ export class AuthenticationService {
     private baseUrl: string;
 
     login(email: string, password: string): Observable<Object> {
-        const creds: Creds = {
+        const info: Login = {
             Email: email,
             Password: password,
             RememberMe: false
         };
         return this.http
-            .post(this.baseUrl + 'api/Authentication/Login', creds, {
+            .post(this.baseUrl + 'api/authentication/Login', info, {
                 headers: new HttpHeaders({
                     'Content-Type': 'application/json; charset=utf-8'
                 })
@@ -53,13 +56,25 @@ export class AuthenticationService {
     register(email: string, password: string, confirmPassword: string): Observable<Object> {
         if (password !== confirmPassword)
             throw new Error("Passwords do not match.");
-        const info: RegistrationInfo = {
+        const info: Registration = {
                 Email: email,
                 Password: password,
                 ConfirmPassword: confirmPassword
             };
         return this.http
-            .post(this.baseUrl + 'api/Authentication/Register', info, {
+            .post(this.baseUrl + 'api/authentication/Register', info, {
+                headers: new HttpHeaders({
+                    'Content-Type': 'application/json; charset=utf-8'
+                })
+            });
+    }
+
+    registerExternal(email: string): Observable<Object> {
+        const info: ExternalLogin = {
+            Email: email
+        };
+        return this.http
+            .post(this.baseUrl + 'api/authentication/ExternalLoginConfirmation', info, {
                 headers: new HttpHeaders({
                     'Content-Type': 'application/json; charset=utf-8'
                 })
