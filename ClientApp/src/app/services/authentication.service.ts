@@ -66,6 +66,9 @@ export class AuthenticationService {
                 headers: new HttpHeaders({
                     'Content-Type': 'application/json; charset=utf-8'
                 })
+            })
+            .do(next => {
+                this.isLoggedIn = true;
             });
     }
 
@@ -78,6 +81,9 @@ export class AuthenticationService {
                 headers: new HttpHeaders({
                     'Content-Type': 'application/json; charset=utf-8'
                 })
+            })
+            .do(next => {
+                this.isLoggedIn = true;
             });
     }
 }
