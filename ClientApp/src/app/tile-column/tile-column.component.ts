@@ -18,11 +18,13 @@ export class TileColumnComponent implements OnInit {
             title: 'Home',
             route: 'home',
             description: 'The place where the deer and the antelope play. Maybe Nebraska? Hard to say.',
+            iconPath: './../../assets/Bandaid.svg'
         },
         {
             title: 'Geographical Stats',
             route: 'geo',
             description: 'See where in the world certain hashtags are coming from!',
+            iconPath: './../../assets/Bandaid.svg'
         },
     ];
 
