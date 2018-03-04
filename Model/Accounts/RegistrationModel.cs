@@ -2,7 +2,7 @@
 
 namespace SixDegrees.Model.AccountViewModel
 {
-    public class RegisterModel
+    public class RegistrationModel
     {
         [Required]
         [EmailAddress]

@@ -14,7 +14,7 @@ using SixDegrees.Services;
 
 namespace SixDegrees.Controllers
 {
-    [Route("api/[controller]/[action]")]
+    [Route("api/authentication/[action]")]
     public class AuthenticationController : Controller
     {
         private readonly UserManager<ApplicationUser> userManager;
@@ -122,7 +122,7 @@ namespace SixDegrees.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult ExternalLogin(string provider, string returnUrl = null)
         {
-            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Account", new { returnUrl });
+            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Authentication", new { returnUrl });
             var properties = signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
             return Challenge(properties, provider);
         }
