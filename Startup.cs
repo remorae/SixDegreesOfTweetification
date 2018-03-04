@@ -32,6 +32,9 @@ namespace SixDegrees
                 configuration.RootPath = "ClientApp/dist";
             });
 
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
                 {
                     options.Lockout.AllowedForNewUsers = true;
@@ -51,20 +54,18 @@ namespace SixDegrees
                 })
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
+            
+            services.AddTransient<IEmailSender, EmailSender>();
+            
+            services.AddMvc();
+
+            services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
 
             services.AddAuthentication().AddTwitter(twitterOptions =>
             {
                 twitterOptions.ConsumerKey = Configuration["consumerKey"];
                 twitterOptions.ConsumerSecret = Configuration["consumerSecret"];
             });
-            
-            services.AddTransient<IEmailSender, EmailSender>();
-
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
-
-            services.AddMvc();
-            services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -79,7 +80,11 @@ namespace SixDegrees
                 app.UseExceptionHandler("/Home/Error");
             }
 
+            app.UseStaticFiles();
+            app.UseSpaStaticFiles();
+
             app.UseAuthentication();
+
             app.Use(async (context, next) =>
             {
                 string path = context.Request.Path.Value.ToLower();
@@ -98,9 +103,6 @@ namespace SixDegrees
                 }
                 await next.Invoke();
             });
-
-            app.UseStaticFiles();
-            app.UseSpaStaticFiles();
 
             app.UseMvc(routes =>
             {
