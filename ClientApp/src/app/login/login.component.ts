@@ -11,6 +11,7 @@ export class LoginComponent implements OnInit {
     email = '';
     password = '';
     message = '';
+
     constructor(
         private router: Router,
         private authService: AuthenticationService
@@ -28,12 +29,16 @@ export class LoginComponent implements OnInit {
                 }
             },
             error => {
-                this.message = JSON.stringify(error.error);
+                this.message = error.error;
             }
         );
     }
 
     navToRegister() {
         this.router.navigate(['register']);
+    }
+
+    loginWithTwitter() {
+        location.href = 'api/authentication/ExternalLogin?provider=Twitter';
     }
 }
