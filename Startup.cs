@@ -1,13 +1,27 @@
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Twitter;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SpaServices.AngularCli;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SixDegrees.Data;
+using SixDegrees.Model;
+using SixDegrees.Services;
+using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace SixDegrees
 {
     public class Startup
     {
+        internal const string AccessTokenClaim = "urn:tokens:twitter:accesstoken";
+        internal const string AccessTokenSecretClaim = "urn:tokens:twitter:accesstokensecret";
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -18,17 +32,62 @@ namespace SixDegrees
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc();
-
             // In production, the Angular files will be served from this directory
             services.AddSpaStaticFiles(configuration =>
             {
                 configuration.RootPath = "ClientApp/dist";
             });
+
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+
+            services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+                {
+                    options.Lockout.AllowedForNewUsers = true;
+                    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+                    options.Lockout.MaxFailedAccessAttempts = 5;
+                    
+                    options.Password.RequiredLength = 8;
+                    options.Password.RequiredUniqueChars = 5;
+                    options.Password.RequireDigit = false;
+                    options.Password.RequireNonAlphanumeric = false;
+                    options.Password.RequireUppercase = false;
+
+                    options.SignIn.RequireConfirmedEmail = false;
+                    options.SignIn.RequireConfirmedPhoneNumber = false;
+
+                    options.User.RequireUniqueEmail = true;
+                })
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultTokenProviders();
+            
+            services.AddTransient<IEmailSender, EmailSender>();
+            
+            services.AddMvc();
+
+            services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
+
+            services
+                .AddAuthentication()
+                .AddTwitter(twitterOptions =>
+                {
+                    twitterOptions.ConsumerKey = Configuration["consumerKey"];
+                    twitterOptions.ConsumerSecret = Configuration["consumerSecret"];
+                    twitterOptions.Events = new TwitterEvents()
+                    {
+                        OnCreatingTicket = context =>
+                        {
+                            var identity = (ClaimsIdentity)context.Principal.Identity;
+                            identity.AddClaim(new Claim(AccessTokenClaim, context.AccessToken));
+                            identity.AddClaim(new Claim(AccessTokenSecretClaim, context.AccessTokenSecret));
+                            return Task.CompletedTask;
+                        }
+                    };
+                });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, IAntiforgery antiforgery)
         {
             if (env.IsDevelopment())
             {
@@ -41,6 +100,27 @@ namespace SixDegrees
 
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
+
+            app.UseAuthentication();
+
+            app.Use(async (context, next) =>
+            {
+                string path = context.Request.Path.Value.ToLower();
+                if (path != null && (path == "/" || path == ""))
+                {
+                    // This is needed to provide the token generator with the logged in context (if any) 
+                    var authInfo = await context.AuthenticateAsync();
+                    context.User = authInfo.Principal;
+
+                    // XSRF-TOKEN used by angular in the $http if provided
+                    var tokens = antiforgery.GetAndStoreTokens(context);
+                    context.Response.Cookies.Append(
+                        "XSRF-TOKEN",
+                        tokens.RequestToken
+                    );
+                }
+                await next.Invoke();
+            });
 
             app.UseMvc(routes =>
             {

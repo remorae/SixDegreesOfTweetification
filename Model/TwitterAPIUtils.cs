@@ -73,7 +73,7 @@ namespace SixDegrees.Model
             return $"user_id={string.Join(",", userIds)}";
         }
 
-        internal static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, TwitterAPIEndpoint endpoint, string query, string token)
+        internal static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, TwitterAPIEndpoint endpoint, string query, string token, string tokenSecret)
         {
             RateLimitInfo endpointStatus = RateLimitCache.Get[endpoint];
             if (!endpointStatus.Available)
@@ -86,7 +86,7 @@ namespace SixDegrees.Model
                 {
                     using (var request = new HttpRequestMessage(method, GetUri(endpoint, query)))
                     {
-                        if (!TryAuthorize(request, config, authType, config["userToken"], endpointStatus, out AuthenticationType? authTypeUsed)) //TODO remove test user token
+                        if (!TryAuthorize(request, config, authType, token, tokenSecret, endpointStatus, out AuthenticationType? authTypeUsed))
                             throw new Exception($"Unable to authenticate Twitter API call of type {authType}, endpoint {endpoint}.");
                         using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
                         {
@@ -127,7 +127,7 @@ namespace SixDegrees.Model
             }
         }
 
-        private static bool TryAuthorize(HttpRequestMessage request, IConfiguration config, AuthenticationType authType, string token, RateLimitInfo endpointStatus, out AuthenticationType? used)
+        private static bool TryAuthorize(HttpRequestMessage request, IConfiguration config, AuthenticationType authType, string token, string tokenSecret, RateLimitInfo endpointStatus, out AuthenticationType? used)
         {
             if (UseApplicationAuth(authType, token, endpointStatus))
             {
@@ -136,7 +136,7 @@ namespace SixDegrees.Model
             }
             else if (UseUserAuth(authType, token, endpointStatus))
             {
-                AddUserAuth(config, request, token, config["userSecret"]); //TODO Use user token secret
+                AddUserAuth(config, request, token, tokenSecret);
                 used = AuthenticationType.User;
             }
             else
