@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -110,7 +111,7 @@ namespace SixDegrees.Controllers
 
                     await signInManager.SignInAsync(user, isPersistent: false);
                     logger.LogInformation("User created a new account with password.");
-                    return RedirectToLocal(returnUrl);
+                    return Ok(returnUrl);
                 }
 
                 return BadRequest($"Error during registration:\n{string.Join("\n", result.Errors.Select(error => $"{error.Code}: {error.Description}"))}");
@@ -133,14 +134,13 @@ namespace SixDegrees.Controllers
         {
             if (remoteError != null)
             {
-                Response.Redirect("/login");
-                return BadRequest($"Error from external provider: {remoteError}");
+                return RedirectToLocal("/login");
             }
             var info = await signInManager.GetExternalLoginInfoAsync();
             if (info == null)
             {
-                Response.Redirect("/login");
-                return BadRequest($"No token to assign.");
+                // No token to assign
+                return RedirectToLocal("/login");
             }
 
             // Sign in the user with this external login provider if the user already has a login.
@@ -151,13 +151,12 @@ namespace SixDegrees.Controllers
             }
             if (result.IsLockedOut)
             {
-                Response.Redirect("/login");
-                return BadRequest($"User locked out.");
+                return RedirectToAction(nameof(Lockout));
             }
             else
             {
                 // If the user does not have an account, then ask the user to create an account.
-                return Redirect($"/externallogin");
+                return RedirectToLocal("/externallogin");
             }
         }
 
@@ -184,7 +183,7 @@ namespace SixDegrees.Controllers
                         if (result.Succeeded)
                         {
                             await signInManager.SignInAsync(user, isPersistent: false);
-                            return RedirectToLocal(returnUrl);
+                            return Ok(returnUrl);
                         }
                     }
                 }
@@ -195,16 +194,17 @@ namespace SixDegrees.Controllers
             return BadRequest("Not a valid email.");
         }
 
-        private IActionResult RedirectToLocal(string returnUrl)
+        private IActionResult RedirectToLocal(string localUrl)
         {
-            if (Url.IsLocalUrl(returnUrl))
-            {
-                return Redirect(returnUrl);
-            }
+            if (localUrl == null)
+                localUrl = "/home";
             else
             {
-                return Redirect(Request.PathBase.ToUriComponent() + "/home");
+                Regex regex = new Regex(@"^/[^\s]*");
+                if (!regex.IsMatch(localUrl))
+                    localUrl = "/home";
             }
+            return Redirect($"https://{Request.Host.Value}{localUrl}");
         }
 
         [HttpGet]
