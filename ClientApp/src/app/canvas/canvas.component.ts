@@ -19,10 +19,22 @@ export class CanvasComponent implements OnInit {
   }
 
 
-  draw() {
+  draw(){
 
-    this.ctx.fillStyle = 'black';
-    this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+     this.ctx.fillStyle = 'black';
+     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+  }
+
+
+  drawImage() {
+
+    let image = new Image();
+    image.onload = ()=>{
+
+        this.ctx.drawImage(image, 0 , 0);
+    };
+
+    image.src = './../../assets/united-states-state.svg';
 }
 
 
