@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Twitter;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Rewrite;
 using Microsoft.AspNetCore.SpaServices.AngularCli;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -89,6 +91,17 @@ namespace SixDegrees
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, IAntiforgery antiforgery)
         {
+            int? httpsPort = null;
+            var httpsSection = Configuration.GetSection("HttpServer:Endpoints:Https");
+            if (httpsSection.Exists())
+            {
+                var httpsEndpoint = new EndpointConfiguration();
+                httpsSection.Bind(httpsEndpoint);
+                httpsPort = httpsEndpoint.Port;
+            }
+            var statusCode = env.IsDevelopment() ? StatusCodes.Status302Found : StatusCodes.Status301MovedPermanently;
+            app.UseRewriter(new RewriteOptions().AddRedirectToHttps(statusCode, httpsPort));
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();

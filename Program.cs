@@ -12,6 +12,7 @@ namespace SixDegrees
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
+                .UseKestrel(options => options.ConfigureEndpoints())
                 .UseStartup<Startup>();
     }
 }
