@@ -1,10 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using SixDegrees.Extensions;
 using SixDegrees.Model;
 using SixDegrees.Model.JSON;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace SixDegrees.Controllers
@@ -15,11 +18,11 @@ namespace SixDegrees.Controllers
         private static readonly IEnumerable<string> RateLimitResources = new string[] { "account", "followers", "friends", "search", "oauth", "users" };
         private static readonly TimeSpan MaxRateLimitAge = new TimeSpan(0, 5, 0);
 
-        private IConfiguration Configuration { get; }
+        private readonly IConfiguration configuration;
 
         public RateLimitController(IConfiguration configuration)
         {
-            Configuration = configuration;
+            this.configuration = configuration;
         }
 
         [HttpGet("all")]
@@ -34,19 +37,33 @@ namespace SixDegrees.Controllers
                 if (timeSinceLastUpdate > RateLimitCache.Get.UntilReset(type))
                     RateLimitCache.Get.Reset(type);
                 else if ((forceUpdate?.ToLower() == "true" || timeSinceLastUpdate > MaxRateLimitAge) && RateLimitCache.Get[TwitterAPIEndpoint.RateLimitStatus].Available)
-                    await GetUpdatedLimits(null); //TODO Use user token
+                    await GetUpdatedLimits(User.GetTwitterAccessToken(), User.GetTwitterAccessTokenSecret());
                 return RateLimitCache.Get.MinimumRateLimits(type);
             }
             else
                 return RateLimitCache.BadRateLimit;
         }
 
-        private async Task GetUpdatedLimits(string token)
+        private async Task GetUpdatedLimits(string token, string tokenSecret)
         {
             RateLimitCache.Get[TwitterAPIEndpoint.RateLimitStatus].ResetIfNeeded();
 
-            string appResponseBody = await TwitterAPIUtils.GetResponse(Configuration, AuthenticationType.Application, TwitterAPIEndpoint.RateLimitStatus, TwitterAPIUtils.RateLimitStatusQuery(RateLimitResources), null);
-            string userResponseBody = await TwitterAPIUtils.GetResponse(Configuration, AuthenticationType.User, TwitterAPIEndpoint.RateLimitStatus, TwitterAPIUtils.RateLimitStatusQuery(RateLimitResources), token);
+            string appResponseBody = await TwitterAPIUtils.GetResponse(
+                configuration,
+                AuthenticationType.Application,
+                TwitterAPIEndpoint.RateLimitStatus,
+                TwitterAPIUtils.RateLimitStatusQuery(RateLimitResources),
+                null, 
+                null);
+            string userResponseBody = (token == null || tokenSecret == null)
+                ? null
+                : await TwitterAPIUtils.GetResponse(
+                    configuration,
+                    AuthenticationType.User,
+                    TwitterAPIEndpoint.RateLimitStatus,
+                    TwitterAPIUtils.RateLimitStatusQuery(RateLimitResources),
+                    token,
+                    tokenSecret);
             var appResults = (appResponseBody != null) ? RateLimitResults.FromJson(appResponseBody) : null;
             var userResults = (userResponseBody != null) ? RateLimitResults.FromJson(userResponseBody) : null;
 
