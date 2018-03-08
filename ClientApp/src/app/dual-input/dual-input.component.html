@@ -13,7 +13,7 @@
             <small
                 *ngIf="firstSub?.errors?.pattern && firstSub.touched"
                 class="text-danger d-block"
-                title="Leave out the hash (#) symbol and make sure there are no spaces in the input."
+                title="Leave out the {{inputType}} ({{labelText}}) symbol and make sure there are no spaces in the input."
             >
                 Input is not a valid {{inputType}}.
             </small>
@@ -34,7 +34,7 @@
             <small
                 *ngIf="secondSub?.errors?.pattern && firstSub.touched"
                 class="text-danger d-block"
-                title="Leave out the hash (#) symbol and make sure there are no spaces in the input."
+                title="Leave out the {{inputType}} ({{labelText}}) symbol and make sure there are no spaces in the input."
             >
                 Input is not a valid {{inputType}}.
             </small>
