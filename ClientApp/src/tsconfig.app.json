@@ -4,7 +4,7 @@
     "outDir": "../out-tsc/app",
     "baseUrl": "./",
     "module": "es2015",
-    "types": []
+    "types": ["node" ,"@types/d3", "@types/d3.cloud.layout"]
   },
   "exclude": [
     "test.ts",
