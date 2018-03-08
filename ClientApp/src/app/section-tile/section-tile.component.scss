@@ -1,5 +1,7 @@
 @import '../../sass/styles.scss';
 
+// TODO: Make this a fixed height so they don't pop around when the arrow doesn't show on active
+
 .card {
     border: none;
 }
@@ -30,5 +32,17 @@ svg {
 
     svg {
         display: none;
+    }
+}
+
+a[ng-reflect-router-link="/geo"] {
+    // :not(a[routerlinkactive="link-active"]) ?
+    span {
+        float: left;
+        width: calc(100% - 3rem);
+    }
+
+    svg {
+        margin-top: 2rem;
     }
 }
