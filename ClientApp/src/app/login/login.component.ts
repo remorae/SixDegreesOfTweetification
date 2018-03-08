@@ -8,9 +8,10 @@ import { Router } from '@angular/router';
     styleUrls: ['./login.component.scss']
 })
 export class LoginComponent implements OnInit {
-    username = '';
+    email = '';
     password = '';
     message = '';
+
     constructor(
         private router: Router,
         private authService: AuthenticationService
@@ -19,17 +20,25 @@ export class LoginComponent implements OnInit {
     ngOnInit() {}
 
     login() {
-        this.authService.login(this.username, this.password).subscribe(
+        this.authService.login(this.email, this.password).subscribe(
             val => {
                 if (this.authService.isLoggedIn) {
                     this.router.navigate(['home']);
                 } else {
-                    this.message = 'Login Failed due to improper credentials';
+                    this.message = 'Login failed due to improper credentials.';
                 }
             },
             error => {
-                this.message = 'Login failed due to' + JSON.stringify(error);
+                this.message = JSON.stringify(error.error).replace(new RegExp(';', 'g'), '\n').replace(new RegExp('"', 'g'), '');
             }
         );
+    }
+
+    navToRegister() {
+        this.router.navigate(['register']);
+    }
+
+    loginWithTwitter() {
+        location.href = 'api/authentication/ExternalLogin?provider=Twitter';
     }
 }

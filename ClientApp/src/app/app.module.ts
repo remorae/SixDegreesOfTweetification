@@ -1,7 +1,7 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HttpClientXsrfModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { RouterModule, Routes } from '@angular/router';
 
 import { AppComponent } from './app.component';
@@ -21,11 +21,15 @@ import { RateLimitDisplayComponent } from './rate-limit-display/rate-limit-displ
 import { HashToHashPageComponent } from './hash-to-hash-page/hash-to-hash-page.component';
 import { UserToUserPageComponent } from './user-to-user-page/user-to-user-page.component';
 import { WordCloudPageComponent } from './word-cloud-page/word-cloud-page.component';
-
+import { HttpXsrfInterceptorService } from './services/http-xsrfinterceptor.service';
+import { RegisterComponent } from './register/register.component';
+import { ExternalLoginComponent } from './external-login/external-login.component';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
     { path: 'login', component: LoginComponent, pathMatch: 'full' },
+    { path: 'externallogin', component: ExternalLoginComponent, pathMatch: 'full' },
+    { path: 'register', component: RegisterComponent, pathMatch: 'full' },
     { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
     { path: 'hash-to-hash', component: HashToHashPageComponent, canActivate: [AuthGuard] },
     { path: 'geo', component: GeoPageComponent, canActivate: [AuthGuard] },
@@ -47,16 +51,27 @@ const appRoutes: Routes = [
         RateLimitDisplayComponent,
         HashToHashPageComponent,
         UserToUserPageComponent,
-        WordCloudPageComponent
+        WordCloudPageComponent,
+        RegisterComponent,
+        ExternalLoginComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
         HttpClientModule,
+        HttpClientXsrfModule.withOptions({
+            cookieName: 'XSRF-TOKEN',
+            headerName: 'X-XSRF-TOKEN',
+        }),
         FormsModule,
         ReactiveFormsModule,
         RouterModule.forRoot(appRoutes) // , { enableTracing: true })
     ],
-    providers: [AuthenticationService, AuthGuard, EndpointService],
+    providers: [
+        AuthenticationService,
+        AuthGuard,
+        EndpointService,
+        { provide: HTTP_INTERCEPTORS, useClass: HttpXsrfInterceptorService, multi: true }
+    ],
     bootstrap: [AppComponent]
 })
 export class AppModule {}
