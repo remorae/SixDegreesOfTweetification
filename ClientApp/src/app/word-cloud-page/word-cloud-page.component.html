@@ -1,0 +1,20 @@
+<div class="clearfix mb-4">
+    <h1 class="mb-3 d-inline-block align-top">Word Cloud</h1>
+    <app-single-input (userSubmit)="onUserSubmit($event)"></app-single-input>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        An obnoxious JS library is going to go here. Hopefully less obnoxious when it works!
+        <br/>
+        <br/>
+        <i class="fas fa-comment-alt"></i>
+        <i class="fas fa-cloud"></i>
+        <br/>
+        <br/>
+        <p *ngIf="!!latestSearch">
+            Dude, check out this word you just typed: <br/>
+            {{latestSearch}}
+        </p>
+    </div>
+</div>
