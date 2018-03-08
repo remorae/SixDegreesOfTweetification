@@ -1,3 +1,15 @@
+@import '../sass/styles.scss';
+
+.tile-column {
+    width: $tile-width;
+    padding: 0 $grid-gutter-width / 2;
+}
+
+.content-area {
+    width: calc(100% - #{$tile-width});
+    padding: 0 $grid-gutter-width / 2;
+}
+
 @media (max-width: 767px) {
   /* On small screens, the nav menu spans the full width of the screen. Leave a space for it. */
   .body-content {
