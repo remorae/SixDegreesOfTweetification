@@ -18,13 +18,19 @@ import { EndpointService } from './services/endpoint.service';
 import { SectionTileComponent } from './section-tile/section-tile.component';
 import { SelectGeoFilterComponent } from './select-geo-filter/select-geo-filter.component';
 import { RateLimitDisplayComponent } from './rate-limit-display/rate-limit-display.component';
+import { HashToHashPageComponent } from './hash-to-hash-page/hash-to-hash-page.component';
+import { UserToUserPageComponent } from './user-to-user-page/user-to-user-page.component';
+import { WordCloudPageComponent } from './word-cloud-page/word-cloud-page.component';
 
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
     { path: 'login', component: LoginComponent, pathMatch: 'full' },
-    { path: 'geo', component: GeoPageComponent, canActivate: [AuthGuard] },
     { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
+    { path: 'hash-to-hash', component: HashToHashPageComponent, canActivate: [AuthGuard] },
+    { path: 'geo', component: GeoPageComponent, canActivate: [AuthGuard] },
+    { path: 'user-to-user', component: UserToUserPageComponent, canActivate: [AuthGuard] },
+    { path: 'word-cloud', component: WordCloudPageComponent, canActivate: [AuthGuard] },
 ];
 @NgModule({
     declarations: [
@@ -38,7 +44,10 @@ const appRoutes: Routes = [
         SingleInputComponent,
         SectionTileComponent,
         SelectGeoFilterComponent,
-        RateLimitDisplayComponent
+        RateLimitDisplayComponent,
+        HashToHashPageComponent,
+        UserToUserPageComponent,
+        WordCloudPageComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
