@@ -1,0 +1,21 @@
+<div class="clearfix mb-4">
+    <h1 class="mb-3 d-inline-block align-top">Hash to Hash</h1>
+    <app-dual-input (userSubmit)="onUserSubmit($event)" inputType="hashtag"></app-dual-input>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        Cool stuff is going to go here. Just you wait.
+        <br/>
+        <br/>
+        <i class="fas fa-hashtag"></i>
+        <i class="fas fa-arrow-right"></i>
+        <i class="fas fa-hashtag"></i>
+        <br/>
+        <br/>
+        <p *ngIf="!!latestSearch">
+            In fact, here's some cool stuff now! <br/>
+            {{latestSearch}}
+        </p>
+    </div>
+</div>
