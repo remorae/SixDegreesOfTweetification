@@ -26,6 +26,7 @@ import { WordCloudPageComponent } from './word-cloud-page/word-cloud-page.compon
 import { HttpXsrfInterceptorService } from './services/http-xsrfinterceptor.service';
 import { RegisterComponent } from './register/register.component';
 import { ExternalLoginComponent } from './external-login/external-login.component';
+import { CloudBottleComponent } from './cloud-bottle/cloud-bottle.component';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
@@ -56,7 +57,8 @@ const appRoutes: Routes = [
         UserToUserPageComponent,
         WordCloudPageComponent,
         RegisterComponent,
-        ExternalLoginComponent
+        ExternalLoginComponent,
+        CloudBottleComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
