@@ -27,6 +27,7 @@ import { HttpXsrfInterceptorService } from './services/http-xsrfinterceptor.serv
 import { RegisterComponent } from './register/register.component';
 import { ExternalLoginComponent } from './external-login/external-login.component';
 import { CloudBottleComponent } from './cloud-bottle/cloud-bottle.component';
+import { CloudDataService} from './services/cloud-data.service';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
@@ -75,7 +76,8 @@ const appRoutes: Routes = [
         AuthenticationService,
         AuthGuard,
         EndpointService,
-        { provide: HTTP_INTERCEPTORS, useClass: HttpXsrfInterceptorService, multi: true }
+        { provide: HTTP_INTERCEPTORS, useClass: HttpXsrfInterceptorService, multi: true },
+        CloudDataService
     ],
     bootstrap: [AppComponent]
 })
