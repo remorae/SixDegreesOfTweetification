@@ -5,7 +5,6 @@ import { CloudDataService } from '../services/cloud-data.service';
 declare let d3: any;
 
 export interface WeightedWord {
-
     text: string;
     size: number;
 }
@@ -21,8 +20,6 @@ export class CloudBottleComponent implements OnInit, OnChanges {
     @Input() words: WeightedWord[];
     cloudWidth: string;
     cloudHeight: string;
-    differ;
-    layout;
     constructor() { }
 
     ngOnInit() {
@@ -41,7 +38,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
         d3.layout.cloud().size([this.cloudWidth, this.cloudHeight])
             .words(this.words)
             .padding(1)
-            .rotate(() => ~~(Math.random() * 2) * 45)
+            //   .rotate(() => ~~(Math.random() * 2) * 45) // the default rotate function may be more visually appealing
             // turns out ~~ just chops off everything to the right of the decimal
             .font('Impact')
             .fontSize((d) => d.size)

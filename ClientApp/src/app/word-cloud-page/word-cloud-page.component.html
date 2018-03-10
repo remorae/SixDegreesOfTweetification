@@ -1,12 +1,12 @@
 <div class="clearfix mb-4">
     <h1 class="mb-3 d-inline-block align-top">Word Cloud</h1>
     <app-single-input (userSubmit)="onUserSubmit($event)" inputType="hashtag"></app-single-input>
-    <p> Latest Search:{{latestSearch}}
-         New Words: {{newlyAdded}}
-          Total Words: {{cloudWords.length}}</p>
+         <span>Latest Search:</span><span class="badge badge-primary">{{latestSearch}}</span> <br/>
+         <span>New Words:</span><span class="badge badge-primary">{{newlyAdded}}</span> <br>
+         <span>Total Words:</span><span class="badge badge-primary">{{cloudWords.length}}</span> <br>
 </div>
 
-<div class="card mb-3">
+<div [hidden]="!cloudWords.length" class="card mb-3"> <!-- Can't be an NgIf due to timing issues with adding the element back to the DOM-->
     <div class="card-body">
         <app-cloud-bottle [words]="cloudWords"></app-cloud-bottle>
 
