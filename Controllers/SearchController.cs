@@ -117,6 +117,39 @@ namespace SixDegrees.Controllers
         }
 
         /// <summary>
+        /// Returns a list of hashtags associated with the given hashtag.
+        /// </summary>
+        /// <param name="query">The hashtags to search for, separated by spaces.</param>
+        /// <returns></returns>
+        [HttpGet("hashtags")]
+        public async Task<IActionResult> Hashtags(string query)
+        {
+            try
+            {
+                var results = await GetResults<TweetSearchResults>(
+                    query,
+                    AuthenticationType.Both,
+                    TwitterAPIUtils.HashtagSearchQuery,
+                    TwitterAPIEndpoint.SearchTweets);
+
+                var hashtags = results.Statuses
+                    .Aggregate(new HashSet<Hashtag>(), (set, status) => AppendHashtagsInStatus(status, set))
+                    .Select(hashtag => hashtag.Text.ToLower());
+                return Ok(hashtags);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        private static HashSet<Hashtag> AppendHashtagsInStatus(Status status, HashSet<Hashtag> set)
+        {
+            set.UnionWith(status.Entities.Hashtags.AsEnumerable());
+            return set;
+        }
+
+        /// <summary>
         /// Returns a list of locations from tweets containing given hashtags.
         /// </summary>
         /// <param name="query">The hashtags to search for, separated by spaces.</param>
