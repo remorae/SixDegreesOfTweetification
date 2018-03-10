@@ -1,5 +1,11 @@
 @import '../../sass/styles.scss';
 
-label {
-    color: $ewu-grey;
+.input-group {
+    max-width: 20rem;
+}
+
+.input-group-text {
+    background-color: $primary;
+    border-color: $primary;
+    color: $white;
 }
