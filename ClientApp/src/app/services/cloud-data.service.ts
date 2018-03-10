@@ -20,6 +20,7 @@ export class CloudDataService {
                     .map((p: PlaceResult): string[] => p.hashtags)
                     .reduce((prev, curr): string[] => prev.concat(...curr), [])
                     .map((hash: string): WeightedWord => ({ text: hash, size: 10 + Math.random() * 90 }));
+                // we may want to change default size to 1 and do transformations based on word length
             }));
         });
     }
