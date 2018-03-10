@@ -20,6 +20,7 @@ export class WordCloudPageComponent implements OnInit {
     onUserSubmit(input: UserInput) {
         this.latestSearch = input.inputs[0];
         this.cloudData.getRelatedHashes(this.latestSearch).subscribe((newWords: WeightedWord[]) => {
+
             newWords.forEach((word) => {
                 if (this.wordMap.has(word.text)) {
                     this.wordMap.get(word.text).size++;
@@ -28,11 +29,13 @@ export class WordCloudPageComponent implements OnInit {
                 }
             });
             const fresh: WeightedWord[] = this.wordMap.values();
-            this.newlyAdded = fresh.length - this.cloudWords.length;
+
             if (!this.cloudWords.length) {
-                this.newlyAdded = newWords.length;
+                this.newlyAdded = fresh.length;
+            } else {
+                this.newlyAdded = fresh.length - this.cloudWords.length;
             }
-            this.cloudWords = this.wordMap.values();
+            this.cloudWords = fresh;
         });
 
     }
