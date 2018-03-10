@@ -1,14 +1,28 @@
 import { Injectable } from '@angular/core';
 import { WeightedWord } from '../cloud-bottle/cloud-bottle.component';
+import { EndpointService } from './endpoint.service';
+import { Country, PlaceResult } from '../models';
+import { Observable } from 'rxjs/Observable';
 
 @Injectable()
 export class CloudDataService {
 
-    constructor() {
+    accumulatedWords: WeightedWord[];
+    constructor(private endpoint: EndpointService) {
 
     }
 
+    getRelatedHashes(hashtag: string): Observable<WeightedWord[]> {
+        return this.endpoint.searchLocations(hashtag).map((results: Country[]): WeightedWord[] => {
 
+            return [].concat(...results.map((c: Country): WeightedWord[] => {
+                return c.places
+                    .map((p: PlaceResult): string[] => p.hashtags)
+                    .reduce((prev, curr): string[] => prev.concat(...curr), [])
+                    .map((hash: string): WeightedWord => ({ text: hash, size: 10 + Math.random() * 90 }));
+            }));
+        });
+    }
 
 
 
