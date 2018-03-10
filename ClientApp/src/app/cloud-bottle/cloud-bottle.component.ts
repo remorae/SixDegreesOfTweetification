@@ -37,7 +37,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
         }
     }
 
-    buildLayout() {
+    buildLayout() {  // https://github.com/jasondavies/d3-cloud for cloud generator
         d3.layout.cloud().size([this.cloudWidth, this.cloudHeight])
             .words(this.words)
             .padding(1)
