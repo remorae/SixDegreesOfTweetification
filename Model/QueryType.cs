@@ -5,6 +5,7 @@
         TweetsByHashtag,
         LocationsByHashtag,
         UserByScreenName,
-        UserConnectionsByScreenName
+        UserConnectionsByScreenName,
+        HashtagsFromHashtag
     }
 }
