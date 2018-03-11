@@ -1,19 +1,17 @@
 <div class="clearfix mb-4">
     <h1 class="mb-3 d-inline-block align-top">Word Cloud</h1>
-    <div class="flex row">
+    <div class="flex row align-items-baseline">
         <app-single-input (userSubmit)="onUserSubmit($event)" inputType="hashtag"></app-single-input>
-        <button class="mx-3 btn btn-primary" [disabled]="!this.cloudWords.length" (click)="clearCloud()">Clear Cloud</button>
-        <span *ngIf="!newlyAdded && !latestSearch; else show"></span>
 
-        <ng-template #show>
-            <span *ngIf="newlyAdded" class="bg-success rounded p-2">Words Added!</span>
-            <span *ngIf="!newlyAdded" class="bg-danger rounded  p-2">No New Results</span>
-        </ng-template>
+        <button class="mx-3 btn btn-primary" [disabled]="!this.cloudWords.length" (click)="clearCloud()">Clear Cloud</button>
+            <span *ngIf="cloudState === 'new'" class="bg-success rounded p-2">Words Added!</span>
+            <span *ngIf="cloudState === 'unchanged'" class="bg-danger rounded  p-2">No New Results</span>
+
     </div>
 </div>
 <div [hidden]="!cloudWords.length" class="card mb-3">
     <!-- Can't be an NgIf due to timing issues with adding the element back to the DOM-->
     <div class="card-body">
-        <app-cloud-bottle [words]="cloudWords"></app-cloud-bottle>
+        <app-cloud-bottle [words]="cloudWords" (cloudDrawn)="checkCloudDrawn($event)"></app-cloud-bottle>
     </div>
 </div>
