@@ -47,7 +47,7 @@ export class RateLimitDisplayComponent implements OnInit {
             case 'geo':
                 return [QueryType.LocationsByHashtag]; // TODO: update when adding components
             case 'word-cloud':
-            return [QueryType.LocationsByHashtag];
+            return [QueryType.HashtagsFromHashtag];
             default:
                 return null;
         }

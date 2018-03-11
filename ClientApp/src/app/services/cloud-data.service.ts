@@ -3,26 +3,51 @@ import { WeightedWord } from '../cloud-bottle/cloud-bottle.component';
 import { EndpointService } from './endpoint.service';
 import { Country, PlaceResult } from '../models';
 import { Observable } from 'rxjs/Observable';
-
+import * as D3 from 'd3';
 @Injectable()
 export class CloudDataService {
 
-    accumulatedWords: WeightedWord[];
+    allWords: D3.Map<WeightedWord> = D3.map<WeightedWord>();
+    wordsAdded: number;
+
     constructor(private endpoint: EndpointService) {
 
     }
 
     getRelatedHashes(hashtag: string): Observable<WeightedWord[]> {
-        return this.endpoint.searchLocations(hashtag).map((results: Country[]): WeightedWord[] => {
+        return this.endpoint.searchRelatedHashtags(hashtag).map((results: string[]): WeightedWord[] => {
 
-            return [].concat(...results.map((c: Country): WeightedWord[] => {
-                return c.places
-                    .map((p: PlaceResult): string[] => p.hashtags)
-                    .reduce((prev, curr): string[] => prev.concat(...curr), [])
-                    .map((hash: string): WeightedWord => ({ text: hash, size: 10 + Math.random() * 90 }));
-                // we may want to change default size to 1 and do transformations based on word length
-            }));
+            const oldCount = this.allWords.size();
+
+            results.forEach((hash) => {
+                if (this.allWords.has(hash)) {
+                    this.allWords.get(hash).occurrence++;
+                } else {
+                    this.allWords.set(hash, { text: hash, size: 10, occurrence: 1 });
+                }
+            });
+
+            this.wordsAdded = this.allWords.size() - oldCount;
+            this.allWords.each((word) => {
+
+                const limiter = (this.allWords.size() > 100) ? this.allWords.size() / 100 : 1;
+                word.size = 10  + (Math.random() * 90)  / limiter;
+            });
+
+            return this.allWords.values();
         });
+    }
+
+    getTotalWordCount(): number {
+        return this.allWords.size();
+    }
+
+    dropCachedWords(): void {
+        this.allWords.clear();
+    }
+
+    getWordsAdded(): number {
+        return this.wordsAdded;
     }
 
 
@@ -60,7 +85,7 @@ export class CloudDataService {
             'netus', 'fames', 'quisque', 'euismod', 'curabitur', 'lectus',
             'elementum', 'tempor', 'risus', 'cras']
             .map(function (d): WeightedWord {
-                return { text: d, size: 10 + Math.random() * 90 };
+                return { text: d, size: 10 + Math.random() * 90, occurrence: 1 };
             });
     }
 }
