@@ -1,6 +1,5 @@
 import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
 import * as D3 from 'd3';
-import * as cloud from 'd3-cloud';
 import { CloudDataService } from '../services/cloud-data.service';
 declare let d3: any;
 
