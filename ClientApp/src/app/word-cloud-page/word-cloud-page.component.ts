@@ -10,7 +10,7 @@ import * as D3 from 'd3';
 })
 export class WordCloudPageComponent implements OnInit {
     latestSearch: string;
-    wordMap: D3.Map<WeightedWord> = D3.map();
+    wordMap: D3.Map<WeightedWord> = D3.map<WeightedWord>();
     cloudWords: WeightedWord[] = [];
     newlyAdded: number;
     constructor(private cloudData: CloudDataService) { }
