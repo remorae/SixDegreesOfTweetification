@@ -31,6 +31,7 @@ namespace SixDegrees.Model
             {
                 case QueryType.TweetsByHashtag:
                 case QueryType.LocationsByHashtag:
+                case QueryType.HashtagsFromHashtag:
                     yield return TwitterAPIEndpoint.SearchTweets;
                     yield break;
                 case QueryType.UserByScreenName:
