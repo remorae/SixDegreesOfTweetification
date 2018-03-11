@@ -1,6 +1,8 @@
-import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, OnInit, Input, OnChanges, SimpleChanges, EventEmitter, Output } from '@angular/core';
 import * as D3 from 'd3';
 import { CloudDataService } from '../services/cloud-data.service';
+import { CloudState } from '../word-cloud-page/word-cloud-page.component';
+
 declare let d3: any;
 
 export interface WeightedWord {
@@ -21,6 +23,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
     cloudWords: WeightedWord[];
     cloudWidth: string;
     cloudHeight: string;
+    @Output() cloudDrawn: EventEmitter<string> = new EventEmitter<string>(true);
     constructor() { }
 
     ngOnInit() {
@@ -29,11 +32,18 @@ export class CloudBottleComponent implements OnInit, OnChanges {
     }
     ngOnChanges(changes: SimpleChanges) {
         const wordChange = changes['words'];
+        let drawn: CloudState = 'unchanged';
         if (wordChange.previousValue && wordChange.previousValue.length !== wordChange.currentValue.length) {
             this.cloudWords = this.words.map((word) => ({ ...word }));
             this.dropCloud();
             this.buildLayout();
+            drawn = 'new';
         }
+        if (wordChange.isFirstChange()) {
+            drawn = 'empty';
+        }
+        this.cloudDrawn.emit(drawn);
+
     }
 
     buildLayout() {  // https://github.com/jasondavies/d3-cloud for cloud generator
@@ -75,6 +85,8 @@ export class CloudBottleComponent implements OnInit, OnChanges {
                 'translate(' + [d.x, d.y] + ')rotate(' + d.rotate + ')'
             )
             .text((d: WeightedWord) => d.text);
-        //D3.select("text").transform
+
+
+
     }
 }
