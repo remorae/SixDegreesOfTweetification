@@ -9,7 +9,8 @@ export enum QueryType {
     TweetsByHashtag = 'TweetsByHashtag',
     LocationsByHashtag = 'LocationsByHashtag',
     UserByScreenName = 'UserByScreenName',
-    UserConnectionsByScreenName = 'UserConnectionsByScreenName'
+    UserConnectionsByScreenName = 'UserConnectionsByScreenName',
+    HashtagsFromHashtag = 'HashtagsFromHashtag'
 }
 export class AuthPair {
     Application: number;
@@ -59,5 +60,9 @@ export class EndpointService {
         return this.http.get<AuthPair>(
             this.baseUrl + 'api/ratelimit/status?=' + type + '&forceupdate=true'
         );
+    }
+
+    public searchRelatedHashtags(hashtag: string): Observable<string[]> {
+        return this.http.get<string[]>(this.baseUrl + 'api/search/hashtags?query=' + hashtag).finally(this.pushLatest);
     }
 }
