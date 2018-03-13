@@ -38,7 +38,11 @@ export class CloudBottleComponent implements OnInit, OnChanges {
             this.dropCloud();
             this.buildLayout();
             drawn = 'new';
+            if (wordChange.currentValue.length < wordChange.previousValue.length) {
+                drawn = 'empty';
+            }
         }
+
         if (wordChange.isFirstChange()) {
             drawn = 'empty';
         }
@@ -64,6 +68,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
 
     dropCloud() {
         D3.select('svg.removable').remove();
+        this.cloudDrawn.emit('empty');
     }
     createCloud(input) {
         const fill: D3.ScaleOrdinal<string, string> = D3.scaleOrdinal(D3.schemeCategory10);
