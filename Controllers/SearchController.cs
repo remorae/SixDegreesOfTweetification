@@ -148,6 +148,106 @@ namespace SixDegrees.Controllers
             set.UnionWith(status.Entities.Hashtags.AsEnumerable());
             return set;
         }
+        
+        /// <summary>
+         /// Returns a list of hashtags within the given number of "degrees" of the given hashtag.
+         /// </summary>
+         /// <param name="query">The hashtag to search for.</param>
+         /// <param name="numberOfDegrees">The maximum distance between a hashtag and the initial term.</param>
+         /// <returns></returns>
+        [HttpGet("degrees/hashtags")]
+        public async Task<IActionResult> HashtagConnections(string query, int numberOfDegrees = 6)
+        {
+            if (query == null)
+                return BadRequest("Invalid query.");
+            int maxAPICalls = Math.Min(RateLimitCache.Get.MinimumRateLimits(QueryType.HashtagConnectionsByHashtag)[AuthenticationType.User], 60);
+            int callsMade = 0;
+            try
+            {
+                ISet<string> queried = new HashSet<string>();
+                Stack<string> remaining = new Stack<string>();
+                IDictionary<string, HashtagConnectionInfo> results = new Dictionary<string, HashtagConnectionInfo>
+                {
+                    { query, new HashtagConnectionInfo(0) }
+                };
+                remaining.Push(query);
+                while (callsMade < maxAPICalls && remaining.Count > 0)
+                {
+                    ++callsMade;
+                    string toQuery = remaining.Pop();
+                    queried.Add(toQuery);
+                    var lookup = (await Hashtags(toQuery) as OkObjectResult).Value as IEnumerable<string>;
+                    foreach (var hashtag in lookup.Distinct())
+                    {
+                        results[toQuery].Connections.Add(hashtag);
+                    }
+                    int nextDistance = results[toQuery].Distance + 1;
+                    foreach (var hashtag in lookup.Distinct().Except(queried).Except(remaining))
+                    {
+                        if (nextDistance < numberOfDegrees)
+                            remaining.Push(hashtag);
+                        results[hashtag] = new HashtagConnectionInfo(nextDistance);
+                    
+                    }
+                }
+
+                return Ok(results);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Returns a list of users within the given number of "degrees" of the given user.
+        /// </summary>
+        /// <param name="query">The user to search for.</param>
+        /// <param name="numberOfDegrees">The maximum distance between a user and the initial username.</param>
+        /// <returns></returns>
+        [HttpGet("degrees/users")]
+        public async Task<IActionResult> UserConnections(string query, int numberOfDegrees = 6)
+        {
+            if (query == null)
+                return BadRequest("Invalid query.");
+            int maxAPICalls = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName)[AuthenticationType.User];
+            int callsMade = 0;
+            try
+            {
+                ISet<string> queried = new HashSet<string>();
+                Stack<string> remaining = new Stack<string>();
+                IDictionary<string, UserConnectionInfo> results = new Dictionary<string, UserConnectionInfo>
+                {
+                    { query, new UserConnectionInfo(0) }
+                };
+                remaining.Push(query);
+                while (callsMade < maxAPICalls && remaining.Count > 0)
+                {
+                    ++callsMade;
+                    string toQuery = remaining.Pop();
+                    queried.Add(toQuery);
+                    var lookup = (await GetUserConnections(toQuery) as OkObjectResult).Value as IEnumerable<UserResult>;
+                    foreach (var hashtag in lookup.Distinct())
+                    {
+                        results[toQuery].Connections.Add(hashtag);
+                    }
+                    int nextDistance = results[toQuery].Distance + 1;
+                    foreach (var user in lookup.Distinct().Where(user => !queried.Contains(user.ScreenName)).Where(user => !remaining.Contains(user.ScreenName)))
+                    {
+                        if (nextDistance < numberOfDegrees)
+                            remaining.Push(user.ScreenName);
+                        results[user.ScreenName] = new UserConnectionInfo(nextDistance);
+
+                    }
+                }
+
+                return Ok(results);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
         /// <summary>
         /// Returns a list of locations from tweets containing given hashtags.
