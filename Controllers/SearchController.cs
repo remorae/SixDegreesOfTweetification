@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using SixDegrees.Data;
 using SixDegrees.Extensions;
 using SixDegrees.Model;
 using SixDegrees.Model.JSON;
@@ -15,6 +17,8 @@ namespace SixDegrees.Controllers
     public class SearchController : Controller
     {
         private const int MaxUserLookupCount = 100;
+        private readonly UserManager<ApplicationUser> userManager;
+        private readonly RateLimitDbContext rateLimitDb;
 
         private static void LogQuery(string query, TwitterAPIEndpoint endpoint, IQueryResults results)
         {
@@ -60,20 +64,29 @@ namespace SixDegrees.Controllers
 
         private IConfiguration Configuration { get; }
 
-        public SearchController(IConfiguration configuration)
+        public SearchController(IConfiguration configuration, UserManager<ApplicationUser> userManager, RateLimitDbContext rateLimitDb)
         {
             Configuration = configuration;
+            this.userManager = userManager;
+            this.rateLimitDb = rateLimitDb;
         }
 
         private async Task<T> GetResults<T>(string query, AuthenticationType authType, Func<string, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint) where T : IQueryResults
         {
+            UserRateLimitInfo userInfo = RateLimitController.GetCurrentUserInfo(rateLimitDb, endpoint, userManager, User);
             string responseBody = await TwitterAPIUtils.GetResponse(
                 Configuration,
                 authType,
                 endpoint,
                 buildQueryString(query, endpoint),
                 User.GetTwitterAccessToken(),
-                User.GetTwitterAccessTokenSecret());
+                User.GetTwitterAccessTokenSecret(),
+                userInfo);
+            if (userInfo != null)
+            {
+                rateLimitDb.Update(userInfo);
+                rateLimitDb.SaveChanges();
+            }
             T results = JsonConvert.DeserializeObject<T>(responseBody);
             LogQuery(query, endpoint, results);
             return results;
@@ -81,13 +94,20 @@ namespace SixDegrees.Controllers
 
         private async Task<IEnumerable<T>> GetResultCollection<T>(IEnumerable<string> queries, AuthenticationType authType, Func<IEnumerable<string>, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint) where T : IQueryResults
         {
+            UserRateLimitInfo userInfo = RateLimitController.GetCurrentUserInfo(rateLimitDb, endpoint, userManager, User);
             string responseBody = await TwitterAPIUtils.GetResponse(
                 Configuration,
                 authType,
                 endpoint,
                 buildQueryString(queries, endpoint),
                 User.GetTwitterAccessToken(),
-                User.GetTwitterAccessTokenSecret());
+                User.GetTwitterAccessTokenSecret(),
+                userInfo);
+            if (userInfo != null)
+            {
+                rateLimitDb.Update(userInfo);
+                rateLimitDb.SaveChanges();
+            }
             T[] results = JsonConvert.DeserializeObject<T[]>(responseBody);
             LogQuerySet(queries, endpoint, results.Cast<IQueryResults>());
             return results;
@@ -160,7 +180,7 @@ namespace SixDegrees.Controllers
         {
             if (query == null)
                 return BadRequest("Invalid query.");
-            int maxAPICalls = Math.Min(RateLimitCache.Get.MinimumRateLimits(QueryType.HashtagConnectionsByHashtag)[AuthenticationType.User], 60);
+            int maxAPICalls = Math.Min(RateLimitCache.Get.MinimumRateLimits(QueryType.HashtagConnectionsByHashtag, rateLimitDb, userManager, User)[AuthenticationType.User], 60);
             int callsMade = 0;
             try
             {
@@ -210,7 +230,7 @@ namespace SixDegrees.Controllers
         {
             if (query == null)
                 return BadRequest("Invalid query.");
-            int maxAPICalls = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName)[AuthenticationType.User];
+            int maxAPICalls = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User)[AuthenticationType.User];
             int callsMade = 0;
             try
             {
@@ -345,7 +365,7 @@ namespace SixDegrees.Controllers
                 if (QueryHistory.Get[TwitterAPIEndpoint.FollowersIDs].LastQuery == screen_name)
                     return BadRequest("Cannot repeat user connection queries."); //TODO Cache results and return those?
 
-                int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName).Values.Min();
+                int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User).Values.Min();
                 limit = Math.Min(limit, maxLookupCount * MaxUserLookupCount);
                 
                 var followerResults = await GetResults<UserIdsResults>(

@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace SixDegrees.Model
 {
-    class RateLimitInfo
+    public abstract class RateLimitInfo
     {
-        private const long TwitterAPIResetIntervalMillis = (15 * TimeSpan.TicksPerMinute / TimeSpan.TicksPerMillisecond);
-        private static readonly IDictionary<TwitterAPIEndpoint, IDictionary<AuthenticationType, int>> AuthLimits
+        protected const long TwitterAPIResetIntervalMillis = (15 * TimeSpan.TicksPerMinute / TimeSpan.TicksPerMillisecond);
+        protected static readonly IDictionary<TwitterAPIEndpoint, IDictionary<AuthenticationType, int>> AuthLimits
             = new Dictionary<TwitterAPIEndpoint, IDictionary<AuthenticationType, int>>()
         {
             { TwitterAPIEndpoint.SearchTweets,
@@ -60,29 +59,20 @@ namespace SixDegrees.Model
                 }
             }
         };
-        private static readonly IEnumerable<AuthenticationType> useableAuthTypes = new AuthenticationType[] { AuthenticationType.Application, AuthenticationType.User };
+        internal static readonly IEnumerable<AuthenticationType> UseableAuthTypes = new AuthenticationType[] { AuthenticationType.Application, AuthenticationType.User };
 
-        internal static bool SupportsAppAuth(TwitterAPIEndpoint type) => AuthLimits[type][AuthenticationType.Application] > 0;
-        internal static bool SupportsUserAuth(TwitterAPIEndpoint type) => AuthLimits[type][AuthenticationType.User] > 0;
-        internal static IEnumerable<AuthenticationType> UseableAuthTypes => useableAuthTypes;
+        private TwitterAPIEndpoint type;
+        public TwitterAPIEndpoint Type { get => type; set { type = value; OnTypeChanged(); } }
 
-        private readonly TwitterAPIEndpoint type;
-        private DateTime lastUpdated = DateTime.Now;
-        private IDictionary<AuthenticationType, int> currentLimits = new Dictionary<AuthenticationType, int>();
+        internal abstract void OnTypeChanged();
 
-        internal int this[AuthenticationType type] => (UseableAuthTypes.Contains(type) ? currentLimits[type] : -1);
+        public DateTime LastUpdated { get; set; }
 
-        internal bool NeedsReset => SinceLastUpdate > UntilReset;
-        internal TimeSpan SinceLastUpdate => DateTime.Now - lastUpdated;
-        internal TimeSpan UntilReset { get; private set; } = TimeSpan.FromMilliseconds(TwitterAPIResetIntervalMillis);
-        internal bool Available => NeedsReset || UseableAuthTypes.Any(authType => currentLimits[authType] > 0);
-
-        internal RateLimitInfo(TwitterAPIEndpoint type)
-        {
-            this.type = type;
-            foreach (AuthenticationType authType in UseableAuthTypes)
-                currentLimits.Add(authType, AuthLimits[type][authType]);
-        }
+        public int Limit { get; set; }
+        protected bool NeedsReset => SinceLastUpdate > UntilReset;
+        internal TimeSpan SinceLastUpdate => DateTime.Now - LastUpdated;
+        public TimeSpan UntilReset { get; set; } = TimeSpan.FromMilliseconds(TwitterAPIResetIntervalMillis);
+        internal bool Available => NeedsReset || Limit > 0;
 
         internal void ResetIfNeeded()
         {
@@ -90,28 +80,19 @@ namespace SixDegrees.Model
                 Reset();
         }
 
-        private void Reset()
-        {
-            foreach (AuthenticationType authType in UseableAuthTypes)
-                currentLimits[authType] = AuthLimits[type][authType];
-            UntilReset = TimeSpan.FromMilliseconds((SinceLastUpdate - UntilReset).TotalMilliseconds % TwitterAPIResetIntervalMillis);
-            lastUpdated = DateTime.Now;
-        }
+        protected abstract void Reset();
 
-        internal void Update(int appAuthRemaining, int userAuthRemaining)
+        internal void Update(int remaining)
         {
             ResetIfNeeded();
-            currentLimits[AuthenticationType.Application] = appAuthRemaining;
-            currentLimits[AuthenticationType.User] = userAuthRemaining;
+            Limit = remaining;
         }
 
-        internal void Update(AuthenticationType authType, int remaining, TimeSpan untilReset)
+        internal void Update(int remaining, TimeSpan untilReset)
         {
-            currentLimits[authType] = remaining;
+            Limit = remaining;
             UntilReset = untilReset;
-            lastUpdated = DateTime.Now;
+            LastUpdated = DateTime.Now;
         }
-
-        internal bool IsAvailable(AuthenticationType type) => this[type] > 0;
     }
 }

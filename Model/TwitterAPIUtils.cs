@@ -73,12 +73,12 @@ namespace SixDegrees.Model
             return $"user_id={string.Join(",", userIds)}";
         }
 
-        internal static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, TwitterAPIEndpoint endpoint, string query, string token, string tokenSecret)
+        internal static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, TwitterAPIEndpoint endpoint, string query, string token, string tokenSecret, UserRateLimitInfo userStatus)
         {
-            RateLimitInfo endpointStatus = RateLimitCache.Get[endpoint];
-            if (!endpointStatus.Available)
-                throw new Exception($"Endpoint {endpoint} currently unavailable due to rate limits. Time until reset: {endpointStatus.UntilReset}");
-            endpointStatus.ResetIfNeeded();
+            AppRateLimitInfo appStatus = RateLimitCache.Get[endpoint];
+            if (!appStatus.Available)
+                throw new Exception($"Endpoint {endpoint} currently unavailable due to rate limits. Time until reset: {appStatus.UntilReset}");
+            appStatus.ResetIfNeeded();
             HttpMethod method = HttpMethod(endpoint);
             try
             {
@@ -86,7 +86,7 @@ namespace SixDegrees.Model
                 {
                     using (var request = new HttpRequestMessage(method, GetUri(endpoint, query)))
                     {
-                        if (!TryAuthorize(request, config, authType, token, tokenSecret, endpointStatus, out AuthenticationType? authTypeUsed))
+                        if (!TryAuthorize(request, config, authType, token, tokenSecret, appStatus, userStatus, out AuthenticationType? authTypeUsed))
                             throw new Exception($"Unable to authenticate Twitter API call of type {authType}, endpoint {endpoint}.");
                         using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
                         {
@@ -96,7 +96,12 @@ namespace SixDegrees.Model
                             {
                                 if (int.TryParse(remaining.FirstOrDefault(), out int limitRemaining) &&
                                     double.TryParse(reset.FirstOrDefault(), out double secondsUntilReset))
-                                    RateLimitCache.Get[endpoint].Update(authTypeUsed.Value, limitRemaining, TimeSpan.FromSeconds(secondsUntilReset));
+                                {
+                                    if (authTypeUsed.Value == AuthenticationType.Application)
+                                        RateLimitCache.Get[endpoint].Update(limitRemaining, UntilEpochSeconds(secondsUntilReset));
+                                    else
+                                        userStatus?.Update(limitRemaining, UntilEpochSeconds(secondsUntilReset));
+                                }
                             }
                             return await response.Content.ReadAsStringAsync();
                         }
@@ -107,6 +112,11 @@ namespace SixDegrees.Model
             {
                 throw new Exception($"Twitter API call failed: {ex.Message}");
             }
+        }
+
+        private static TimeSpan UntilEpochSeconds(double epochSeconds)
+        {
+            return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(epochSeconds) - DateTime.Now;
         }
 
         private static HttpMethod HttpMethod(TwitterAPIEndpoint endpoint)
@@ -127,14 +137,14 @@ namespace SixDegrees.Model
             }
         }
 
-        private static bool TryAuthorize(HttpRequestMessage request, IConfiguration config, AuthenticationType authType, string token, string tokenSecret, RateLimitInfo endpointStatus, out AuthenticationType? used)
+        private static bool TryAuthorize(HttpRequestMessage request, IConfiguration config, AuthenticationType authType, string token, string tokenSecret, AppRateLimitInfo appStatus, UserRateLimitInfo userStatus, out AuthenticationType? used)
         {
-            if (UseApplicationAuth(authType, token, endpointStatus))
+            if (UseApplicationAuth(authType, token, appStatus, userStatus))
             {
                 AddBearerAuth(config, request);
                 used = AuthenticationType.Application;
             }
-            else if (UseUserAuth(authType, token, endpointStatus))
+            else if (UseUserAuth(authType, token, userStatus))
             {
                 AddUserAuth(config, request, token, tokenSecret);
                 used = AuthenticationType.User;
@@ -147,16 +157,16 @@ namespace SixDegrees.Model
             return true;
         }
 
-        private static bool UseApplicationAuth(AuthenticationType authType, string token, RateLimitInfo endpointStatus)
+        private static bool UseApplicationAuth(AuthenticationType authType, string token, AppRateLimitInfo appStatus, UserRateLimitInfo userStatus)
         {
-            return endpointStatus.IsAvailable(AuthenticationType.Application) &&
+            return appStatus.Available &&
                 (authType == AuthenticationType.Application ||
-                (authType == AuthenticationType.Both && (null == token || !endpointStatus.IsAvailable(AuthenticationType.User))));
+                (authType == AuthenticationType.Both && (null == token || !userStatus.Available)));
         }
 
-        private static bool UseUserAuth(AuthenticationType authType, string token, RateLimitInfo endpointStatus)
+        private static bool UseUserAuth(AuthenticationType authType, string token, UserRateLimitInfo userStatus)
         {
-            return endpointStatus.IsAvailable(AuthenticationType.User) && token != null &&
+            return userStatus != null && userStatus.Available && token != null &&
                 (authType == AuthenticationType.User || authType == AuthenticationType.Both);
         }
 
