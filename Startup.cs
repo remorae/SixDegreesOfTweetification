@@ -121,17 +121,14 @@ namespace SixDegrees
             app.Use(async (context, next) =>
             {
                 string path = context.Request.Path.Value.ToLower();
-                if (path != null && (path == "/" || path == ""))
+                if (path != null && (path == "/" || path == "" || path == "/home"))
                 {
-                    // This is needed to provide the token generator with the logged in context (if any) 
-                    var authInfo = await context.AuthenticateAsync();
-                    context.User = authInfo.Principal;
-
                     // XSRF-TOKEN used by angular in the $http if provided
                     var tokens = antiforgery.GetAndStoreTokens(context);
                     context.Response.Cookies.Append(
                         "XSRF-TOKEN",
-                        tokens.RequestToken
+                        tokens.RequestToken,
+                        new CookieOptions() { HttpOnly = false }
                     );
                 }
                 await next.Invoke();
