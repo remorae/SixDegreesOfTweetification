@@ -6,6 +6,7 @@
         LocationsByHashtag,
         UserByScreenName,
         UserConnectionsByScreenName,
-        HashtagsFromHashtag
+        HashtagsFromHashtag,
+        HashtagConnectionsByHashtag
     }
 }

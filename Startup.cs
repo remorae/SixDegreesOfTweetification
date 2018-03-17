@@ -42,6 +42,8 @@ namespace SixDegrees
 
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+            services.AddDbContext<RateLimitDbContext>(options =>
+                options.UseSqlServer(Configuration.GetConnectionString("RateLimitConnection")));
 
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
                 {

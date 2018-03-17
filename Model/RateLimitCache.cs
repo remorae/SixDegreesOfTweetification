@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Identity;
+using SixDegrees.Controllers;
+using SixDegrees.Data;
 
 namespace SixDegrees.Model
 {
@@ -32,6 +36,7 @@ namespace SixDegrees.Model
                 case QueryType.TweetsByHashtag:
                 case QueryType.LocationsByHashtag:
                 case QueryType.HashtagsFromHashtag:
+                case QueryType.HashtagConnectionsByHashtag:
                     yield return TwitterAPIEndpoint.SearchTweets;
                     yield break;
                 case QueryType.UserByScreenName:
@@ -47,20 +52,20 @@ namespace SixDegrees.Model
             }
         }
 
-        internal RateLimitInfo this[TwitterAPIEndpoint type] => cache[type];
+        internal AppRateLimitInfo this[TwitterAPIEndpoint type] => cache[type];
 
-        private IDictionary<TwitterAPIEndpoint, RateLimitInfo> cache;
+        private IDictionary<TwitterAPIEndpoint, AppRateLimitInfo> cache;
 
         private RateLimitCache()
         {
-            cache = new Dictionary<TwitterAPIEndpoint, RateLimitInfo>();
+            cache = new Dictionary<TwitterAPIEndpoint, AppRateLimitInfo>();
             foreach (TwitterAPIEndpoint endpoint in Enum.GetValues(typeof(TwitterAPIEndpoint)))
-                cache.Add(endpoint, new RateLimitInfo(endpoint));
+                cache.Add(endpoint, new AppRateLimitInfo() { Type = endpoint });
         }
 
-        internal IDictionary<QueryType, IDictionary<AuthenticationType, int>> CurrentRateLimits
+        internal IDictionary<QueryType, IDictionary<AuthenticationType, int>> CurrentRateLimits(RateLimitDbContext rateLimitDb, UserManager<ApplicationUser> userManager, ClaimsPrincipal user)
             => Enum.GetValues(typeof(QueryType)).Cast<QueryType>()
-            .ToDictionary(type => type, type => MinimumRateLimits(type));
+            .ToDictionary(type => type, type => MinimumRateLimits(type, rateLimitDb, userManager, user));
 
         internal static bool HasEndpoint(QueryType type) => Endpoints(type).Count() > 0;
 
@@ -74,7 +79,11 @@ namespace SixDegrees.Model
 
         internal TimeSpan? SinceLastUpdate(QueryType type) => Endpoints(type).Max(endpoint => cache[endpoint.Value].SinceLastUpdate as TimeSpan?) ?? null;
 
-        internal IDictionary<AuthenticationType, int> MinimumRateLimits(QueryType type)
-            => RateLimitInfo.UseableAuthTypes.ToDictionary(authType => authType, authType => Endpoints(type).Min(endpoint => cache[endpoint.Value][authType] as int?) ?? -1);
+        internal IDictionary<AuthenticationType, int> MinimumRateLimits(QueryType type, RateLimitDbContext dbContext, UserManager<ApplicationUser> userManager, ClaimsPrincipal user)
+            => new Dictionary<AuthenticationType, int>()
+            {
+                { AuthenticationType.Application, Endpoints(type).Min(endpoint => cache[endpoint.Value].Limit as int?) ?? -1 },
+                { AuthenticationType.User, Endpoints(type).Min(endpoint => RateLimitController.GetCurrentUserInfo(dbContext, endpoint.Value, userManager, user)?.Limit as int?) ?? -1 }
+            };
     }
 }
