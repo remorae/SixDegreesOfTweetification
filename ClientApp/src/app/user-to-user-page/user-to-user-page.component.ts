@@ -1,17 +1,24 @@
 import { Component, OnInit } from '@angular/core';
 import { UserInput } from '../models/userInput';
+import { EndpointService } from '../services/endpoint.service';
 
 @Component({
-  selector: 'app-user-to-user-page',
-  templateUrl: './user-to-user-page.component.html',
-  styleUrls: ['./user-to-user-page.component.scss']
+    selector: 'app-user-to-user-page',
+    templateUrl: './user-to-user-page.component.html',
+    styleUrls: ['./user-to-user-page.component.scss']
 })
 export class UserToUserPageComponent implements OnInit {
-    latestSearch: string[];
-    constructor() { }
+    latestSearch;
+    results;
+    constructor(private endpoint: EndpointService) { }
 
-    ngOnInit() {}
+    ngOnInit() {
+    }
     onUserSubmit(input: UserInput) {
-        this.latestSearch = input.inputs;
+        this.latestSearch = input.inputs[0];
+
+        this.endpoint.searchUserDegrees(this.latestSearch).subscribe((values) => {
+            this.results = values;
+        });
     }
 }
