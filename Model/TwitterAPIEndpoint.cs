@@ -1,6 +1,6 @@
 ﻿namespace SixDegrees.Model
 {
-    enum TwitterAPIEndpoint
+    public enum TwitterAPIEndpoint
     {
         SearchTweets,
         UsersShow,

@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using SixDegrees.Data;
 using SixDegrees.Extensions;
 using SixDegrees.Model;
 using SixDegrees.Model.JSON;
@@ -15,6 +17,8 @@ namespace SixDegrees.Controllers
     public class SearchController : Controller
     {
         private const int MaxUserLookupCount = 100;
+        private readonly UserManager<ApplicationUser> userManager;
+        private readonly RateLimitDbContext rateLimitDb;
 
         private static void LogQuery(string query, TwitterAPIEndpoint endpoint, IQueryResults results)
         {
@@ -60,20 +64,29 @@ namespace SixDegrees.Controllers
 
         private IConfiguration Configuration { get; }
 
-        public SearchController(IConfiguration configuration)
+        public SearchController(IConfiguration configuration, UserManager<ApplicationUser> userManager, RateLimitDbContext rateLimitDb)
         {
             Configuration = configuration;
+            this.userManager = userManager;
+            this.rateLimitDb = rateLimitDb;
         }
 
         private async Task<T> GetResults<T>(string query, AuthenticationType authType, Func<string, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint) where T : IQueryResults
         {
+            UserRateLimitInfo userInfo = RateLimitController.GetCurrentUserInfo(rateLimitDb, endpoint, userManager, User);
             string responseBody = await TwitterAPIUtils.GetResponse(
                 Configuration,
                 authType,
                 endpoint,
                 buildQueryString(query, endpoint),
                 User.GetTwitterAccessToken(),
-                User.GetTwitterAccessTokenSecret());
+                User.GetTwitterAccessTokenSecret(),
+                userInfo);
+            if (userInfo != null)
+            {
+                rateLimitDb.Update(userInfo);
+                rateLimitDb.SaveChanges();
+            }
             T results = JsonConvert.DeserializeObject<T>(responseBody);
             LogQuery(query, endpoint, results);
             return results;
@@ -81,13 +94,20 @@ namespace SixDegrees.Controllers
 
         private async Task<IEnumerable<T>> GetResultCollection<T>(IEnumerable<string> queries, AuthenticationType authType, Func<IEnumerable<string>, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint) where T : IQueryResults
         {
+            UserRateLimitInfo userInfo = RateLimitController.GetCurrentUserInfo(rateLimitDb, endpoint, userManager, User);
             string responseBody = await TwitterAPIUtils.GetResponse(
                 Configuration,
                 authType,
                 endpoint,
                 buildQueryString(queries, endpoint),
                 User.GetTwitterAccessToken(),
-                User.GetTwitterAccessTokenSecret());
+                User.GetTwitterAccessTokenSecret(),
+                userInfo);
+            if (userInfo != null)
+            {
+                rateLimitDb.Update(userInfo);
+                rateLimitDb.SaveChanges();
+            }
             T[] results = JsonConvert.DeserializeObject<T[]>(responseBody);
             LogQuerySet(queries, endpoint, results.Cast<IQueryResults>());
             return results;
@@ -147,6 +167,106 @@ namespace SixDegrees.Controllers
         {
             set.UnionWith(status.Entities.Hashtags.AsEnumerable());
             return set;
+        }
+        
+        /// <summary>
+         /// Returns a list of hashtags within the given number of "degrees" of the given hashtag.
+         /// </summary>
+         /// <param name="query">The hashtag to search for.</param>
+         /// <param name="numberOfDegrees">The maximum distance between a hashtag and the initial term.</param>
+         /// <returns></returns>
+        [HttpGet("degrees/hashtags")]
+        public async Task<IActionResult> HashtagConnections(string query, int numberOfDegrees = 6)
+        {
+            if (query == null)
+                return BadRequest("Invalid query.");
+            int maxAPICalls = Math.Min(RateLimitCache.Get.MinimumRateLimits(QueryType.HashtagConnectionsByHashtag, rateLimitDb, userManager, User)[AuthenticationType.User], 60);
+            int callsMade = 0;
+            try
+            {
+                ISet<string> queried = new HashSet<string>();
+                Stack<string> remaining = new Stack<string>();
+                IDictionary<string, HashtagConnectionInfo> results = new Dictionary<string, HashtagConnectionInfo>
+                {
+                    { query, new HashtagConnectionInfo(0) }
+                };
+                remaining.Push(query);
+                while (callsMade < maxAPICalls && remaining.Count > 0)
+                {
+                    ++callsMade;
+                    string toQuery = remaining.Pop();
+                    queried.Add(toQuery);
+                    var lookup = (await Hashtags(toQuery) as OkObjectResult).Value as IEnumerable<string>;
+                    foreach (var hashtag in lookup.Distinct())
+                    {
+                        results[toQuery].Connections.Add(hashtag);
+                    }
+                    int nextDistance = results[toQuery].Distance + 1;
+                    foreach (var hashtag in lookup.Distinct().Except(queried).Except(remaining))
+                    {
+                        if (nextDistance < numberOfDegrees)
+                            remaining.Push(hashtag);
+                        results[hashtag] = new HashtagConnectionInfo(nextDistance);
+                    
+                    }
+                }
+
+                return Ok(results);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Returns a list of users within the given number of "degrees" of the given user.
+        /// </summary>
+        /// <param name="query">The user to search for.</param>
+        /// <param name="numberOfDegrees">The maximum distance between a user and the initial username.</param>
+        /// <returns></returns>
+        [HttpGet("degrees/users")]
+        public async Task<IActionResult> UserConnections(string query, int numberOfDegrees = 6)
+        {
+            if (query == null)
+                return BadRequest("Invalid query.");
+            int maxAPICalls = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User)[AuthenticationType.User];
+            int callsMade = 0;
+            try
+            {
+                ISet<string> queried = new HashSet<string>();
+                Stack<string> remaining = new Stack<string>();
+                IDictionary<string, UserConnectionInfo> results = new Dictionary<string, UserConnectionInfo>
+                {
+                    { query, new UserConnectionInfo(0) }
+                };
+                remaining.Push(query);
+                while (callsMade < maxAPICalls && remaining.Count > 0)
+                {
+                    ++callsMade;
+                    string toQuery = remaining.Pop();
+                    queried.Add(toQuery);
+                    var lookup = (await GetUserConnections(toQuery) as OkObjectResult).Value as IEnumerable<UserResult>;
+                    foreach (var hashtag in lookup.Distinct())
+                    {
+                        results[toQuery].Connections.Add(hashtag);
+                    }
+                    int nextDistance = results[toQuery].Distance + 1;
+                    foreach (var user in lookup.Distinct().Where(user => !queried.Contains(user.ScreenName)).Where(user => !remaining.Contains(user.ScreenName)))
+                    {
+                        if (nextDistance < numberOfDegrees)
+                            remaining.Push(user.ScreenName);
+                        results[user.ScreenName] = new UserConnectionInfo(nextDistance);
+
+                    }
+                }
+
+                return Ok(results);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -245,7 +365,7 @@ namespace SixDegrees.Controllers
                 if (QueryHistory.Get[TwitterAPIEndpoint.FollowersIDs].LastQuery == screen_name)
                     return BadRequest("Cannot repeat user connection queries."); //TODO Cache results and return those?
 
-                int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName).Values.Min();
+                int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User).Values.Min();
                 limit = Math.Min(limit, maxLookupCount * MaxUserLookupCount);
                 
                 var followerResults = await GetResults<UserIdsResults>(
