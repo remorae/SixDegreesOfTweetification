@@ -30,9 +30,10 @@ export interface ExternalLogin {
 export class AuthenticationService {
     constructor(private http: HttpClient, @Inject('BASE_URL') baseUrl: string) {
         this.baseUrl = baseUrl;
+        this.loggedIn = !!localStorage.getItem('auth_token');
     }
 
-    isLoggedIn = false;
+    private loggedIn: boolean = false;
     redirectUrl: string;
     private baseUrl: string;
 
@@ -43,13 +44,14 @@ export class AuthenticationService {
             RememberMe: false
         };
         return this.http
-            .post(this.baseUrl + 'api/authentication/Login', info, {
+            .post(this.baseUrl + 'authentication/Login', info, {
                 headers: new HttpHeaders({
                     'Content-Type': 'application/json; charset=utf-8'
                 })
             })
             .do(next => {
-                this.isLoggedIn = true;
+                localStorage.setItem('auth_token', JSON.parse(JSON.stringify(next)).auth_token);
+                this.loggedIn = true;
             });
     }
 
@@ -68,7 +70,8 @@ export class AuthenticationService {
                 })
             })
             .do(next => {
-                this.isLoggedIn = true;
+                localStorage.setItem('auth_token', JSON.parse(JSON.stringify(next)).auth_token);
+                this.loggedIn = true;
             });
     }
 
@@ -83,7 +86,26 @@ export class AuthenticationService {
                 })
             })
             .do(next => {
-                this.isLoggedIn = true;
+                localStorage.setItem('auth_token', this.readCookie("SixDegrees.Identity"));
+                this.loggedIn = true;
             });
+    }
+
+    private readCookie(key: string): string {
+        let cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            let cookie = cookies[i].trim().split('=');
+            if (cookie[0] === key)
+                return cookie[1];
+        }
+    }
+
+    logout() {
+        localStorage.removeItem('auth_token');
+        this.loggedIn = false;
+    }
+
+    isLoggedIn(): boolean {
+        return this.loggedIn;
     }
 }

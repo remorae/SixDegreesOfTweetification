@@ -88,6 +88,15 @@ namespace SixDegrees
                         }
                     };
                 });
+
+            services.ConfigureApplicationCookie(options =>
+            {
+                options.Cookie.Name = "SixDegrees.Identity";
+                options.Cookie.HttpOnly = true;
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
+                options.LoginPath = "/login";
+                options.LogoutPath = "/login";
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
