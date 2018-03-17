@@ -15,7 +15,7 @@ using SixDegrees.Services;
 
 namespace SixDegrees.Controllers
 {
-    [Route("api/authentication/[action]")]
+    [Route("authentication/[action]")]
     public class AuthenticationController : Controller
     {
         private readonly UserManager<ApplicationUser> userManager;
