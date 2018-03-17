@@ -10,7 +10,8 @@ export enum QueryType {
     LocationsByHashtag = 'LocationsByHashtag',
     UserByScreenName = 'UserByScreenName',
     UserConnectionsByScreenName = 'UserConnectionsByScreenName',
-    HashtagsFromHashtag = 'HashtagsFromHashtag'
+    HashtagsFromHashtag = 'HashtagsFromHashtag',
+    HashtagConnectionsByHashtag = 'HashtagConnectionsByHashtag'
 }
 export class AuthPair {
     Application: number;
@@ -64,5 +65,13 @@ export class EndpointService {
 
     public searchRelatedHashtags(hashtag: string): Observable<string[]> {
         return this.http.get<string[]>(this.baseUrl + 'api/search/hashtags?query=' + hashtag).finally(this.pushLatest);
+    }
+
+    public searchHashDegrees(hashtag: string) {
+        return this.http.get(this.baseUrl + 'api/search/degrees/hashtags?query=' + hashtag).finally(this.pushLatest);
+    }
+
+    public searchUserDegrees(user: string) {
+        return this.http.get(this.baseUrl + 'api/search/degrees/users?query=' + user).finally(this.pushLatest);
     }
 }
