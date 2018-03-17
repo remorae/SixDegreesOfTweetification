@@ -24,12 +24,14 @@ import { WordCloudPageComponent } from './word-cloud-page/word-cloud-page.compon
 import { HttpXsrfInterceptorService } from './services/http-xsrfinterceptor.service';
 import { RegisterComponent } from './register/register.component';
 import { ExternalLoginComponent } from './external-login/external-login.component';
+import { AccountComponent } from './account/account.component';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
-    { path: 'login', component: LoginComponent, pathMatch: 'full' },
-    { path: 'externallogin', component: ExternalLoginComponent, pathMatch: 'full' },
-    { path: 'register', component: RegisterComponent, pathMatch: 'full' },
+    { path: 'login', component: LoginComponent, pathMatch: 'full', canActivate: [AuthGuard] },
+    { path: 'externallogin', component: ExternalLoginComponent, pathMatch: 'full', canActivate: [AuthGuard] },
+    { path: 'register', component: RegisterComponent, pathMatch: 'full', canActivate: [AuthGuard] },
+    { path: 'account', component: AccountComponent, pathMatch: 'full', canActivate: [AuthGuard] },
     { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
     { path: 'hash-to-hash', component: HashToHashPageComponent, canActivate: [AuthGuard] },
     { path: 'geo', component: GeoPageComponent, canActivate: [AuthGuard] },
@@ -53,7 +55,8 @@ const appRoutes: Routes = [
         UserToUserPageComponent,
         WordCloudPageComponent,
         RegisterComponent,
-        ExternalLoginComponent
+        ExternalLoginComponent,
+        AccountComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),

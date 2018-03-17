@@ -24,13 +24,15 @@ export interface Registration {
 
 export interface ExternalLogin {
     Email: string;
+    Password: string;
+    ConfirmPassword: string;
 }
 
 @Injectable()
 export class AuthenticationService {
     constructor(private http: HttpClient, @Inject('BASE_URL') baseUrl: string) {
         this.baseUrl = baseUrl;
-        this.loggedIn = !!localStorage.getItem('auth_token');
+        this.loggedIn = !!localStorage.getItem('sixdegrees_auth');
     }
 
     private loggedIn: boolean = false;
@@ -44,13 +46,13 @@ export class AuthenticationService {
             RememberMe: false
         };
         return this.http
-            .post(this.baseUrl + 'authentication/Login', info, {
+            .post(this.baseUrl + 'account/Login', info, {
                 headers: new HttpHeaders({
                     'Content-Type': 'application/json; charset=utf-8'
                 })
             })
             .do(next => {
-                localStorage.setItem('auth_token', JSON.parse(JSON.stringify(next)).auth_token);
+                localStorage.setItem('sixdegrees_auth', 'true');
                 this.loggedIn = true;
             });
     }
@@ -64,48 +66,83 @@ export class AuthenticationService {
                 ConfirmPassword: confirmPassword
             };
         return this.http
-            .post(this.baseUrl + 'authentication/Register', info, {
+            .post(this.baseUrl + 'account/Register', info, {
                 headers: new HttpHeaders({
                     'Content-Type': 'application/json; charset=utf-8'
                 })
             })
             .do(next => {
-                localStorage.setItem('auth_token', JSON.parse(JSON.stringify(next)).auth_token);
+                localStorage.setItem('sixdegrees_auth', 'true');
                 this.loggedIn = true;
             });
     }
 
-    registerExternal(email: string): Observable<Object> {
+    registerExternal(email: string, password: string, confirmPassword: string): Observable<Object> {
         const info: ExternalLogin = {
-            Email: email
+            Email: email,
+            Password: password,
+            ConfirmPassword: confirmPassword
         };
         return this.http
-            .post(this.baseUrl + 'authentication/ExternalLoginConfirmation', info, {
+            .post(this.baseUrl + 'account/ExternalLoginConfirmation', info, {
                 headers: new HttpHeaders({
                     'Content-Type': 'application/json; charset=utf-8'
                 })
             })
             .do(next => {
-                localStorage.setItem('auth_token', this.readCookie("SixDegrees.Identity"));
+                localStorage.setItem('sixdegrees_auth', 'true');
                 this.loggedIn = true;
             });
     }
 
-    private readCookie(key: string): string {
-        let cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            let cookie = cookies[i].trim().split('=');
-            if (cookie[0] === key)
-                return cookie[1];
-        }
-    }
-
-    logout() {
-        localStorage.removeItem('auth_token');
-        this.loggedIn = false;
+    logout(onCompletion: any): void {
+        this.http.post(this.baseUrl + 'account/Logout', {
+            headers: new HttpHeaders({
+                'Content-Type': 'application/json; charset=utf-8'
+            })
+        }).subscribe(res => {
+            localStorage.removeItem('auth_token');
+            this.loggedIn = false;
+            onCompletion();
+        });
     }
 
     isLoggedIn(): boolean {
+        this.updateLoginStatus()
+        .subscribe(res => {
+            if (res) {
+                localStorage.setItem('sixdegrees_auth', 'true');
+                this.loggedIn = true;
+            }
+        });
         return this.loggedIn;
     }
+
+    updateLoginStatus(): Observable<boolean> {
+        return this.http
+            .post<boolean>(this.baseUrl + 'account/Authenticated', {
+                headers: new HttpHeaders({
+                    'Content-Type': 'application/json; charset=utf-8'
+                })
+            })
+    }
+
+    hasTwitterLogin(): Observable<boolean> {
+        return this.http.post<boolean>(this.baseUrl + 'account/TwitterAvailable', {
+            headers: new HttpHeaders({
+                'Content-Type': 'application/json; charset=utf-8'
+            })
+        });
+    }
+
+    removeTwitter(): Observable<Object> {
+        return this.http.post(this.baseUrl + 'manage/RemoveExternal?provider=Twitter', {
+            headers: new HttpHeaders({
+                'Content-Type': 'application/json; charset=utf-8'
+            })
+        });
+    }
+
+    externalLoginUrl: string = 'account/ExternalLogin?provider=Twitter';
+    linkLoginUrl: string = 'manage/LinkLogin?provider=Twitter';
 }

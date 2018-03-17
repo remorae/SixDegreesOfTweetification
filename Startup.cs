@@ -94,8 +94,6 @@ namespace SixDegrees
                 options.Cookie.Name = "SixDegrees.Identity";
                 options.Cookie.HttpOnly = true;
                 options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
-                options.LoginPath = "/login";
-                options.LogoutPath = "/login";
             });
         }
 
@@ -129,17 +127,13 @@ namespace SixDegrees
 
             app.Use(async (context, next) =>
             {
-                string path = context.Request.Path.Value.ToLower();
-                if (path != null && (path == "/" || path == "" || path == "/home"))
-                {
-                    // XSRF-TOKEN used by angular in the $http if provided
-                    var tokens = antiforgery.GetAndStoreTokens(context);
-                    context.Response.Cookies.Append(
-                        "XSRF-TOKEN",
-                        tokens.RequestToken,
-                        new CookieOptions() { HttpOnly = false }
-                    );
-                }
+                // XSRF-TOKEN used by angular in the $http if provided
+                var tokens = antiforgery.GetAndStoreTokens(context);
+                context.Response.Cookies.Append(
+                    "XSRF-TOKEN",
+                    tokens.RequestToken,
+                    new CookieOptions() { HttpOnly = false }
+                );
                 await next.Invoke();
             });
 
