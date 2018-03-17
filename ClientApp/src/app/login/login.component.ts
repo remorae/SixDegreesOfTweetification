@@ -39,6 +39,6 @@ export class LoginComponent implements OnInit {
     }
 
     loginWithTwitter() {
-        location.href = 'api/authentication/ExternalLogin?provider=Twitter';
+        location.href = 'authentication/ExternalLogin?provider=Twitter';
     }
 }

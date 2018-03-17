@@ -62,7 +62,7 @@ export class AuthenticationService {
                 ConfirmPassword: confirmPassword
             };
         return this.http
-            .post(this.baseUrl + 'api/authentication/Register', info, {
+            .post(this.baseUrl + 'authentication/Register', info, {
                 headers: new HttpHeaders({
                     'Content-Type': 'application/json; charset=utf-8'
                 })
@@ -77,7 +77,7 @@ export class AuthenticationService {
             Email: email
         };
         return this.http
-            .post(this.baseUrl + 'api/authentication/ExternalLoginConfirmation', info, {
+            .post(this.baseUrl + 'authentication/ExternalLoginConfirmation', info, {
                 headers: new HttpHeaders({
                     'Content-Type': 'application/json; charset=utf-8'
                 })
