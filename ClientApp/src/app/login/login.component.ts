@@ -15,7 +15,14 @@ export class LoginComponent implements OnInit {
     constructor(
         private router: Router,
         private authService: AuthenticationService
-    ) {}
+    ) {
+        this.authService.updateLoginStatus()
+            .subscribe(res => {
+                if (res) {
+                    this.router.navigate(['home']);
+                }
+            });
+    }
 
     ngOnInit() {}
 
@@ -39,6 +46,6 @@ export class LoginComponent implements OnInit {
     }
 
     loginWithTwitter() {
-        location.href = 'authentication/ExternalLogin?provider=Twitter';
+        location.href = this.authService.externalLoginUrl;
     }
 }
