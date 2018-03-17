@@ -79,10 +79,9 @@ namespace SixDegrees.Model
 
         internal TimeSpan? SinceLastUpdate(QueryType type) => Endpoints(type).Max(endpoint => cache[endpoint.Value].SinceLastUpdate as TimeSpan?) ?? null;
 
-        internal IDictionary<AuthenticationType, int> MinimumRateLimits(QueryType type, RateLimitDbContext dbContext, UserManager<ApplicationUser> userManager, ClaimsPrincipal user)
-            => new Dictionary<AuthenticationType, int>()
+        internal IDictionary<AuthenticationType, int> MinimumRateLimits(QueryType type, RateLimitDbContext dbContext, UserManager<ApplicationUser> userManager, ClaimsPrincipal user) => new Dictionary<AuthenticationType, int>()
             {
-                { AuthenticationType.Application, Endpoints(type).Min(endpoint => cache[endpoint.Value].Limit as int?) ?? -1 },
+                { AuthenticationType.Application, Endpoints(type).Min(endpoint => { var info = cache[endpoint.Value]; info.ResetIfNeeded(); return info.Limit as int?; }) ?? -1 },
                 { AuthenticationType.User, Endpoints(type).Min(endpoint => RateLimitController.GetCurrentUserInfo(dbContext, endpoint.Value, userManager, user)?.Limit as int?) ?? -1 }
             };
     }
