@@ -28,6 +28,7 @@ import { RegisterComponent } from './register/register.component';
 import { ExternalLoginComponent } from './external-login/external-login.component';
 import { CloudBottleComponent } from './cloud-bottle/cloud-bottle.component';
 import { CloudDataService} from './services/cloud-data.service';
+import { HashVisualizerComponent } from './hash-visualizer/hash-visualizer.component';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
@@ -59,7 +60,8 @@ const appRoutes: Routes = [
         WordCloudPageComponent,
         RegisterComponent,
         ExternalLoginComponent,
-        CloudBottleComponent
+        CloudBottleComponent,
+        HashVisualizerComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
