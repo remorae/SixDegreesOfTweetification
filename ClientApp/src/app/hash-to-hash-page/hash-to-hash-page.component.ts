@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { UserInput } from '../models/userInput';
 import { EndpointService } from '../services/endpoint.service';
+import { HashConnectionMap } from '../models/HashConnectionInfo';
 
 @Component({
     selector: 'app-hash-to-hash-page',
@@ -15,7 +16,7 @@ export class HashToHashPageComponent implements OnInit {
     ngOnInit() { }
     onUserSubmit(input: UserInput) {
         this.latestSearch = input.inputs[0];
-        this.endpoint.searchHashDegrees(this.latestSearch).subscribe((values) => {
+        this.endpoint.searchHashDegrees(this.latestSearch).subscribe((values: HashConnectionMap) => {
             this.results = values;
         });
     }
