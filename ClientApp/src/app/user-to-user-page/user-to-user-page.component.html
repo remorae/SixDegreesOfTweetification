@@ -6,16 +6,8 @@
 <div class="card mb-3">
     <div class="card-body">
         {{results | json}}
-        <br/>
-        <br/>
-        <i class="fas fa-user"></i>
-        <i class="fas fa-arrow-right"></i>
-        <i class="fas fa-user"></i>
-        <br/>
-        <br/>
-        <p *ngIf="!!latestSearch">
-            In fact, here's some awesomeness on a stick now! <br/>
-            {{latestSearch}}
-        </p>
+        <h3 *ngIf="latestSearch && !results">
+                <i class="fa fa-spinner fa-spin mr-2"></i>Loading...
+            </h3>
     </div>
 </div>

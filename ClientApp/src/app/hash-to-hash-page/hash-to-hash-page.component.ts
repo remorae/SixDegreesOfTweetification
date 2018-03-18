@@ -16,6 +16,7 @@ export class HashToHashPageComponent implements OnInit {
     ngOnInit() { }
     onUserSubmit(input: UserInput) {
         this.latestSearch = input.inputs[0];
+        this.results = undefined;
         this.endpoint.searchHashDegrees(this.latestSearch).subscribe((values: HashConnectionMap) => {
             this.results = values;
         });

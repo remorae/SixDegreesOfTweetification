@@ -17,7 +17,7 @@ export class UserToUserPageComponent implements OnInit {
     }
     onUserSubmit(input: UserInput) {
         this.latestSearch = input.inputs[0];
-
+        this.results = undefined;
         this.endpoint.searchUserDegrees(this.latestSearch).subscribe((values: UserConnectionMap) => {
             this.results = values;
         });
