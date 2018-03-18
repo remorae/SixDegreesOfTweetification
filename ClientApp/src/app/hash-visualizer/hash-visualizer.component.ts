@@ -17,8 +17,8 @@ export class HashVisualizerComponent implements OnInit { // https://bl.ocks.org/
 
     drawGraph() {
         const svg = D3.select('svg.target'),
-            width = +svg.attr('width'),
-            height = +svg.attr('height');
+            width = 900, // +svg.attr('width'),
+            height = 900; // +svg.attr('height');
 
         const color = D3.scaleOrdinal(D3.schemeCategory10);
 
