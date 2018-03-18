@@ -4,6 +4,8 @@ import { Observable } from 'rxjs/Observable';
 import { Country } from '../models';
 import { Subject } from 'rxjs/Subject';
 import 'rxjs/add/operator/finally';
+import { UserConnectionInfo, UserConnectionMap } from '../models/UserResult';
+import { HashConnectionMap } from '../models/HashConnectionInfo';
 
 export enum QueryType {
     TweetsByHashtag = 'TweetsByHashtag',
@@ -68,10 +70,10 @@ export class EndpointService {
     }
 
     public searchHashDegrees(hashtag: string) {
-        return this.http.get(this.baseUrl + 'api/search/degrees/hashtags?query=' + hashtag).finally(this.pushLatest);
+        return this.http.get<HashConnectionMap>(this.baseUrl + 'api/search/degrees/hashtags?query=' + hashtag).finally(this.pushLatest);
     }
 
     public searchUserDegrees(user: string) {
-        return this.http.get(this.baseUrl + 'api/search/degrees/users?query=' + user).finally(this.pushLatest);
+        return this.http.get<UserConnectionMap>(this.baseUrl + 'api/search/degrees/users?query=' + user).finally(this.pushLatest);
     }
 }

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { UserInput } from '../models/userInput';
 import { EndpointService } from '../services/endpoint.service';
+import { UserResult, UserConnectionInfo, UserConnectionMap } from '../models/UserResult';
 
 @Component({
     selector: 'app-user-to-user-page',
@@ -9,7 +10,7 @@ import { EndpointService } from '../services/endpoint.service';
 })
 export class UserToUserPageComponent implements OnInit {
     latestSearch;
-    results;
+    results: UserConnectionMap;
     constructor(private endpoint: EndpointService) { }
 
     ngOnInit() {
@@ -17,7 +18,7 @@ export class UserToUserPageComponent implements OnInit {
     onUserSubmit(input: UserInput) {
         this.latestSearch = input.inputs[0];
 
-        this.endpoint.searchUserDegrees(this.latestSearch).subscribe((values) => {
+        this.endpoint.searchUserDegrees(this.latestSearch).subscribe((values: UserConnectionMap) => {
             this.results = values;
         });
     }
