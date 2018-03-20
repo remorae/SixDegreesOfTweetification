@@ -36,6 +36,10 @@ namespace SixDegrees.Controllers
             {
                 throw new ApplicationException($"Unable to load user with ID '{userManager.GetUserId(User)}'.");
             }
+            if (user.PasswordHash == null && (await userManager.GetLoginsAsync(user)).Count() < 2)
+            {
+                return BadRequest("No other authentication method for current user.");
+            }
 
             var currentLogin = (await userManager.GetLoginsAsync(user)).Where(login => login.LoginProvider == provider).First();
             var result = await userManager.RemoveLoginAsync(user, currentLogin.LoginProvider, currentLogin.ProviderKey);
