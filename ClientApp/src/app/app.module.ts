@@ -18,6 +18,8 @@ import { EndpointService } from './services/endpoint.service';
 import { SectionTileComponent } from './section-tile/section-tile.component';
 import { SelectGeoFilterComponent } from './select-geo-filter/select-geo-filter.component';
 import { RateLimitDisplayComponent } from './rate-limit-display/rate-limit-display.component';
+import { CanvasComponent } from './canvas/canvas.component';
+
 import { HashToHashPageComponent } from './hash-to-hash-page/hash-to-hash-page.component';
 import { UserToUserPageComponent } from './user-to-user-page/user-to-user-page.component';
 import { WordCloudPageComponent } from './word-cloud-page/word-cloud-page.component';
@@ -25,6 +27,8 @@ import { HttpXsrfInterceptorService } from './services/http-xsrfinterceptor.serv
 import { RegisterComponent } from './register/register.component';
 import { ExternalLoginComponent } from './external-login/external-login.component';
 import { AccountComponent } from './account/account.component';
+import { CloudBottleComponent } from './cloud-bottle/cloud-bottle.component';
+import { CloudDataService} from './services/cloud-data.service';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
@@ -51,12 +55,15 @@ const appRoutes: Routes = [
         SectionTileComponent,
         SelectGeoFilterComponent,
         RateLimitDisplayComponent,
+        CanvasComponent,
         HashToHashPageComponent,
         UserToUserPageComponent,
         WordCloudPageComponent,
         RegisterComponent,
         ExternalLoginComponent,
         AccountComponent
+        ExternalLoginComponent,
+        CloudBottleComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
@@ -73,7 +80,8 @@ const appRoutes: Routes = [
         AuthenticationService,
         AuthGuard,
         EndpointService,
-        { provide: HTTP_INTERCEPTORS, useClass: HttpXsrfInterceptorService, multi: true }
+        { provide: HTTP_INTERCEPTORS, useClass: HttpXsrfInterceptorService, multi: true },
+        CloudDataService
     ],
     bootstrap: [AppComponent]
 })
