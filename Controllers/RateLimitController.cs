@@ -30,12 +30,25 @@ namespace SixDegrees.Controllers
             this.rateLimitDb = rateLimitDb;
         }
 
+        /// <summary>
+        /// Returns current rate limiting information for all endpoints.
+        /// </summary>
+        /// <returns></returns>
         [HttpGet("all")]
-        public IDictionary<QueryType, IDictionary<AuthenticationType, int>> GetAllRateLimits() => RateLimitCache.Get.CurrentRateLimits(rateLimitDb, userManager, User);
+        public IDictionary<QueryType, IDictionary<AuthenticationType, int>> GetAllRateLimits() =>
+            RateLimitCache.Get.CurrentRateLimits(rateLimitDb, userManager, User);
 
+        /// <summary>
+        /// Returns current rate limiting information for the specified endpoint.
+        /// </summary>
+        /// <param name="endpoint">The Six Degrees endpoint to retrieve rate limiting info for.</param>
+        /// <param name="forceUpdate">Set to "true" to request the most up-to-date info from the Twitter API itself rather than the cache.</param>
+        /// <returns></returns>
         [HttpGet("status")]
         public async Task<IDictionary<AuthenticationType, int>> GetRateLimitStatus(string endpoint, string forceUpdate)
         {
+            if (endpoint == null)
+                return RateLimitCache.BadRateLimit;
             if (Enum.TryParse(endpoint, out QueryType type))
             {
                 TimeSpan? timeSinceLastUpdate = RateLimitCache.Get.SinceLastUpdate(type);
