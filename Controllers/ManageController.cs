@@ -1,8 +1,6 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -31,21 +29,23 @@ namespace SixDegrees.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RemoveExternal(string provider)
         {
+            if (provider == null)
+                return BadRequest("Invalid parameters.");
             var user = await userManager.GetUserAsync(User);
             if (user == null)
             {
-                throw new ApplicationException($"Unable to load user with ID '{userManager.GetUserId(User)}'.");
+                return BadRequest($"Unable to load user with ID '{userManager.GetUserId(User)}'.");
             }
             if (user.PasswordHash == null && (await userManager.GetLoginsAsync(user)).Count() < 2)
             {
                 return BadRequest("No other authentication method for current user.");
             }
 
-            var currentLogin = (await userManager.GetLoginsAsync(user)).Where(login => login.LoginProvider == provider).First();
+            var currentLogin = (await userManager.GetLoginsAsync(user)).Where(login => login.LoginProvider == provider).FirstOrDefault();
             var result = await userManager.RemoveLoginAsync(user, currentLogin.LoginProvider, currentLogin.ProviderKey);
             if (!result.Succeeded)
             {
-                throw new ApplicationException($"Unexpected error occurred removing external login for user with ID '{user.Id}'.");
+                return BadRequest($"Unexpected error occurred removing external login for user with ID '{user.Id}'.");
             }
 
             await signInManager.SignInAsync(user, isPersistent: false);
@@ -54,10 +54,10 @@ namespace SixDegrees.Controllers
         
         public async Task<IActionResult> LinkLogin(string provider)
         {
-            // Clear the existing external cookie to ensure a clean login process
+            if (provider == null)
+                return BadRequest("Invalid parameters.");
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
-            // Request a redirect to the external login provider to link a login for the current user
             var redirectUrl = Url.Action(nameof(LinkLoginCallback));
             var properties = signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl, userManager.GetUserId(User));
             return new ChallengeResult(provider, properties);
@@ -83,8 +83,7 @@ namespace SixDegrees.Controllers
             {
                 return BadRequest($"Unexpected error occurred adding external login.");
             }
-
-            // Clear the existing external cookie to ensure a clean login process
+            
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
             return AccountController.RedirectToLocal(this, Request, "/account");
         }
