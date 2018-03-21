@@ -124,6 +124,8 @@ namespace SixDegrees.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ExternalLogin(string provider, string returnUrl = null)
         {
+            if (provider == null)
+                return BadRequest("Invalid parameters.");
             await signInManager.SignOutAsync();
             var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Account", new { returnUrl });
             var properties = signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
@@ -197,6 +199,8 @@ namespace SixDegrees.Controllers
 
         internal static IActionResult RedirectToLocal(ControllerBase controller, HttpRequest request, string localUrl)
         {
+            if (controller == null || request == null)
+                throw new ArgumentNullException("Null controller or request.");
             if (localUrl == null)
                 localUrl = "/home";
             else
