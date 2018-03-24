@@ -39,6 +39,9 @@ export class AuthenticationService {
     redirectUrl: string;
     private baseUrl: string;
 
+    externalLoginUrl: string = 'account/ExternalLogin?provider=Twitter';
+    linkLoginUrl: string = 'manage/LinkLogin?provider=Twitter';
+
     login(email: string, password: string): Observable<Object> {
         const info: Login = {
             Email: email,
@@ -100,7 +103,7 @@ export class AuthenticationService {
             headers: new HttpHeaders({
                 'Content-Type': 'application/json; charset=utf-8'
             })
-        }).subscribe(res => {
+        }).subscribe(() => {
             localStorage.removeItem('auth_token');
             this.loggedIn = false;
             onCompletion();
@@ -142,7 +145,4 @@ export class AuthenticationService {
             })
         });
     }
-
-    externalLoginUrl: string = 'account/ExternalLogin?provider=Twitter';
-    linkLoginUrl: string = 'manage/LinkLogin?provider=Twitter';
 }
