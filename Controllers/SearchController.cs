@@ -114,13 +114,15 @@ namespace SixDegrees.Controllers
         }
 
         /// <summary>
-        /// Returns a list of tweets containing given hashtags.
+        /// Returns tweet search results for the given hashtag.
         /// </summary>
-        /// <param name="query">The hashtags to search for, separated by spaces.</param>
+        /// <param name="query">The hashtag to search for (minus the '#').</param>
         /// <returns></returns>
         [HttpGet("tweets")]
         public async Task<IActionResult> Tweets(string query)
         {
+            if (query == null)
+                return BadRequest("Invalid parameters.");
             try
             {
                 var results = await GetResults<TweetSearchResults>(
@@ -137,13 +139,15 @@ namespace SixDegrees.Controllers
         }
 
         /// <summary>
-        /// Returns a list of hashtags associated with the given hashtag.
+        /// Returns a list of hashtags (will contain duplicates) associated directly (contained within the same tweet) with the given hashtag.
         /// </summary>
-        /// <param name="query">The hashtags to search for, separated by spaces.</param>
+        /// <param name="query">The hashtag to search for (minus the '#').</param>
         /// <returns></returns>
         [HttpGet("hashtags")]
         public async Task<IActionResult> Hashtags(string query)
         {
+            if (query == null)
+                return BadRequest("Invalid parameters.");
             try
             {
                 var results = await GetResults<TweetSearchResults>(
@@ -168,19 +172,21 @@ namespace SixDegrees.Controllers
             set.UnionWith(status.Entities.Hashtags.AsEnumerable());
             return set;
         }
-        
+
         /// <summary>
-         /// Returns a list of hashtags within the given number of "degrees" of the given hashtag.
-         /// </summary>
-         /// <param name="query">The hashtag to search for.</param>
-         /// <param name="numberOfDegrees">The maximum distance between a hashtag and the initial term.</param>
-         /// <returns></returns>
+        /// Returns a list of hashtags within the given number of "degrees" of the given hashtag (each tweet represents one degree).
+        /// Performs a depth-first search, and will never exceed 60 API calls by default.
+        /// </summary>
+        /// <param name="query">The hashtag to search for (minus the '#').</param>
+        /// <param name="numberOfDegrees">The maximum integer number of degrees to search with.</param>
+        /// <param name="maxCalls">The maximum integer number of Twitter API calls to make.</param>
+        /// <returns></returns>
         [HttpGet("degrees/hashtags")]
-        public async Task<IActionResult> HashtagConnections(string query, int numberOfDegrees = 6)
+        public async Task<IActionResult> HashtagConnections(string query, int numberOfDegrees = 6, int maxCalls = 60)
         {
-            if (query == null)
+            if (query == null || numberOfDegrees < 1 || maxCalls < 1)
                 return BadRequest("Invalid query.");
-            int maxAPICalls = Math.Min(RateLimitCache.Get.MinimumRateLimits(QueryType.HashtagConnectionsByHashtag, rateLimitDb, userManager, User)[AuthenticationType.User], 60);
+            int maxAPICalls = Math.Min(maxCalls, RateLimitCache.Get.MinimumRateLimits(QueryType.HashtagConnectionsByHashtag, rateLimitDb, userManager, User)[AuthenticationType.User]);
             int callsMade = 0;
             try
             {
@@ -220,17 +226,20 @@ namespace SixDegrees.Controllers
         }
 
         /// <summary>
-        /// Returns a list of users within the given number of "degrees" of the given user.
+        /// Returns a list of users within the given number of "degrees" of the user with the given screen name
+        /// (a link to a user's followers/friends represents one degree).
+        /// Performs a depth-first search, and will never exceed 60 API calls by default.
         /// </summary>
-        /// <param name="query">The user to search for.</param>
-        /// <param name="numberOfDegrees">The maximum distance between a user and the initial username.</param>
+        /// <param name="query">The screen name to search for (minus the '@').</param>
+        /// <param name="numberOfDegrees">The maximum integer number of degrees to search with.</param>
+        /// <param name="maxCalls">The maximum integer number of Twitter API calls to make.</param>
         /// <returns></returns>
         [HttpGet("degrees/users")]
-        public async Task<IActionResult> UserConnections(string query, int numberOfDegrees = 6)
+        public async Task<IActionResult> UserConnections(string query, int numberOfDegrees = 6, int maxCalls = 60)
         {
-            if (query == null)
+            if (query == null || numberOfDegrees < 1 || maxCalls < 1)
                 return BadRequest("Invalid query.");
-            int maxAPICalls = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User)[AuthenticationType.User];
+            int maxAPICalls = Math.Min(maxCalls, RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User)[AuthenticationType.User]);
             int callsMade = 0;
             try
             {
@@ -270,13 +279,15 @@ namespace SixDegrees.Controllers
         }
 
         /// <summary>
-        /// Returns a list of locations from tweets containing given hashtags.
+        /// Returns search results for the given hashtag with any associated hashtags and the source tweet urls organized by location.
         /// </summary>
-        /// <param name="query">The hashtags to search for, separated by spaces.</param>
+        /// <param name="query">The hashtag to search for (minus the '#').</param>
         /// <returns></returns>
         [HttpGet("locations")]
         public async Task<IActionResult> Locations(string query)
         {
+            if (query == null)
+                return BadRequest("Invalid parameters.");
             try
             {
                 var results = await GetResults<TweetSearchResults>(
@@ -310,11 +321,13 @@ namespace SixDegrees.Controllers
         /// <summary>
         /// Returns information about a specified Twitter user.
         /// </summary>
-        /// <param name="screen_name">The user screen name to search for.</param>
+        /// <param name="screen_name">Returns information about a specified user.</param>
         /// <returns></returns>
         [HttpGet("user")]
         public async Task<IActionResult> GetUser(string screen_name)
         {
+            if (screen_name == null)
+                return BadRequest("Invalid parameters.");
             try
             {
                 var results = await GetResults<UserSearchResults>(
@@ -352,14 +365,17 @@ namespace SixDegrees.Controllers
         }
 
         /// <summary>
-        /// Returns users that are friends or followers of the specified Twitter user.
+        /// Returns information about the friends and followers of the specified user.
         /// </summary>
-        /// <param name="screen_name">The user to get connections for.</param>
-        /// <param name="limit">The maximum number of users to return.</param>
+        /// <param name="screen_name">The screen name of the Twitter user to search for (minus the '@').</param>
+        /// <param name="limit">The maximum number of users to return (will be rounded up to the nearest 100).
+        /// The maximum number of friends/followers to lookup in one query is 1500 (for each) due to rate limiting.</param>
         /// <returns></returns>
         [HttpGet("user/connections")]
         public async Task<IActionResult> GetUserConnections(string screen_name, int limit = MaxUserLookupCount)
         {
+            if (screen_name == null || limit < 1)
+                return BadRequest("Invalid parameters.");
             try
             {
                 if (QueryHistory.Get[TwitterAPIEndpoint.FollowersIDs].LastQuery == screen_name)

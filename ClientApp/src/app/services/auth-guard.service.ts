@@ -15,16 +15,25 @@ export class AuthGuard implements CanActivate {
     ) {}
     canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot) {
         const url: string = state.url;
+        
+        if (url === "/login" || url === "/register" || url === "/externallogin") {
 
-        if (isDevMode()) {
-            return true;
-        }
-        if (this.authService.isLoggedIn) {
-            return true;
-        }
-        this.authService.redirectUrl = url;
+            if (!this.authService.isLoggedIn()) {
+                return true;
+            }
+            this.authService.redirectUrl = url;
 
-        this.router.navigate(['/login']);
-        return false;
+            this.router.navigate(['/account']);
+            return false;
+        }
+        else {
+            if (this.authService.isLoggedIn()) {
+                return true;
+            }
+            this.authService.redirectUrl = url;
+
+            this.router.navigate(['/login']);
+            return false;
+        }
     }
 }

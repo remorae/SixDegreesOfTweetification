@@ -15,14 +15,21 @@ export class LoginComponent implements OnInit {
     constructor(
         private router: Router,
         private authService: AuthenticationService
-    ) {}
+    ) {
+        this.authService.updateLoginStatus()
+            .subscribe(res => {
+                if (res) {
+                    this.router.navigate(['home']);
+                }
+            });
+    }
 
     ngOnInit() {}
 
     login() {
         this.authService.login(this.email, this.password).subscribe(
             val => {
-                if (this.authService.isLoggedIn) {
+                if (this.authService.isLoggedIn()) {
                     this.router.navigate(['home']);
                 } else {
                     this.message = 'Login failed due to improper credentials.';
@@ -39,6 +46,6 @@ export class LoginComponent implements OnInit {
     }
 
     loginWithTwitter() {
-        location.href = 'api/authentication/ExternalLogin?provider=Twitter';
+        location.href = this.authService.externalLoginUrl;
     }
 }

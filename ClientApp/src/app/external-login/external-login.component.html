@@ -5,6 +5,14 @@
             Email
             <input class="form-control" [(ngModel)]="email" type="text">
         </label>
+        <label class="d-block">
+            Password
+            <input class="form-control" [(ngModel)]="password" type="password">
+        </label>
+        <label class="d-block">
+            Confirm Password
+            <input class="form-control" [(ngModel)]="confirmPassword" type="password">
+        </label>
         <button class="btn btn-primary mt-3" (click)="register()" role="button">Register</button>
         <br />
         {{message}}
