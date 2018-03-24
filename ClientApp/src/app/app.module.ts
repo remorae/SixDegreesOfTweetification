@@ -61,7 +61,7 @@ const appRoutes: Routes = [
         WordCloudPageComponent,
         RegisterComponent,
         ExternalLoginComponent,
-        AccountComponent
+        AccountComponent,
         ExternalLoginComponent,
         CloudBottleComponent
     ],
