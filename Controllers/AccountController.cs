@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -15,8 +16,8 @@ using SixDegrees.Services;
 
 namespace SixDegrees.Controllers
 {
-    [Route("api/authentication/[action]")]
-    public class AuthenticationController : Controller
+    [Route("account/[action]")]
+    public class AccountController : Controller
     {
         private readonly UserManager<ApplicationUser> userManager;
         private readonly SignInManager<ApplicationUser> signInManager;
@@ -24,12 +25,12 @@ namespace SixDegrees.Controllers
         private readonly ILogger logger;
         private readonly IConfiguration configuration;
 
-        public AuthenticationController(
+        public AccountController(
             IConfiguration configuration,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             IEmailSender emailSender,
-            ILogger<AuthenticationController> logger)
+            ILogger<AccountController> logger)
         {
             this.configuration = configuration;
             this.userManager = userManager;
@@ -116,38 +117,40 @@ namespace SixDegrees.Controllers
 
                 return BadRequest($"Error during registration:\n{string.Join("\n", result.Errors.Select(error => $"{error.Code}: {error.Description}"))}");
             }
-            
+
             return BadRequest($"Invalid registration info: {string.Join(";", ModelState.Values.SelectMany(v => v.Errors.Select(b => b.ErrorMessage)))}");
         }
-        
+
         [AllowAnonymous]
-        public IActionResult ExternalLogin(string provider, string returnUrl = null)
+        public async Task<IActionResult> ExternalLogin(string provider, string returnUrl = null)
         {
-            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Authentication", new { returnUrl });
+            if (provider == null)
+                return BadRequest("Invalid parameters.");
+            await signInManager.SignOutAsync();
+            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Account", new { returnUrl });
             var properties = signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
             return Challenge(properties, provider);
         }
 
         [HttpGet]
-        [AllowAnonymous]
         public async Task<IActionResult> ExternalLoginCallback(string returnUrl = null, string remoteError = null)
         {
             if (remoteError != null)
             {
-                return RedirectToLocal("/login");
+                return RedirectToLocal(this, Request, "/login");
             }
             var info = await signInManager.GetExternalLoginInfoAsync();
             if (info == null)
             {
                 // No token to assign
-                return RedirectToLocal("/login");
+                return RedirectToLocal(this, Request, "/login");
             }
 
             // Sign in the user with this external login provider if the user already has a login.
             var result = await signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
             if (result.Succeeded)
             {
-                return RedirectToLocal(returnUrl);
+                return RedirectToLocal(this, Request, returnUrl);
             }
             if (result.IsLockedOut)
             {
@@ -156,7 +159,7 @@ namespace SixDegrees.Controllers
             else
             {
                 // If the user does not have an account, then ask the user to create an account.
-                return RedirectToLocal("/externallogin");
+                return RedirectToLocal(this, Request, "/externallogin");
             }
         }
 
@@ -173,7 +176,7 @@ namespace SixDegrees.Controllers
                     throw new ApplicationException("Error loading external login information during confirmation.");
                 }
                 var user = new ApplicationUser { UserName = model.Email, Email = model.Email };
-                var result = await userManager.CreateAsync(user);
+                var result = await userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
                     result = await userManager.AddLoginAsync(user, info);
@@ -194,8 +197,10 @@ namespace SixDegrees.Controllers
             return BadRequest("Not a valid email.");
         }
 
-        private IActionResult RedirectToLocal(string localUrl)
+        internal static IActionResult RedirectToLocal(ControllerBase controller, HttpRequest request, string localUrl)
         {
+            if (controller == null || request == null)
+                throw new ArgumentNullException("Null controller or request.");
             if (localUrl == null)
                 localUrl = "/home";
             else
@@ -204,7 +209,7 @@ namespace SixDegrees.Controllers
                 if (!regex.IsMatch(localUrl))
                     localUrl = "/home";
             }
-            return Redirect($"https://{Request.Host.Value}{localUrl}");
+            return controller.Redirect($"https://{request.Host.Value}{localUrl}");
         }
 
         [HttpGet]
@@ -225,6 +230,22 @@ namespace SixDegrees.Controllers
                 return Ok();
             else
                 return BadRequest("Error");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<bool> TwitterAvailable()
+        {
+            if (!User.Identity.IsAuthenticated)
+                return false;
+            var logins = await userManager.GetLoginsAsync(await userManager.GetUserAsync(User));
+            return logins.Where(login => login.LoginProvider == "Twitter").Count() > 0;
+        }
+
+        [HttpPost]
+        public bool Authenticated()
+        {
+            return User.Identity.IsAuthenticated;
         }
     }
 }

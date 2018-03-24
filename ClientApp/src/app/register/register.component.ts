@@ -25,7 +25,7 @@ export class RegisterComponent implements OnInit {
                 this.router.navigate(['home']);
             },
             error => {
-                this.message = JSON.stringify(error.error).replace(new RegExp(';', 'g'), '\n').replace(new RegExp('"', 'g'), '');
+                this.message = error.replace(new RegExp(';', 'g'), '\n').replace(new RegExp('"', 'g'), '');
             }
         );
     }

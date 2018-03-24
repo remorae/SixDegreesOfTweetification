@@ -1,0 +1,10 @@
+<div class="card">
+    <div class="card-body">
+        <h2 class="mb-3"><i class="fa fa-user-circle mr-2"></i>Account</h2>
+        <button class="btn btn-primary mt-3" (click)="logout()" role="button">Logout</button>
+        <br />
+        <span *ngIf="!canAddTwitter && !canRemoveTwitter">Loading External Logins...</span>
+        <button *ngIf="canAddTwitter" class="btn mt-3" style="border-color:#ced4da;" (click)="addTwitter()" role="button"><img src="assets/sign-in-with-twitter-link.png" /></button>
+        <button *ngIf="canRemoveTwitter" class="btn mt-3" style="border-color:#ced4da;" (click)="removeTwitter()" role="button">Remove Twitter Connection</button>
+    </div>
+</div>

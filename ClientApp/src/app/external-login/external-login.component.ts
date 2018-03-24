@@ -9,6 +9,8 @@ import { Router } from '@angular/router';
 })
 export class ExternalLoginComponent implements OnInit {
     email = '';
+    password = '';
+    confirmPassword = '';
     message = '';
     constructor(
         private router: Router,
@@ -18,7 +20,7 @@ export class ExternalLoginComponent implements OnInit {
     ngOnInit() { }
 
     register() {
-        this.authService.registerExternal(this.email).subscribe(
+        this.authService.registerExternal(this.email, this.password, this.confirmPassword).subscribe(
             val => {
                 this.router.navigate(['home']);
             },
