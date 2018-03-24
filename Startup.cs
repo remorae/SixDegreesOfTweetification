@@ -88,6 +88,13 @@ namespace SixDegrees
                         }
                     };
                 });
+
+            services.ConfigureApplicationCookie(options =>
+            {
+                options.Cookie.Name = "SixDegrees.Identity";
+                options.Cookie.HttpOnly = true;
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -120,20 +127,13 @@ namespace SixDegrees
 
             app.Use(async (context, next) =>
             {
-                string path = context.Request.Path.Value.ToLower();
-                if (path != null && (path == "/" || path == ""))
-                {
-                    // This is needed to provide the token generator with the logged in context (if any) 
-                    var authInfo = await context.AuthenticateAsync();
-                    context.User = authInfo.Principal;
-
-                    // XSRF-TOKEN used by angular in the $http if provided
-                    var tokens = antiforgery.GetAndStoreTokens(context);
-                    context.Response.Cookies.Append(
-                        "XSRF-TOKEN",
-                        tokens.RequestToken
-                    );
-                }
+                // XSRF-TOKEN used by angular in the $http if provided
+                var tokens = antiforgery.GetAndStoreTokens(context);
+                context.Response.Cookies.Append(
+                    "XSRF-TOKEN",
+                    tokens.RequestToken,
+                    new CookieOptions() { HttpOnly = false }
+                );
                 await next.Invoke();
             });
 
