@@ -7,6 +7,7 @@
         UserByScreenName,
         UserConnectionsByScreenName,
         HashtagsFromHashtag,
-        HashtagConnectionsByHashtag
+        HashtagConnectionsByHashtag,
+        UserConnectionsByID
     }
 }
