@@ -151,7 +151,11 @@ namespace SixDegrees.Controllers
                 rateLimitDb.SaveChanges();
             }
             else
+            {
                 info.ResetIfNeeded();
+                rateLimitDb.Update(info);
+                rateLimitDb.SaveChanges();
+            }
 
             return info;
         }
