@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SixDegrees.Model
 {
@@ -53,7 +54,7 @@ namespace SixDegrees.Model
             }
 
             public T Value { get; }
-            public int Distance { get; }
+            public int Distance { get; set; }
             private int previousMaxDepth = -1;
             private double storedHeuristic = -1;
             public double Heuristic(int maxDepth)
@@ -87,8 +88,9 @@ namespace SixDegrees.Model
 
             foreach (var vertex in vertices)
             {
-                distances[vertex.Key] = (vertex.Key.Equals(start) ? 0 : int.MaxValue);
-                nodes.Add(vertex.Key);
+                distances[vertex.Key] = (vertex.Key.Value.Equals(start.Value) ? 0 : int.MaxValue);
+                if (vertex.Value.Connections.Count > 0 || vertex.Key.Value.Equals(start.Value) || vertex.Key.Value.Equals(end.Value))
+                    nodes.Add(vertex.Key);
             }
 
             while (nodes.Count > 0)
@@ -97,21 +99,23 @@ namespace SixDegrees.Model
                 var smallest = nodes[0];
                 nodes.Remove(smallest);
 
-                if (smallest.Equals(end))
+                if (smallest.Value.Equals(end.Value))
                 {
                     path = new List<Node>();
-                    while (previous.ContainsKey(smallest) && !smallest.Equals(start))
+                    while (previous.ContainsKey(smallest) && !smallest.Value.Equals(start.Value))
                     {
                         path.Add(new Node(smallest.Value, distances[smallest]));
                         smallest = previous[smallest];
                     }
+                    if (path.Count > 0)
+                        path.Add(new Node(start.Value, 0));
                     path.Reverse();
                     break;
                 }
 
                 if (distances[smallest] == int.MaxValue)
                     break;
-
+                
                 foreach (var neighbor in vertices[smallest].Connections)
                 {
                     var distanceFromShortestPath = distances[smallest] + neighbor.Value;

@@ -299,13 +299,17 @@ namespace SixDegrees.Controllers
                 Ok((await GetResults<TweetSearchResults>(
                        query,
                        AuthenticationType.Both,
-                       TwitterAPIUtils.HashtagNoRepeatSearchQuery,
+                       TwitterAPIUtils.HashtagIgnoreRepeatSearchQuery,
                        TwitterAPIEndpoint.SearchTweets))
                     .Statuses
-                    .Aggregate(new HashSet<Hashtag>(), (set, status) => AppendHashtagsInStatus(status, set))
-                    .Select(hashtag => hashtag.Text.ToLower())
-                    .Distinct())
+                    .Aggregate(new Dictionary<Status, IEnumerable<string>>(), (dict, status) => AppendHashtagsInStatus(status, dict)))
             );
+        }
+
+        private Dictionary<Status, IEnumerable<string>> AppendHashtagsInStatus(Status status, Dictionary<Status, IEnumerable<string>> dict)
+        {
+            dict.Add(status, status.Entities.Hashtags.Select(hashtag => hashtag.Text.ToLower()).Distinct());
+            return dict;
         }
 
         /// <summary>
@@ -329,16 +333,18 @@ namespace SixDegrees.Controllers
 
             return await FindLink(user1ID, user2ID, numberOfDegrees, maxAPICalls,
                 async query =>
-                Ok(((await GetUserConnectionIDs(query) as OkObjectResult).Value as IEnumerable<long>).Select(id => id.ToString())));
+                Ok(((await GetUserConnectionIDs(query) as OkObjectResult).Value as IEnumerable<long>).Select(id => id.ToString()).Distinct()));
         }
 
-        private async Task<IActionResult> FindLink<T>(T start, T end, int numberOfDegrees, int maxAPICalls, Func<T, Task<IActionResult>> lookupFunc)
+        private async Task<IActionResult> FindLink<T>(T start, T end, int numberOfDegrees, int maxAPICalls, Func<T, Task<IActionResult>> lookupFunc) where T : class
         {
             if (maxAPICalls < 1)
                 return BadRequest("Rate limit exceeded.");
+            DateTime startTime = DateTime.Now;
             int callsMade = 0;
             try
             {
+                var links = new Dictionary<Status, IEnumerable<T>>();
                 var startList = new List<ConnectionInfo<T>.Node>() { new ConnectionInfo<T>.Node(start, 0) };
                 var endList = new List<ConnectionInfo<T>.Node>() { new ConnectionInfo<T>.Node(end, 0) };
 
@@ -368,6 +374,18 @@ namespace SixDegrees.Controllers
                                 break;
                             }
                         }
+                        else if (obj is IDictionary<Status, IEnumerable<T>> newLinks)
+                        {
+                            foreach (var entry in newLinks)
+                                links.Add(entry.Key, entry.Value);
+                            var tags = newLinks.Aggregate(new List<T>(), (list, entry) => { list.AddRange(entry.Value); return list; });
+                            StoreResults(numberOfDegrees, ref startList, ref queried, ref seen, ref connections, ref toQuery, tags.Where(result => !result.Equals(toQuery.Value)));
+                            if (tags.Contains(end))
+                            {
+                                foundOther = true;
+                                break;
+                            }
+                        }
                     }
                     if (endList.Count > 0 && callsMade < maxAPICalls)
                     {
@@ -377,8 +395,20 @@ namespace SixDegrees.Controllers
                         var obj = (await lookupFunc(toQuery.Value) as OkObjectResult).Value;
                         if (obj is IEnumerable<T> lookup)
                         {
-                            StoreResults(numberOfDegrees, ref startList, ref queried, ref seen, ref connections, ref toQuery, lookup.Where(result => !result.Equals(toQuery.Value)));
+                            StoreResults(numberOfDegrees, ref endList, ref queried, ref seen, ref connections, ref toQuery, lookup.Where(result => !result.Equals(toQuery.Value)));
                             if (lookup.Contains(start))
+                            {
+                                foundOther = true;
+                                break;
+                            }
+                        }
+                        else if (obj is IDictionary<Status, IEnumerable<T>> newLinks)
+                        {
+                            foreach (var entry in newLinks)
+                                links.Add(entry.Key, entry.Value);
+                            var tags = newLinks.Aggregate(new List<T>(), (list, entry) => { list.AddRange(entry.Value); return list; });
+                            StoreResults(numberOfDegrees, ref endList, ref queried, ref seen, ref connections, ref toQuery, tags.Where(result => !result.Equals(toQuery.Value)));
+                            if (tags.Contains(start))
                             {
                                 foundOther = true;
                                 break;
@@ -394,8 +424,41 @@ namespace SixDegrees.Controllers
                         connections.First(node => node.Key.Value.Equals(start)).Key,
                         connections.First(node => node.Key.Value.Equals(end)).Key);
                 if (results == null || results.Count() == 0)
-                    return Ok(connections.ToDictionary(entry => entry.Key.Value, entry => entry.Value.Connections.Select(node => node.Value)));
-                return Ok(results.ToDictionary(node => node.Value, node => node.Distance));
+                {
+                    results = ConnectionInfo<T>.ShortestPath(
+                        connections,
+                        connections.First(node => node.Key.Value.Equals(end)).Key,
+                        connections.First(node => node.Key.Value.Equals(start)).Key);
+                }
+                if (results == null || results.Count() == 0)
+                    return Ok(new {
+                        Connections = connections //TODO Get screen names
+                            .Where(entry => entry.Value.Connections.Count > 0)
+                            .ToDictionary(entry => entry.Key.Value, entry => entry.Value.Connections.Select(node => node.Key.Value)),
+                        Links = Enumerable.Empty<string>(),
+                        Metadata = new { Time = DateTime.Now - startTime, Calls = callsMade } });
+                var resultLinks = new List<Status>();
+                if (links.Count > 0)
+                {
+                    for (int i = 0; i < results.Count() - 1; ++i)
+                        resultLinks.Add(links.First(entry => entry.Value.Contains(results[i].Value) && entry.Value.Contains(results[i + 1].Value)).Key);
+                }
+                else
+                {
+                    var userResults = await GetResultCollection<UserSearchResults>(
+                           results.Select(node => node.Value) as IEnumerable<string>,
+                           AuthenticationType.Both,
+                           TwitterAPIUtils.UserLookupQuery,
+                           TwitterAPIEndpoint.UsersLookup);
+                    var newPath = new List<ConnectionInfo<T>.Node>();
+                    foreach (var node in results)
+                        newPath.Add(new ConnectionInfo<T>.Node(userResults.First(user => user.IdStr.Equals(node.Value)).ScreenName as T, node.Distance));
+                    results = newPath;
+                }
+                return Ok(new {
+                    Path = results.ToDictionary(node => node.Value, node => node.Distance),
+                    Links = resultLinks.Select(status => status.URL),
+                    Metadata = new { Time = DateTime.Now - startTime, Calls = callsMade } });
             }
             catch (Exception ex)
             {

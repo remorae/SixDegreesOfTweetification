@@ -55,7 +55,7 @@ namespace SixDegrees.Model
             return result;
         }
 
-        internal static string HashtagNoRepeatSearchQuery(string hashtag, TwitterAPIEndpoint endpoint)
+        internal static string HashtagIgnoreRepeatSearchQuery(string hashtag, TwitterAPIEndpoint endpoint)
         {
             return $"q=%23{hashtag}&count={TweetCount}&tweet_mode={TweetMode}&include_entities={IncludeEntities}";
         }
