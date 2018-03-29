@@ -125,7 +125,8 @@ namespace SixDegrees.Model
 
         private static TimeSpan UntilEpochSeconds(double epochSeconds)
         {
-            return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(epochSeconds) - DateTime.Now;
+            var time = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(epochSeconds);
+            return time - DateTime.UtcNow;
         }
 
         private static HttpMethod HttpMethod(TwitterAPIEndpoint endpoint)
