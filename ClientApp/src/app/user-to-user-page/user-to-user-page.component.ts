@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { UserInput } from '../models/userInput';
-import { EndpointService } from '../services/endpoint.service';
 import { UserResult, UserConnectionInfo, UserConnectionMap } from '../models/UserResult';
+import { GraphDataService, Graph } from '../services/graph-data.service';
 
 @Component({
     selector: 'app-user-to-user-page',
@@ -10,16 +10,16 @@ import { UserResult, UserConnectionInfo, UserConnectionMap } from '../models/Use
 })
 export class UserToUserPageComponent implements OnInit {
     latestSearch;
-    results: UserConnectionMap;
-    constructor(private endpoint: EndpointService) { }
+    userRelationshipGraph: Graph;
+    constructor(private graphService: GraphDataService) { }
 
     ngOnInit() {
+        this.graphService.getLatestGraphData()
+            .subscribe((g: Graph) => { this.userRelationshipGraph = g; });
     }
     onUserSubmit(input: UserInput) {
         this.latestSearch = input.inputs[0];
-        this.results = undefined;
-        this.endpoint.searchUserDegrees(this.latestSearch).subscribe((values: UserConnectionMap) => {
-            this.results = values;
-        });
+        this.userRelationshipGraph = undefined;
+        this.graphService.getSingleUserData(this.latestSearch);
     }
 }
