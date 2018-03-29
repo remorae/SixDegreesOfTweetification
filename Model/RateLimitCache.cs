@@ -47,6 +47,10 @@ namespace SixDegrees.Model
                     yield return TwitterAPIEndpoint.FriendsIDs;
                     yield return TwitterAPIEndpoint.UsersLookup;
                     yield break;
+                case QueryType.UserConnectionsByID:
+                    yield return TwitterAPIEndpoint.FollowersIDs;
+                    yield return TwitterAPIEndpoint.FriendsIDs;
+                    yield break;
                 default:
                     yield break;
             }
