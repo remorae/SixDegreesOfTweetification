@@ -35,8 +35,12 @@ namespace SixDegrees.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet("all")]
-        public IDictionary<QueryType, IDictionary<AuthenticationType, int>> GetAllRateLimits() =>
-            RateLimitCache.Get.CurrentRateLimits(rateLimitDb, userManager, User);
+        public async Task<IDictionary<QueryType, IDictionary<AuthenticationType, int>>> GetAllRateLimits(string forceUpdate)
+        {
+            if (forceUpdate?.ToLower() == "true")
+                await GetUpdatedLimits(User.GetTwitterAccessToken(), User.GetTwitterAccessTokenSecret());
+            return RateLimitCache.Get.CurrentRateLimits(rateLimitDb, userManager, User);
+        }
 
         /// <summary>
         /// Returns current rate limiting information for the specified endpoint.
@@ -151,7 +155,11 @@ namespace SixDegrees.Controllers
                 rateLimitDb.SaveChanges();
             }
             else
+            {
                 info.ResetIfNeeded();
+                rateLimitDb.Update(info);
+                rateLimitDb.SaveChanges();
+            }
 
             return info;
         }
