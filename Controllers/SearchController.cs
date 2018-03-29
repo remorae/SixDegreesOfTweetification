@@ -294,6 +294,7 @@ namespace SixDegrees.Controllers
             if (hashtag1 == null || hashtag2 == null || numberOfDegrees < 1 || maxCalls < 1)
                 return BadRequest("Invalid query.");
             int maxAPICalls = Math.Min(maxCalls, RateLimitCache.Get.MinimumRateLimits(QueryType.HashtagConnectionsByHashtag, rateLimitDb, userManager, User)[AuthenticationType.User]);
+            
             return await FindLink(hashtag1, hashtag2, numberOfDegrees, maxAPICalls,
                 async query =>
                 Ok((await GetResults<TweetSearchResults>(
@@ -336,15 +337,17 @@ namespace SixDegrees.Controllers
                 Ok(((await GetUserConnectionIDs(query) as OkObjectResult).Value as IEnumerable<long>).Select(id => id.ToString()).Distinct()));
         }
 
-        private async Task<IActionResult> FindLink<T>(T start, T end, int numberOfDegrees, int maxAPICalls, Func<T, Task<IActionResult>> lookupFunc) where T : class
+        private async Task<IActionResult> FindLink<T>(T start, T end, int numberOfDegrees, int maxAPICalls, Func<T, Task<IActionResult>> lookupFunc)
+            where T : class
         {
             if (maxAPICalls < 1)
                 return BadRequest("Rate limit exceeded.");
             DateTime startTime = DateTime.Now;
             int callsMade = 0;
+
             try
             {
-                var links = new Dictionary<Status, IEnumerable<T>>();
+                var hashtagLinks = new Dictionary<Status, IEnumerable<T>>();
                 var startList = new List<ConnectionInfo<T>.Node>() { new ConnectionInfo<T>.Node(start, 0) };
                 var endList = new List<ConnectionInfo<T>.Node>() { new ConnectionInfo<T>.Node(end, 0) };
 
@@ -357,7 +360,7 @@ namespace SixDegrees.Controllers
                 };
 
                 bool foundOther = false;
-                while (callsMade < maxAPICalls && (startList.Count > 0 || endList.Count > 0))
+                while (callsMade < maxAPICalls && (startList.Count > 0 || endList.Count > 0) && !foundOther)
                 {
                     if (startList.Count > 0)
                     {
@@ -365,27 +368,7 @@ namespace SixDegrees.Controllers
                         ConnectionInfo<T>.Node toQuery = startList.First();
                         startList.Remove(toQuery);
                         var obj = (await lookupFunc(toQuery.Value) as OkObjectResult).Value;
-                        if (obj is IEnumerable<T> lookup)
-                        {
-                            StoreResults(numberOfDegrees, ref startList, ref queried, ref seen, ref connections, ref toQuery, lookup.Where(result => !result.Equals(toQuery.Value)));
-                            if (lookup.Contains(end))
-                            {
-                                foundOther = true;
-                                break;
-                            }
-                        }
-                        else if (obj is IDictionary<Status, IEnumerable<T>> newLinks)
-                        {
-                            foreach (var entry in newLinks)
-                                links.Add(entry.Key, entry.Value);
-                            var tags = newLinks.Aggregate(new List<T>(), (list, entry) => { list.AddRange(entry.Value); return list; });
-                            StoreResults(numberOfDegrees, ref startList, ref queried, ref seen, ref connections, ref toQuery, tags.Where(result => !result.Equals(toQuery.Value)));
-                            if (tags.Contains(end))
-                            {
-                                foundOther = true;
-                                break;
-                            }
-                        }
+                        HandleSearchResults(obj, toQuery, ref foundOther, end, ref hashtagLinks, numberOfDegrees, ref startList, ref queried, ref seen, ref connections);
                     }
                     if (endList.Count > 0 && callsMade < maxAPICalls)
                     {
@@ -393,55 +376,43 @@ namespace SixDegrees.Controllers
                         ConnectionInfo<T>.Node toQuery = endList.First();
                         endList.Remove(toQuery);
                         var obj = (await lookupFunc(toQuery.Value) as OkObjectResult).Value;
-                        if (obj is IEnumerable<T> lookup)
-                        {
-                            StoreResults(numberOfDegrees, ref endList, ref queried, ref seen, ref connections, ref toQuery, lookup.Where(result => !result.Equals(toQuery.Value)));
-                            if (lookup.Contains(start))
-                            {
-                                foundOther = true;
-                                break;
-                            }
-                        }
-                        else if (obj is IDictionary<Status, IEnumerable<T>> newLinks)
-                        {
-                            foreach (var entry in newLinks)
-                                links.Add(entry.Key, entry.Value);
-                            var tags = newLinks.Aggregate(new List<T>(), (list, entry) => { list.AddRange(entry.Value); return list; });
-                            StoreResults(numberOfDegrees, ref endList, ref queried, ref seen, ref connections, ref toQuery, tags.Where(result => !result.Equals(toQuery.Value)));
-                            if (tags.Contains(start))
-                            {
-                                foundOther = true;
-                                break;
-                            }
-                        }
+                        HandleSearchResults(obj, toQuery, ref foundOther, start, ref hashtagLinks, numberOfDegrees, ref endList, ref queried, ref seen, ref connections);
                     }
                 }
 
-                var results = (!foundOther)
-                    ? null
-                    : ConnectionInfo<T>.ShortestPath(
-                        connections,
-                        connections.First(node => node.Key.Value.Equals(start)).Key,
-                        connections.First(node => node.Key.Value.Equals(end)).Key);
+                List<ConnectionInfo<T>.Node> results = (!foundOther) ? null : LookForPath(connections, start, end);
+
                 if (results == null || results.Count() == 0)
                 {
-                    results = ConnectionInfo<T>.ShortestPath(
-                        connections,
-                        connections.First(node => node.Key.Value.Equals(end)).Key,
-                        connections.First(node => node.Key.Value.Equals(start)).Key);
-                }
-                if (results == null || results.Count() == 0)
+                    // Failed to find link
+                    if (hashtagLinks.Count == 0)
+                    {
+                        var userResults = new List<UserSearchResults>();
+                        var userIDs = (connections.Keys.Select(node => node.Value) as IEnumerable<string>).ToList();
+                        while (userIDs.Count() > 0)
+                        {
+                            userResults.AddRange(await GetResultCollection<UserSearchResults>(
+                                userIDs.Take(Math.Min(100, userIDs.Count())),
+                                AuthenticationType.Both,
+                                TwitterAPIUtils.UserLookupQuery,
+                                TwitterAPIEndpoint.UsersLookup));
+                            userIDs.RemoveRange(0, Math.Min(100, userIDs.Count()));
+                        }
+                        ReplaceUserIDsWithScreenNames(ref connections, userResults);
+                    }
                     return Ok(new {
-                        Connections = connections //TODO Get screen names
+                        Connections = connections
                             .Where(entry => entry.Value.Connections.Count > 0)
                             .ToDictionary(entry => entry.Key.Value, entry => entry.Value.Connections.Select(node => node.Key.Value)),
                         Links = Enumerable.Empty<string>(),
                         Metadata = new { Time = DateTime.Now - startTime, Calls = callsMade } });
+                }
+
                 var resultLinks = new List<Status>();
-                if (links.Count > 0)
+                if (hashtagLinks.Count > 0)
                 {
                     for (int i = 0; i < results.Count() - 1; ++i)
-                        resultLinks.Add(links.First(entry => entry.Value.Contains(results[i].Value) && entry.Value.Contains(results[i + 1].Value)).Key);
+                        resultLinks.Add(hashtagLinks.First(entry => entry.Value.Contains(results[i].Value) && entry.Value.Contains(results[i + 1].Value)).Key);
                 }
                 else
                 {
@@ -450,10 +421,7 @@ namespace SixDegrees.Controllers
                            AuthenticationType.Both,
                            TwitterAPIUtils.UserLookupQuery,
                            TwitterAPIEndpoint.UsersLookup);
-                    var newPath = new List<ConnectionInfo<T>.Node>();
-                    foreach (var node in results)
-                        newPath.Add(new ConnectionInfo<T>.Node(userResults.First(user => user.IdStr.Equals(node.Value)).ScreenName as T, node.Distance));
-                    results = newPath;
+                    ReplaceUserIDsWithScreenNames(ref results, userResults);
                 }
                 return Ok(new {
                     Path = results.ToDictionary(node => node.Value, node => node.Distance),
@@ -466,7 +434,89 @@ namespace SixDegrees.Controllers
             }
         }
 
-        private void StoreResults<T>(int numberOfDegrees, ref List<ConnectionInfo<T>.Node> list, ref ISet<T> queried, ref ISet<T> seen, ref IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections, ref ConnectionInfo<T>.Node toQuery, IEnumerable<T> lookup)
+        private List<ConnectionInfo<T>.Node> LookForPath<T>(IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections, T start, T end)
+        {
+            var results = ConnectionInfo<T>.ShortestPath(
+                    connections,
+                    connections.First(node => node.Key.Value.Equals(start)).Key,
+                    connections.First(node => node.Key.Value.Equals(end)).Key);
+            if (results == null || results.Count() == 0)
+            {
+                results = ConnectionInfo<T>.ShortestPath(
+                    connections,
+                    connections.First(node => node.Key.Value.Equals(end)).Key,
+                    connections.First(node => node.Key.Value.Equals(start)).Key);
+            }
+            return results;
+        }
+
+        private void ReplaceUserIDsWithScreenNames<T>(
+            ref IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections,
+            IEnumerable<UserSearchResults> userResults)
+            where T : class
+        {
+            var newConnections = new Dictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>>();
+            foreach (var entry in connections.Where(con => userResults.Any(user => user.IdStr.Equals(con.Key.Value))))
+            {
+                var newNode = new ConnectionInfo<T>.Node(userResults.First(user => user.IdStr.Equals(entry.Key.Value)).ScreenName as T, entry.Key.Distance);
+                var newInfo = new ConnectionInfo<T>();
+                foreach (var connection in entry.Value.Connections.Where(con => userResults.Any(user => user.IdStr.Equals(con.Key.Value))))
+                    newInfo.Connections.Add(new ConnectionInfo<T>.Node(userResults.First(user => user.IdStr.Equals(connection.Key.Value)).ScreenName as T, connection.Key.Distance), connection.Value);
+                newConnections.Add(newNode, newInfo);
+            }
+
+            connections = newConnections;
+        }
+
+        private void ReplaceUserIDsWithScreenNames<T>(
+            ref List<ConnectionInfo<T>.Node> results,
+            IEnumerable<UserSearchResults> userResults)
+            where T : class
+        {
+            var newPath = new List<ConnectionInfo<T>.Node>();
+            foreach (var node in results)
+                newPath.Add(new ConnectionInfo<T>.Node(userResults.First(user => user.IdStr.Equals(node.Value)).ScreenName as T, node.Distance));
+            results = newPath;
+        }
+
+        private void HandleSearchResults<T>(
+            object results,
+            ConnectionInfo<T>.Node toQuery,
+            ref bool foundOther,
+            T goal,
+            ref Dictionary<Status, IEnumerable<T>> links,
+            int numberOfDegrees,
+            ref List<ConnectionInfo<T>.Node> list,
+            ref ISet<T> queried,
+            ref ISet<T> seen,
+            ref IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections)
+            where T : class
+        {
+            if (results is IEnumerable<T> lookup)
+            {
+                StoreResults(numberOfDegrees, ref list, ref queried, ref seen, ref connections, ref toQuery, lookup.Where(result => !result.Equals(toQuery.Value)));
+                if (lookup.Contains(goal))
+                    foundOther = true;
+            }
+            else if (results is IDictionary<Status, IEnumerable<T>> newLinks)
+            {
+                foreach (var entry in newLinks)
+                    links.Add(entry.Key, entry.Value);
+                var tags = newLinks.Aggregate(new List<T>(), (collection, entry) => { collection.AddRange(entry.Value); return collection; });
+                StoreResults(numberOfDegrees, ref list, ref queried, ref seen, ref connections, ref toQuery, tags.Where(result => !result.Equals(toQuery.Value)));
+                if (tags.Contains(goal))
+                    foundOther = true;
+            }
+    }
+
+        private void StoreResults<T>(
+            int numberOfDegrees,
+            ref List<ConnectionInfo<T>.Node> list,
+            ref ISet<T> queried,
+            ref ISet<T> seen,
+            ref IDictionary<ConnectionInfo<T>.Node,ConnectionInfo<T>> connections,
+            ref ConnectionInfo<T>.Node toQuery,
+            IEnumerable<T> lookup)
         {
             queried.Add(toQuery.Value);
             int nextDistance = toQuery.Distance + 1;
