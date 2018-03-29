@@ -28,7 +28,7 @@ export class GraphVisualizerComponent implements OnInit {
         const simulation: any = D3.forceSimulation()  // may need to remove
             .force('link', D3.forceLink().id((d: { id }) => d.id))
             .force('charge', D3.forceManyBody().distanceMax(maxForceDistance))
-            .force('collision', D3.forceCollide())
+
             .force('center', D3.forceCenter(width / 2, height / 2));
         let graph: { links, nodes } = this.graphData.mapUserDataToLinks(); // this probably needs to go back to D3.json
         let link = svg.append('g')
@@ -45,7 +45,7 @@ export class GraphVisualizerComponent implements OnInit {
             .selectAll('circle')
             .data(graph.nodes)
             .enter().append('circle')
-            .attr('r', (d: { group }) => 5 + 4 - d.group)
+            .attr('r', (d: { group }) => { return d.group !== 0 ? 5 : 10})
             .attr('fill', (d: { group }) => color(d.group))
             .call(D3.drag()
                 .on('start', dragstarted)
