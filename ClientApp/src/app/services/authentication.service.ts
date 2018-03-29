@@ -95,7 +95,7 @@ export class AuthenticationService {
             });
     }
 
-    logout(onCompletion: any): void {
+    logout(onCompletion: () => void ): void {
         this.http.post(this.baseUrl + 'account/Logout', {
             headers: new HttpHeaders({
                 'Content-Type': 'application/json; charset=utf-8'
@@ -103,8 +103,8 @@ export class AuthenticationService {
         }).subscribe(res => {
             localStorage.removeItem('auth_token');
             this.loggedIn = false;
-            onCompletion();
-        });
+
+        }, (error=>{}), onCompletion);
     }
 
     isLoggedIn(): boolean {
