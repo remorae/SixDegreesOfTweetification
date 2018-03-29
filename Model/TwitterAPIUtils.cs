@@ -55,6 +55,11 @@ namespace SixDegrees.Model
             return result;
         }
 
+        internal static string HashtagIgnoreRepeatSearchQuery(string hashtag, TwitterAPIEndpoint endpoint)
+        {
+            return $"q=%23{hashtag}&count={TweetCount}&tweet_mode={TweetMode}&include_entities={IncludeEntities}";
+        }
+
         internal static string RateLimitStatusQuery(IEnumerable<string> resources)
         {
             return $"resources={string.Join(',', resources)}";
@@ -63,8 +68,12 @@ namespace SixDegrees.Model
         internal static string FollowersFriendsIDsQuery(string screenName, TwitterAPIEndpoint endpoint)
         {
             string result = $"screen_name={screenName}";
-            if (screenName == QueryHistory.Get[endpoint].LastQuery && QueryHistory.Get[endpoint].NextCursor != "")
-                result += $"&cursor={QueryHistory.Get[endpoint].NextCursor}";
+            return result;
+        }
+
+        internal static string FollowersFriendsIDsQueryByID(string userID, TwitterAPIEndpoint endpoint)
+        {
+            string result = $"user_id={userID}";
             return result;
         }
 
@@ -116,7 +125,8 @@ namespace SixDegrees.Model
 
         private static TimeSpan UntilEpochSeconds(double epochSeconds)
         {
-            return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(epochSeconds) - DateTime.Now;
+            var time = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(epochSeconds);
+            return time - DateTime.UtcNow;
         }
 
         private static HttpMethod HttpMethod(TwitterAPIEndpoint endpoint)
