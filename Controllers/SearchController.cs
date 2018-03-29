@@ -303,6 +303,7 @@ namespace SixDegrees.Controllers
                        TwitterAPIUtils.HashtagIgnoreRepeatSearchQuery,
                        TwitterAPIEndpoint.SearchTweets))
                     .Statuses
+                    .Where(status => status.Entities.Hashtags.Any(tag => tag.Text.ToLower() == query))
                     .Aggregate(new Dictionary<Status, IEnumerable<string>>(), (dict, status) => AppendHashtagsInStatus(status, dict)))
             );
         }
@@ -353,14 +354,16 @@ namespace SixDegrees.Controllers
 
                 ISet<T> queried = new HashSet<T>();
                 ISet<T> seen = new HashSet<T>() { start, end };
-                IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections = new Dictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>>()
+                ISet<T> seenStart = new HashSet<T>() { start };
+                ISet<T> seenEnd = new HashSet<T>() { end };
+                IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections = new Dictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>>(new ConnectionInfo<T>.Node.EqualityComparer())
                 {
                     { startList.First(), new ConnectionInfo<T>() },
                     { endList.First(), new ConnectionInfo<T>() }
                 };
 
-                bool foundOther = false;
-                while (callsMade < maxAPICalls && (startList.Count > 0 || endList.Count > 0) && !foundOther)
+                bool foundLink = false;
+                while (callsMade < maxAPICalls && (startList.Count > 0 || endList.Count > 0) && !foundLink)
                 {
                     if (startList.Count > 0)
                     {
@@ -368,7 +371,7 @@ namespace SixDegrees.Controllers
                         ConnectionInfo<T>.Node toQuery = startList.First();
                         startList.Remove(toQuery);
                         var obj = (await lookupFunc(toQuery.Value) as OkObjectResult).Value;
-                        HandleSearchResults(obj, toQuery, ref foundOther, end, ref hashtagLinks, numberOfDegrees, ref startList, ref queried, ref seen, ref connections);
+                        HandleSearchResults(obj, toQuery, ref foundLink, ref seenEnd, ref hashtagLinks, numberOfDegrees, ref startList, ref queried, ref seen, ref seenStart, ref connections);
                     }
                     if (endList.Count > 0 && callsMade < maxAPICalls)
                     {
@@ -376,11 +379,11 @@ namespace SixDegrees.Controllers
                         ConnectionInfo<T>.Node toQuery = endList.First();
                         endList.Remove(toQuery);
                         var obj = (await lookupFunc(toQuery.Value) as OkObjectResult).Value;
-                        HandleSearchResults(obj, toQuery, ref foundOther, start, ref hashtagLinks, numberOfDegrees, ref endList, ref queried, ref seen, ref connections);
+                        HandleSearchResults(obj, toQuery, ref foundLink, ref seenStart, ref hashtagLinks, numberOfDegrees, ref endList, ref queried, ref seen, ref seenEnd, ref connections);
                     }
                 }
 
-                List<ConnectionInfo<T>.Node> results = (!foundOther) ? null : LookForPath(connections, start, end);
+                List<ConnectionInfo<T>.Node> results = (!foundLink) ? null : LookForPath(connections, start, end);
 
                 if (results == null || results.Count() == 0)
                 {
@@ -436,17 +439,15 @@ namespace SixDegrees.Controllers
 
         private List<ConnectionInfo<T>.Node> LookForPath<T>(IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections, T start, T end)
         {
+            // Make all connections bidirectional
+            foreach (var entry in connections)
+                foreach (var node in entry.Value.Connections.Keys)
+                    if (!connections[node].Connections.ContainsKey(entry.Key))
+                        connections[node].Connections.Add(entry.Key, 1);
             var results = ConnectionInfo<T>.ShortestPath(
                     connections,
                     connections.First(node => node.Key.Value.Equals(start)).Key,
                     connections.First(node => node.Key.Value.Equals(end)).Key);
-            if (results == null || results.Count() == 0)
-            {
-                results = ConnectionInfo<T>.ShortestPath(
-                    connections,
-                    connections.First(node => node.Key.Value.Equals(end)).Key,
-                    connections.First(node => node.Key.Value.Equals(start)).Key);
-            }
             return results;
         }
 
@@ -482,30 +483,31 @@ namespace SixDegrees.Controllers
         private void HandleSearchResults<T>(
             object results,
             ConnectionInfo<T>.Node toQuery,
-            ref bool foundOther,
-            T goal,
+            ref bool foundLink,
+            ref ISet<T> goals,
             ref Dictionary<Status, IEnumerable<T>> links,
             int numberOfDegrees,
             ref List<ConnectionInfo<T>.Node> list,
             ref ISet<T> queried,
             ref ISet<T> seen,
+            ref ISet<T> seenSubset,
             ref IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections)
             where T : class
         {
             if (results is IEnumerable<T> lookup)
             {
-                StoreResults(numberOfDegrees, ref list, ref queried, ref seen, ref connections, ref toQuery, lookup.Where(result => !result.Equals(toQuery.Value)));
-                if (lookup.Contains(goal))
-                    foundOther = true;
+                StoreResults(numberOfDegrees, ref list, ref queried, ref seen, ref seenSubset, ref connections, ref toQuery, lookup.Where(result => !result.Equals(toQuery.Value)));
+                if (lookup.Intersect(goals).Count() > 0)
+                    foundLink = true;
             }
             else if (results is IDictionary<Status, IEnumerable<T>> newLinks)
             {
                 foreach (var entry in newLinks)
                     links.Add(entry.Key, entry.Value);
                 var tags = newLinks.Aggregate(new List<T>(), (collection, entry) => { collection.AddRange(entry.Value); return collection; });
-                StoreResults(numberOfDegrees, ref list, ref queried, ref seen, ref connections, ref toQuery, tags.Where(result => !result.Equals(toQuery.Value)));
-                if (tags.Contains(goal))
-                    foundOther = true;
+                StoreResults(numberOfDegrees, ref list, ref queried, ref seen, ref seenSubset, ref connections, ref toQuery, tags.Where(result => !result.Equals(toQuery.Value)));
+                if (tags.Intersect(goals).Count() > 0)
+                    foundLink = true;
             }
     }
 
@@ -513,7 +515,8 @@ namespace SixDegrees.Controllers
             int numberOfDegrees,
             ref List<ConnectionInfo<T>.Node> list,
             ref ISet<T> queried,
-            ref ISet<T> seen,
+            ref ISet<T> allSeen,
+            ref ISet<T> subSetSeen,
             ref IDictionary<ConnectionInfo<T>.Node,ConnectionInfo<T>> connections,
             ref ConnectionInfo<T>.Node toQuery,
             IEnumerable<T> lookup)
@@ -524,7 +527,7 @@ namespace SixDegrees.Controllers
             {
                 connections[toQuery].Connections.Add(new ConnectionInfo<T>.Node(entity, nextDistance), 1);
             }
-            var tempSeen = seen;
+            var tempSeen = allSeen;
             foreach (var entity in lookup.Distinct().Where(entity => !tempSeen.Contains(entity)).Where(entity => !tempSeen.Contains(entity)))
             {
                 ConnectionInfo<T>.Node node = new ConnectionInfo<T>.Node(entity, nextDistance);
@@ -532,8 +535,9 @@ namespace SixDegrees.Controllers
                     list.Add(node);
                 connections[node] = new ConnectionInfo<T>();
                 tempSeen.Add(entity);
+                subSetSeen.Add(entity);
             }
-            seen = tempSeen;
+            allSeen = tempSeen;
             list.Sort((lhs, rhs) => lhs.Heuristic(nextDistance).CompareTo(rhs.Heuristic(nextDistance)));
         }
 
