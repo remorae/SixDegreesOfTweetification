@@ -6,6 +6,7 @@
 <div class="card mb-3">
     <div class="card-body">
         {{results | json}}
+        <app-graph-visualizer></app-graph-visualizer>
         <h3 *ngIf="latestSearch && !results">
                 <i class="fa fa-spinner fa-spin mr-2"></i>Loading...
             </h3>
