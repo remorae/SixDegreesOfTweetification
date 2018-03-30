@@ -62,6 +62,17 @@ namespace SixDegrees.Controllers
                     await GetUpdatedLimits(User.GetTwitterAccessToken(), User.GetTwitterAccessTokenSecret());
                 return RateLimitCache.Get.MinimumRateLimits(type, rateLimitDb, userManager, User);
             }
+            else if (Enum.TryParse(endpoint, out TwitterAPIEndpoint apiEndpoint))
+            {
+                RateLimitCache.Get[apiEndpoint].ResetIfNeeded();
+                if (forceUpdate?.ToLower() == "true")
+                    await GetUpdatedLimits(User.GetTwitterAccessToken(), User.GetTwitterAccessTokenSecret());
+                return new Dictionary<AuthenticationType, int>()
+                {
+                    { AuthenticationType.Application, RateLimitCache.Get[apiEndpoint].Limit },
+                    { AuthenticationType.User, GetCurrentUserInfo(rateLimitDb, apiEndpoint, userManager, User).Limit }
+                };
+            }
             else
                 return RateLimitCache.BadRateLimit;
         }
