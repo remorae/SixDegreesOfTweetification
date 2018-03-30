@@ -30,16 +30,17 @@ export class GraphDataService {
 
 
     getSingleUserData(username: string) {
-         this.graphData.next(this.mapUserData(this.testData.getUserData()));
-        // this.endpoint.searchUserDegrees(username)
-        //     .map(this.mapUserData)
-        //     .subscribe(
-        //         (graph: Graph) =>
-        //          this.graphData.next(graph),
-        //         (error) => {
-        //             console.log(error);
-        //         this.graphData.next(this.graphData.value);
-        //     });
+        // this.graphData.next(this.mapUserData(this.testData.getUserData()));
+        this.endpoint.searchUserDegrees(username)
+            .map(this.mapUserData)
+            .subscribe(
+                (graph: Graph) =>{
+                 this.graphData.next(graph);
+                },
+                (error) => {
+                    console.log(error);
+                // this.graphData.next(this.graphData.value);
+            });
     }
 
     getLatestGraphData() {
