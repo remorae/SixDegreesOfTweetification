@@ -641,8 +641,8 @@ namespace SixDegrees.Controllers
                 return BadRequest("Invalid parameters.");
             try
             {
-                if (QueryHistory.Get[TwitterAPIEndpoint.FollowersIDs].LastQuery == screen_name)
-                    return BadRequest("Cannot repeat user connection queries."); //TODO Cache results and return those?
+                //if (QueryHistory.Get[TwitterAPIEndpoint.FollowersIDs].LastQuery == screen_name)
+                //TODO Cache results and return those?
 
                 int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User).Values.Min();
                 limit = Math.Min(limit, maxLookupCount * MaxUserLookupCount);
@@ -671,17 +671,17 @@ namespace SixDegrees.Controllers
                         }
                 }
 
-                Queue<long> ids = new Queue<long>(uniqueIds);
+                var ids = new List<long>(uniqueIds);
                 ICollection<UserResult> results = new List<UserResult>();
                 while (ids.Count > 0)
                 {
-                    for (int i = 0; i < ids.Count(); ++i)
-                        ids.Dequeue();
+                    int count = Math.Min(100, ids.Count);
                     var userResults = await GetResultCollection<UserSearchResults>(
-                        ids.Select(id => id.ToString()),
+                        ids.Take(count).Select(id => id.ToString()),
                         AuthenticationType.Both,
                         TwitterAPIUtils.UserLookupQuery,
                         TwitterAPIEndpoint.UsersLookup);
+                    ids.RemoveRange(0, count);
                     foreach (var user in userResults)
                         results.Add(ToUserResult(user));
                 }
