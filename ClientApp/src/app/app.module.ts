@@ -31,6 +31,7 @@ import { CloudBottleComponent } from './cloud-bottle/cloud-bottle.component';
 import { CloudDataService} from './services/cloud-data.service';
 import { GraphDataService} from './services/graph-data.service';
 import { GraphVisualizerComponent } from './graph-visualizer/graph-visualizer.component';
+import { HashVisualizerComponent } from './hash-visualizer/hash-visualizer.component';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
@@ -66,6 +67,7 @@ const appRoutes: Routes = [
         AccountComponent,
         CloudBottleComponent,
         GraphVisualizerComponent,
+        HashVisualizerComponent,
 
     ],
     imports: [
