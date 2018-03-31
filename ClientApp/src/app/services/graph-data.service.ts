@@ -20,50 +20,91 @@ export interface Graph {
     nodes: Node[];
 }
 
+export interface SixDegreesConnection {
+    path: {};
+    links: string[];
+    metadata: { time: string, calls: number };
+}
+
+
 @Injectable()
 export class GraphDataService {
     testData: TestData = new TestData();
-    graphData: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
-
+    userGraphSub: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
+    hashGraphSub: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
     constructor(private endpoint: EndpointService) {
     }
 
 
-    getSingleUserData(username: string) {
-        // this.graphData.next(this.mapUserData(this.testData.getUserData()));
-        this.endpoint.searchUserDegrees(username)
-            .map(this.mapUserData)
+    getHashConnectionData(hashtag1: string, hashtag2: string) {
+        this.endpoint
+            .getHashSixDegrees(hashtag1, hashtag2)
+            .map(this.mapHashData)
             .subscribe(
-                (graph: Graph) =>{
-                 this.graphData.next(graph);
+                (graph: Graph) => {
+                    this.hashGraphSub.next(graph);
                 },
                 (error) => {
                     console.log(error);
-                // this.graphData.next(this.graphData.value);
-            });
+                    this.hashGraphSub.next(this.hashGraphSub.value);
+                });
     }
 
-    getLatestGraphData() {
-        return this.graphData;
+    getSingleUserData(username: string) {
+        this.endpoint
+            .searchUserDegrees(username)
+            .map(this.mapUserData)
+            .subscribe(
+                (graph: Graph) => {
+                    this.userGraphSub.next(graph);
+                },
+                (error) => {
+                    console.log(error);
+                    this.userGraphSub.next(this.hashGraphSub.value);
+                });
+    }
+
+    getLatestUserData(): BehaviorSubject<Graph> {
+        return this.userGraphSub;
+    }
+
+    getLatestHashData(): BehaviorSubject<Graph> {
+        return this.hashGraphSub;
     }
     mapUserData = (data): Graph => {
-        // const data = this.testData.getUserData();
         const nodes: Node[] = Object.keys(data)
             .map((user) => ({ id: user, group: data[user].distance }));
 
-        const links: Link[] = this.createLinks(data, nodes);
+        const links: Link[] = this.createUserLinks(data, nodes);
         return { nodes: nodes, links: links };
     }
 
+    mapHashData = (data: SixDegreesConnection): Graph => {
+        const nodes: Node[] = [];
 
-    createLinks(data, nodes: Node[]) {
+        Object.keys(data.path).forEach((point) => {
+            const position = data.path[point];
+            nodes[position] = { id: point, group: position };
+        });
+
+        const links: Link[] = [];
+        for (let i = 1; i < nodes.length; i++) {
+            const source = nodes[i - 1];
+            const target = nodes[i];
+            links.push({source: source.id, target: target.id, value: 10});
+        }
+        return {nodes: nodes, links: links};
+    }
+
+
+    createUserLinks(data, nodes: Node[]) {
         const links: Link[] = [];
 
         nodes.forEach(element => {
             const user = data[element.id];
             const connections = user ? user.connections : [];
             connections.forEach(connection => {
-                links.push({ source: element.id, target: connection.screenName, value: 1 })
+                links.push({ source: element.id, target: connection.screenName, value: 1 });
             });
         });
 

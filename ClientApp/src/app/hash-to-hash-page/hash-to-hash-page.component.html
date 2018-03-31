@@ -5,10 +5,10 @@
 
 <div class="card mb-3">
     <div class="card-body">
-            <h3 *ngIf="latestSearch && !results">
+            <h3 *ngIf="latestSearchStart && latestSearchEnd && !hashGraph">
                     <i class="fa fa-spinner fa-spin mr-2"></i>Loading...
                 </h3>
-        {{results | json}}
+                <app-graph-visualizer [graph]="hashGraph"></app-graph-visualizer>
 
     </div>
 </div>

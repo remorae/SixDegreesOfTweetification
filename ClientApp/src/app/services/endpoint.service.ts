@@ -76,4 +76,9 @@ export class EndpointService {
     public searchUserDegrees(user: string) {
         return this.http.get<UserConnectionMap>(this.baseUrl + 'api/search/degrees/users/single?query=' + user).finally(this.pushLatest);
     }
+
+    public getHashSixDegrees(hashtag1: string, hashtag2: string) {
+        return this.http.get<any>(this.baseUrl + 'api/search/degrees/hashtags?hashtag1='
+            + hashtag1 + '&hashtag2=' + hashtag2).finally(this.pushLatest);
+    }
 }
