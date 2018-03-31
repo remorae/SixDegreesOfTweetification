@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { UserInput } from '../models/userInput';
-import { EndpointService } from '../services/endpoint.service';
 import { HashConnectionMap } from '../models/HashConnectionInfo';
+import { GraphDataService, Graph } from '../services/graph-data.service';
 
 @Component({
     selector: 'app-hash-to-hash-page',
@@ -9,16 +9,21 @@ import { HashConnectionMap } from '../models/HashConnectionInfo';
     styleUrls: ['./hash-to-hash-page.component.scss']
 })
 export class HashToHashPageComponent implements OnInit {
-    latestSearch;
-    results;
-    constructor(private endpoint: EndpointService) { }
+    latestSearchStart;
+    latestSearchEnd;
+    hashGraph;
+    constructor(private graphData: GraphDataService) { }
 
-    ngOnInit() { }
-    onUserSubmit(input: UserInput) {
-        this.latestSearch = input.inputs[0];
-        this.results = undefined;
-        this.endpoint.searchHashDegrees(this.latestSearch).subscribe((values: HashConnectionMap) => {
-            this.results = values;
+    ngOnInit() {
+        this.graphData.getLatestHashData().subscribe((g: Graph) => {
+            this.hashGraph = g;
         });
+    }
+    onUserSubmit(input: UserInput) {
+        const [hashtag1, hashtag2] = input.inputs;
+        this.hashGraph = undefined;
+        this.graphData.getHashConnectionData(hashtag1, hashtag2);
+        this.latestSearchStart = hashtag1;
+        this.latestSearchEnd = hashtag2;
     }
 }

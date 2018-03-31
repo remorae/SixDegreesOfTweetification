@@ -14,7 +14,7 @@ export class UserToUserPageComponent implements OnInit {
     constructor(private graphService: GraphDataService) { }
 
     ngOnInit() {
-        this.graphService.getLatestGraphData()
+        this.graphService.getLatestUserData()
             .subscribe((g: Graph) => { this.userRelationshipGraph = g; });
     }
     onUserSubmit(input: UserInput) {

@@ -24,9 +24,10 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
 
     ngOnChanges(changes: SimpleChanges) {
         const graphChange = changes['graph'];
+
         if (graphChange.currentValue) {
+            this.deleteGraph();
             this.drawGraph();
-           // this.deleteGraph();
         }
     }
 
