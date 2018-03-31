@@ -32,7 +32,38 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
     }
 
     deleteGraph() {
-            D3.select('svg.graph-container').selectAll('*').remove();
+        D3.select('svg.graph-container').selectAll('*').remove();
+    }
+
+
+    drawGraph() { // credit to https://bl.ocks.org/mbostock/4062045
+        const svg = D3.select('svg.graph-container');
+        const simulation = this.createSimulation();
+        const links = this.createLinksGroup(svg);
+        const nodes = this.createNodesGroup(svg, simulation);
+
+        nodes.append('title')
+            .text((d: Node) => `User: ${d.id} Distance: ${d.group}`);
+
+        simulation
+            .nodes(this.graph.nodes)
+            .on('tick', ticked);
+
+        simulation.force<ForceLink<Node, Link>>('link').links(this.graph.links);
+
+        function ticked() {
+            links
+                .attr('x1', (d: { source }) => d.source.x)
+                .attr('y1', (d: { source }) => d.source.y)
+                .attr('x2', (d: { target }) => d.target.x)
+                .attr('y2', (d: { target }) => d.target.y);
+
+            nodes
+                .attr('cx', (d: { x }) => d.x)
+                .attr('cy', (d: { y }) => d.y);
+        }
+
+
     }
 
     createSimulation(): D3.Simulation<Node, Link> {
@@ -89,36 +120,5 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             d.fy = null;
         }
     }
-    drawGraph() {
-        const svg = D3.select('svg.graph-container');
-        const simulation = this.createSimulation();
-        const links = this.createLinksGroup(svg);
-        const nodes = this.createNodesGroup(svg, simulation);
-
-        nodes.append('title')
-            .text((d: Node) => `User: ${d.id} Distance: ${d.group}`);
-
-        simulation
-            .nodes(this.graph.nodes)
-            .on('tick', ticked);
-
-        simulation.force<ForceLink<Node, Link>>('link').links(this.graph.links);
-
-        function ticked() {
-            links
-                .attr('x1', (d: { source }) => d.source.x)
-                .attr('y1', (d: { source }) => d.source.y)
-                .attr('x2', (d: { target }) => d.target.x)
-                .attr('y2', (d: { target }) => d.target.y);
-
-            nodes
-                .attr('cx', (d: { x }) => d.x)
-                .attr('cy', (d: { y }) => d.y);
-        }
-
-
-    }
-
-
 
 }

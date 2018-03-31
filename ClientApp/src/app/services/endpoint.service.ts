@@ -73,8 +73,15 @@ export class EndpointService {
         return this.http.get<HashConnectionMap>(this.baseUrl + 'api/search/degrees/hashtags?query=' + hashtag).finally(this.pushLatest);
     }
 
-    public searchUserDegrees(user: string) {
-        return this.http.get<UserConnectionMap>(this.baseUrl + 'api/search/degrees/users/single?query=' + user).finally(this.pushLatest);
+    public searchUserDegrees(user: string, numDegrees: number) {
+        return this.http.get<UserConnectionMap>(this.baseUrl +
+            'api/search/degrees/users/single?query='
+            + user + '&numberOfDegrees=' + numDegrees).finally(this.pushLatest);
+    }
+
+    public getUserSixDegrees(user1: string, user2: string) {
+        return this.http.get<any>(this.baseUrl + 'api/search/degrees/users?user1='
+            + user1 + '&user2=' + user2).finally(this.pushLatest);
     }
 
     public getHashSixDegrees(hashtag1: string, hashtag2: string) {
