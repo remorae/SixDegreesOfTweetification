@@ -50,9 +50,35 @@ export class GraphDataService {
                 });
     }
 
+    getUserConnectionData(user1: string, user2: string) {
+        this.endpoint
+            .getUserSixDegrees(user1, user2)
+            .map(this.mapHashData)
+            .subscribe(
+                (graph: Graph) => {
+                this.userGraphSub.next(graph);
+            },
+                (error) => {
+                    console.log(error);
+                });
+    }
+
+    getSingleHashData(hashtag: string) {
+        this.endpoint
+            .searchHashDegrees(hashtag)
+            .map(this.mapUserData)
+            .subscribe(
+                (graph: Graph) => {
+                this.hashGraphSub.next(graph);
+            },
+                (error) => {
+                    console.log(error);
+                });
+    }
+
     getSingleUserData(username: string) {
         this.endpoint
-            .searchUserDegrees(username)
+            .searchUserDegrees(username, 6)
             .map(this.mapUserData)
             .subscribe(
                 (graph: Graph) => {
@@ -91,9 +117,9 @@ export class GraphDataService {
         for (let i = 1; i < nodes.length; i++) {
             const source = nodes[i - 1];
             const target = nodes[i];
-            links.push({source: source.id, target: target.id, value: 10});
+            links.push({ source: source.id, target: target.id, value: 10 });
         }
-        return {nodes: nodes, links: links};
+        return { nodes: nodes, links: links };
     }
 
 
