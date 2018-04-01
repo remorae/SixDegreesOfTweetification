@@ -85,9 +85,12 @@ namespace SixDegrees.Controllers
                 userInfo);
             if (userInfo != null)
             {
+                userInfo.ResetIfNeeded();
                 rateLimitDb.Update(userInfo);
                 rateLimitDb.SaveChanges();
             }
+            if (responseBody == null)
+                return default(T);
             T results = JsonConvert.DeserializeObject<T>(responseBody);
             LogQuery(query, endpoint, results);
             return results;
@@ -106,6 +109,7 @@ namespace SixDegrees.Controllers
                 userInfo);
             if (userInfo != null)
             {
+                userInfo.ResetIfNeeded();
                 rateLimitDb.Update(userInfo);
                 rateLimitDb.SaveChanges();
             }
@@ -203,18 +207,19 @@ namespace SixDegrees.Controllers
                     ++callsMade;
                     string toQuery = remaining.Pop();
                     queried.Add(toQuery);
-                    var lookup = (await Hashtags(toQuery) as OkObjectResult).Value as IEnumerable<string>;
-                    foreach (var hashtag in lookup.Distinct())
+                    if (await Hashtags(toQuery) is OkObjectResult result && result.Value is IEnumerable<string> lookup)
                     {
-                        results[toQuery].Connections.Add(hashtag);
-                    }
-                    int nextDistance = results[toQuery].Distance + 1;
-                    foreach (var hashtag in lookup.Distinct().Except(queried).Except(remaining))
-                    {
-                        if (nextDistance < numberOfDegrees)
-                            remaining.Push(hashtag);
-                        results[hashtag] = new HashtagConnectionInfo(nextDistance);
-                    
+                        foreach (var hashtag in lookup.Distinct())
+                        {
+                            results[toQuery].Connections.Add(hashtag);
+                        }
+                        int nextDistance = results[toQuery].Distance + 1;
+                        foreach (var hashtag in lookup.Distinct().Except(queried).Except(remaining))
+                        {
+                            if (nextDistance < numberOfDegrees)
+                                remaining.Push(hashtag);
+                            results[hashtag] = new HashtagConnectionInfo(nextDistance);
+                        }
                     }
                 }
 
@@ -256,18 +261,19 @@ namespace SixDegrees.Controllers
                     ++callsMade;
                     string toQuery = remaining.Pop();
                     queried.Add(toQuery);
-                    var lookup = (await GetUserConnections(toQuery) as OkObjectResult).Value as IEnumerable<UserResult>;
-                    foreach (var user in lookup.Distinct())
+                    if (await GetUserConnections(toQuery) is OkObjectResult result && result.Value is IEnumerable<UserResult> lookup)
                     {
-                        results[toQuery].Connections.Add(user);
-                    }
-                    int nextDistance = results[toQuery].Distance + 1;
-                    foreach (var user in lookup.Distinct().Where(user => !queried.Contains(user.ScreenName)).Where(user => !remaining.Contains(user.ScreenName)))
-                    {
-                        if (nextDistance < numberOfDegrees)
-                            remaining.Push(user.ScreenName);
-                        results[user.ScreenName] = new UserConnectionInfo(nextDistance);
-
+                        foreach (var user in lookup.Distinct())
+                        {
+                            results[toQuery].Connections.Add(user);
+                        }
+                        int nextDistance = results[toQuery].Distance + 1;
+                        foreach (var user in lookup.Distinct().Where(user => !queried.Contains(user.ScreenName)).Where(user => !remaining.Contains(user.ScreenName)))
+                        {
+                            if (nextDistance < numberOfDegrees)
+                                remaining.Push(user.ScreenName);
+                            results[user.ScreenName] = new UserConnectionInfo(nextDistance);
+                        }
                     }
                 }
 
@@ -328,14 +334,16 @@ namespace SixDegrees.Controllers
         {
 
             if (user1 == null || user2 == null || numberOfDegrees < 1 || maxCalls < 1)
-                return BadRequest("InvalValue query.");
+                return BadRequest("Invalid parameters.");
             int maxAPICalls = Math.Min(maxCalls, RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByID, rateLimitDb, userManager, User)[AuthenticationType.User]);
-            string user1ID = ((await GetUser(user1) as OkObjectResult).Value as UserResult).ID;
-            string user2ID = ((await GetUser(user2) as OkObjectResult).Value as UserResult).ID;
+            string user1ID = ((await GetUser(user1) as OkObjectResult)?.Value as UserResult)?.ID;
+            string user2ID = ((await GetUser(user2) as OkObjectResult)?.Value as UserResult)?.ID;
+            if (user1ID == null || user2ID == null)
+                return BadRequest("Unable to retrieve given users' ids.");
 
             return await FindLink(user1ID, user2ID, numberOfDegrees, maxAPICalls,
                 async query =>
-                Ok(((await GetUserConnectionIDs(query) as OkObjectResult).Value as IEnumerable<long>).Select(id => id.ToString()).Distinct()));
+                Ok(((await GetUserConnectionIDs(query) as OkObjectResult)?.Value as IEnumerable<long>)?.Select(id => id.ToString())?.Distinct()));
         }
 
         private async Task<IActionResult> FindLink<T>(T start, T end, int numberOfDegrees, int maxAPICalls, Func<T, Task<IActionResult>> lookupFunc)
@@ -370,16 +378,18 @@ namespace SixDegrees.Controllers
                         ++callsMade;
                         ConnectionInfo<T>.Node toQuery = startList.First();
                         startList.Remove(toQuery);
-                        var obj = (await lookupFunc(toQuery.Value) as OkObjectResult).Value;
-                        HandleSearchResults(obj, toQuery, ref foundLink, ref seenEnd, ref hashtagLinks, numberOfDegrees, ref startList, ref queried, ref seen, ref seenStart, ref connections);
+                        var obj = (await lookupFunc(toQuery.Value) as OkObjectResult)?.Value;
+                        if (obj != null)
+                            HandleSearchResults(obj, toQuery, ref foundLink, ref seenEnd, ref hashtagLinks, numberOfDegrees, ref startList, ref queried, ref seen, ref seenStart, ref connections);
                     }
                     if (endList.Count > 0 && callsMade < maxAPICalls)
                     {
                         ++callsMade;
                         ConnectionInfo<T>.Node toQuery = endList.First();
                         endList.Remove(toQuery);
-                        var obj = (await lookupFunc(toQuery.Value) as OkObjectResult).Value;
-                        HandleSearchResults(obj, toQuery, ref foundLink, ref seenStart, ref hashtagLinks, numberOfDegrees, ref endList, ref queried, ref seen, ref seenEnd, ref connections);
+                        var obj = (await lookupFunc(toQuery.Value) as OkObjectResult)?.Value;
+                        if (obj != null)
+                            HandleSearchResults(obj, toQuery, ref foundLink, ref seenStart, ref hashtagLinks, numberOfDegrees, ref endList, ref queried, ref seen, ref seenEnd, ref connections);
                     }
                 }
 
@@ -682,8 +692,11 @@ namespace SixDegrees.Controllers
                         TwitterAPIUtils.UserLookupQuery,
                         TwitterAPIEndpoint.UsersLookup);
                     ids.RemoveRange(0, count);
-                    foreach (var user in userResults)
-                        results.Add(ToUserResult(user));
+                    if (userResults != null)
+                    {
+                        foreach (var user in userResults)
+                            results.Add(ToUserResult(user));
+                    }
                 }
                 return Ok(results);
             }
