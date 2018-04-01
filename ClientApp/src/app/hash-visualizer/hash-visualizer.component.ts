@@ -8,7 +8,7 @@ import * as D3 from 'd3';
 export class HashVisualizerComponent implements OnInit, AfterViewInit {
 
     constructor() { }
-    ngOnInit(){}
+    ngOnInit() { }
 
     ngAfterViewInit() {
 
@@ -19,32 +19,32 @@ export class HashVisualizerComponent implements OnInit, AfterViewInit {
             y = Math.cos(2 * Math.PI / 3);
 
         let offset = 0,
-            speed = 4
-          const  start = Date.now();
+            speed = 4;
+        const start = Date.now();
 
-        const svg = D3.select("div.gearbox").append("svg")
-            .attr("width", width)
-            .attr("height", height)
-            .append("g")
-            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(.55)")
-            .append("g");
+        const svg = D3.select('div.gearbox').append('svg')
+            .attr('width', width)
+            .attr('height', height)
+            .append('g')
+            .attr('transform', 'translate(' + width / 2 + ',' + height / 2 + ')scale(.55)')
+            .append('g');
 
-        var frame = svg.append("g")
+        const frame = svg.append('g')
             .datum({ radius: Infinity });
 
-        frame.append("g")
-            .attr("class", "annulus")
+        frame.append('g')
+            .attr('class', 'annulus')
             .datum({ teeth: 80, radius: -radius * 5, annulus: true })
-            .append("path")
-            .attr("d", gear);
+            .append('path')
+            .attr('d', gear);
 
-        frame.append("g")
-            .attr("class", "sun")
+        frame.append('g')
+            .attr('class', 'sun')
             .datum({ teeth: 16, radius: radius })
-            .append("path")
-            .attr("d", gear);
+            .append('path')
+            .attr('d', gear);
 
-        frame.append("g")
+        frame.append('g')
             .attr('class', 'planet')
             .attr('transform', 'translate(0,-' + radius * 3 + ')')
             .datum({ teeth: 32, radius: -radius * 2 })
@@ -80,20 +80,21 @@ export class HashVisualizerComponent implements OnInit, AfterViewInit {
             let r3;
             const n = d.teeth,
                 r2 = Math.abs(d.radius);
-             let   r0 = r2 - 8;
-             let   r1 = r2 + 8;
-             const da = Math.PI / n;
-             let a0 = -Math.PI / 2 + (d.annulus ? Math.PI / n : 0),
-             i = -1;
+            let r0 = r2 - 8;
+            let r1 = r2 + 8;
+            const da = Math.PI / n;
+            let a0 = -Math.PI / 2 + (d.annulus ? Math.PI / n : 0),
+                i = -1;
             r3 = d.annulus ? (r3 = r0, r0 = r1, r1 = r3, r2 + 20) : 20;
             const path = ['M', r0 * Math.cos(a0), ',', r0 * Math.sin(a0)];
-            while (++i < n) { path.push(
-                'A', r0, ',', r0, ' 0 0,1 ', r0 * Math.cos(a0 += da), ',', r0 * Math.sin(a0),
-                'L', r2 * Math.cos(a0), ',', r2 * Math.sin(a0),
-                'L', r1 * Math.cos(a0 += da / 3), ',', r1 * Math.sin(a0),
-                'A', r1, ',', r1, ' 0 0,1 ', r1 * Math.cos(a0 += da / 3), ',', r1 * Math.sin(a0),
-                'L', r2 * Math.cos(a0 += da / 3), ',', r2 * Math.sin(a0),
-                'L', r0 * Math.cos(a0), ',', r0 * Math.sin(a0));
+            while (++i < n) {
+                path.push(
+                    'A', r0, ',', r0, ' 0 0,1 ', r0 * Math.cos(a0 += da), ',', r0 * Math.sin(a0),
+                    'L', r2 * Math.cos(a0), ',', r2 * Math.sin(a0),
+                    'L', r1 * Math.cos(a0 += da / 3), ',', r1 * Math.sin(a0),
+                    'A', r1, ',', r1, ' 0 0,1 ', r1 * Math.cos(a0 += da / 3), ',', r1 * Math.sin(a0),
+                    'L', r2 * Math.cos(a0 += da / 3), ',', r2 * Math.sin(a0),
+                    'L', r0 * Math.cos(a0), ',', r0 * Math.sin(a0));
             }
             path.push('M0,', -r3, 'A', r3, ',', r3, ' 0 0,0 0,', r3, 'A', r3, ',', r3, ' 0 0,0 0,', -r3, 'Z');
             return path.join('');
