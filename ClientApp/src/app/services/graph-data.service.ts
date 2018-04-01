@@ -3,6 +3,7 @@ import { EndpointService } from './endpoint.service';
 import { TestData } from './testdata';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { SimulationNodeDatum, SimulationLinkDatum } from 'd3';
+import { UserConnectionMap } from '../models/UserResult';
 
 export interface Node extends SimulationNodeDatum {
     id: string;
@@ -39,7 +40,7 @@ export class GraphDataService {
     getHashConnectionData(hashtag1: string, hashtag2: string) {
         this.endpoint
             .getHashSixDegrees(hashtag1, hashtag2)
-            .map(this.mapHashData)
+            .map(this.sixDegreesToGraph)
             .subscribe(
                 (graph: Graph) => {
                     this.hashGraphSub.next(graph);
@@ -53,33 +54,21 @@ export class GraphDataService {
     getUserConnectionData(user1: string, user2: string) {
         this.endpoint
             .getUserSixDegrees(user1, user2)
-            .map(this.mapHashData)
+            .map(this.sixDegreesToGraph)
             .subscribe(
                 (graph: Graph) => {
-                this.userGraphSub.next(graph);
-            },
+                    this.userGraphSub.next(graph);
+                },
                 (error) => {
                     console.log(error);
                 });
     }
 
-    getSingleHashData(hashtag: string) {
-        this.endpoint
-            .searchHashDegrees(hashtag)
-            .map(this.mapUserData)
-            .subscribe(
-                (graph: Graph) => {
-                this.hashGraphSub.next(graph);
-            },
-                (error) => {
-                    console.log(error);
-                });
-    }
 
     getSingleUserData(username: string) {
         this.endpoint
             .searchUserDegrees(username, 6)
-            .map(this.mapUserData)
+            .map(this.userConnectionsToGraph)
             .subscribe(
                 (graph: Graph) => {
                     this.userGraphSub.next(graph);
@@ -97,15 +86,18 @@ export class GraphDataService {
     getLatestHashData(): BehaviorSubject<Graph> {
         return this.hashGraphSub;
     }
-    mapUserData = (data): Graph => {
+    userConnectionsToGraph = (data): Graph => {
         const nodes: Node[] = Object.keys(data)
-            .map((user) => ({ id: user, group: data[user].distance }));
+            .map((user) => ({ id: user, group: data[user].distance }))
+            .filter((user) => user.group <= 1);
 
         const links: Link[] = this.createUserLinks(data, nodes);
+
+
         return { nodes: nodes, links: links };
     }
 
-    mapHashData = (data: SixDegreesConnection): Graph => {
+    sixDegreesToGraph = (data: SixDegreesConnection): Graph => {
         const nodes: Node[] = [];
 
         Object.keys(data.path).forEach((point) => {
