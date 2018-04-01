@@ -88,8 +88,7 @@ export class GraphDataService {
     }
     userConnectionsToGraph = (data): Graph => {
         const nodes: Node[] = Object.keys(data)
-            .map((user) => ({ id: user, group: data[user].distance }))
-            .filter((user) => user.group <= 1);
+            .map((user) => ({ id: user, group: data[user].distance }));
 
         const links: Link[] = this.createUserLinks(data, nodes);
 
