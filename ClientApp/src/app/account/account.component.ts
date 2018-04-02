@@ -28,7 +28,7 @@ export class AccountComponent implements OnInit {
     }
 
     logout(): void {
-        this.authService.logout(res => this.router.navigate(['login']));
+        this.authService.logout(() => {this.router.navigate(['login'])});
     }
 
     addTwitter(): void {
