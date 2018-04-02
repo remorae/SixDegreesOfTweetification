@@ -16,7 +16,7 @@ export class LoginComponent implements OnInit {
         private router: Router,
         private authService: AuthenticationService
     ) {
-        this.authService.updateLoginStatus()
+        this.authService.getUpdatedLoginStatus()
             .subscribe(res => {
                 if (res) {
                     this.router.navigate(['home']);
