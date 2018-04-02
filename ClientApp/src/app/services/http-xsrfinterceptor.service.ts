@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpXsrfTokenExtractor, HttpRequest, HttpHandler, HttpEvent } from '@angular/common/http';
+import { HttpXsrfTokenExtractor, HttpRequest, HttpHandler, HttpEvent, HttpInterceptor } from '@angular/common/http';
 import { Observable } from 'rxjs/Observable';
 
 @Injectable()
-export class HttpXsrfInterceptorService {
+export class HttpXsrfInterceptorService implements HttpInterceptor {
     constructor(private tokenService: HttpXsrfTokenExtractor) { }
 
     intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
