@@ -5,17 +5,10 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        Cool stuff is going to go here. Just you wait.
-        <br/>
-        <br/>
-        <i class="fas fa-hashtag"></i>
-        <i class="fas fa-arrow-right"></i>
-        <i class="fas fa-hashtag"></i>
-        <br/>
-        <br/>
-        <p *ngIf="!!latestSearch">
-            In fact, here's some cool stuff now! <br/>
-            {{latestSearch}}
-        </p>
+            <h3 *ngIf="latestSearchStart && latestSearchEnd && !hashGraph">
+                    <i class="fa fa-spinner fa-spin mr-2"></i>Loading...
+                </h3>
+                <app-graph-visualizer [graph]="hashGraph"></app-graph-visualizer>
+
     </div>
 </div>

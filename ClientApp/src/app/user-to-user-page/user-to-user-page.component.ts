@@ -1,17 +1,25 @@
 import { Component, OnInit } from '@angular/core';
 import { UserInput } from '../models/userInput';
+import { UserResult, UserConnectionInfo, UserConnectionMap } from '../models/UserResult';
+import { GraphDataService, Graph } from '../services/graph-data.service';
 
 @Component({
-  selector: 'app-user-to-user-page',
-  templateUrl: './user-to-user-page.component.html',
-  styleUrls: ['./user-to-user-page.component.scss']
+    selector: 'app-user-to-user-page',
+    templateUrl: './user-to-user-page.component.html',
+    styleUrls: ['./user-to-user-page.component.scss']
 })
 export class UserToUserPageComponent implements OnInit {
-    latestSearch: string[];
-    constructor() { }
+    latestSearch;
+    userRelationshipGraph: Graph;
+    constructor(private graphService: GraphDataService) { }
 
-    ngOnInit() {}
+    ngOnInit() {
+        this.graphService.getLatestUserData()
+            .subscribe((g: Graph) => { this.userRelationshipGraph = g; });
+    }
     onUserSubmit(input: UserInput) {
-        this.latestSearch = input.inputs;
+        this.latestSearch = input.inputs[0];
+        this.userRelationshipGraph = undefined;
+        this.graphService.getSingleUserData(this.latestSearch);
     }
 }
