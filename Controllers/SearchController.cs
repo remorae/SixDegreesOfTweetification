@@ -351,6 +351,8 @@ namespace SixDegrees.Controllers
         {
             if (maxAPICalls < 1)
                 return BadRequest("Rate limit exceeded.");
+            if (start.Equals(end))
+                return BadRequest("Start and end must differ.");
             DateTime startTime = DateTime.Now;
             int callsMade = 0;
 
@@ -413,12 +415,14 @@ namespace SixDegrees.Controllers
                         }
                         ReplaceUserIDsWithScreenNames(ref connections, userResults);
                     }
-                    return Ok(new {
+                    return Ok(new
+                    {
                         Connections = connections
                             .Where(entry => entry.Value.Connections.Count > 0)
                             .ToDictionary(entry => entry.Key.Value, entry => entry.Value.Connections.Select(node => node.Key.Value)),
                         Links = Enumerable.Empty<string>(),
-                        Metadata = new { Time = DateTime.Now - startTime, Calls = callsMade } });
+                        Metadata = new { Time = DateTime.Now - startTime, Calls = callsMade }
+                    });
                 }
 
                 var resultLinks = new List<Status>();
@@ -436,11 +440,14 @@ namespace SixDegrees.Controllers
                            TwitterAPIEndpoint.UsersLookup);
                     ReplaceUserIDsWithScreenNames(ref results, userResults);
                 }
+                var expandedStart = seenStart.Aggregate(new HashSet<T>(), AggregateSetConnections(connections));
+                var expandedEnd = seenEnd.Aggregate(new HashSet<T>(), AggregateSetConnections(connections));
                 return Ok(new
                 {
                     Connections = connections
                             .Where(entry => entry.Value.Connections.Count > 0)
                             .ToDictionary(entry => entry.Key.Value, entry => entry.Value.Connections.Select(node => node.Key.Value)),
+                    Shared = expandedStart.Intersect(expandedEnd).Except(new T[] { start, end }),
                     Path = results.ToDictionary(node => node.Value, node => node.Distance),
                     Links = resultLinks.Select(status => status.URL),
                     Metadata = new { Time = DateTime.Now - startTime, Calls = callsMade }
@@ -450,6 +457,17 @@ namespace SixDegrees.Controllers
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        private static Func<HashSet<T>, T, HashSet<T>> AggregateSetConnections<T>(IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections) where T : class
+        {
+            return (set, next) =>
+            {
+                if (!set.Contains(next))
+                    set.Add(next);
+                set.UnionWith(connections.First(conn => conn.Key.Value.Equals(next)).Value.Connections.Select(c => c.Key.Value));
+                return set;
+            };
         }
 
         private List<ConnectionInfo<T>.Node> LookForPath<T>(IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections, T start, T end)
