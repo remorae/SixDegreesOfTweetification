@@ -436,10 +436,15 @@ namespace SixDegrees.Controllers
                            TwitterAPIEndpoint.UsersLookup);
                     ReplaceUserIDsWithScreenNames(ref results, userResults);
                 }
-                return Ok(new {
+                return Ok(new
+                {
+                    Connections = connections
+                            .Where(entry => entry.Value.Connections.Count > 0)
+                            .ToDictionary(entry => entry.Key.Value, entry => entry.Value.Connections.Select(node => node.Key.Value)),
                     Path = results.ToDictionary(node => node.Value, node => node.Distance),
                     Links = resultLinks.Select(status => status.URL),
-                    Metadata = new { Time = DateTime.Now - startTime, Calls = callsMade } });
+                    Metadata = new { Time = DateTime.Now - startTime, Calls = callsMade }
+                });
             }
             catch (Exception ex)
             {
