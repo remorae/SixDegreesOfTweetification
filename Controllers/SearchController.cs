@@ -187,9 +187,9 @@ namespace SixDegrees.Controllers
         /// <param name="maxCalls">The maximum integer number of Twitter API calls to make.</param>
         /// <returns></returns>
         [HttpGet("degrees/hashtags/single")]
-        public async Task<IActionResult> HashtagConnections(string query, int numberOfDegrees = 6, int maxCalls = 60)
+        public async Task<IActionResult> HashtagConnections(string query, int numberOfDegrees = 6, int maxCalls = 60, int maxNodeConnections = 500)
         {
-            if (query == null || numberOfDegrees < 1 || maxCalls < 1)
+            if (query == null || numberOfDegrees < 1 || maxCalls < 1 || maxNodeConnections < 1)
                 return BadRequest("Invalid query.");
             int maxAPICalls = Math.Min(maxCalls, RateLimitCache.Get.MinimumRateLimits(QueryType.HashtagConnectionsByHashtag, rateLimitDb, userManager, User)[AuthenticationType.User]);
             int callsMade = 0;
@@ -212,9 +212,11 @@ namespace SixDegrees.Controllers
                         foreach (var hashtag in lookup.Distinct())
                         {
                             results[toQuery].Connections.Add(hashtag);
+                            if (results[toQuery].Connections.Count >= maxNodeConnections)
+                                break;
                         }
                         int nextDistance = results[toQuery].Distance + 1;
-                        foreach (var hashtag in lookup.Distinct().Except(queried).Except(remaining))
+                        foreach (var hashtag in lookup.Distinct().Except(queried).Except(remaining).Take(maxNodeConnections))
                         {
                             if (nextDistance < numberOfDegrees)
                                 remaining.Push(hashtag);
@@ -241,9 +243,9 @@ namespace SixDegrees.Controllers
         /// <param name="maxCalls">The maximum integer number of Twitter API calls to make.</param>
         /// <returns></returns>
         [HttpGet("degrees/users/single")]
-        public async Task<IActionResult> UserConnections(string query, int numberOfDegrees = 6, int maxCalls = 5)
+        public async Task<IActionResult> UserConnections(string query, int numberOfDegrees = 6, int maxCalls = 5, int maxNodeConnections = 50)
         {
-            if (query == null || numberOfDegrees < 1 || maxCalls < 1)
+            if (query == null || numberOfDegrees < 1 || maxCalls < 1 || maxNodeConnections < 1)
                 return BadRequest("Invalid query.");
             int maxAPICalls = Math.Min(maxCalls, RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User)[AuthenticationType.User]);
             int callsMade = 0;
@@ -266,9 +268,11 @@ namespace SixDegrees.Controllers
                         foreach (var user in lookup.Distinct())
                         {
                             results[toQuery].Connections.Add(user);
+                            if (results[toQuery].Connections.Count >= maxNodeConnections)
+                                break;
                         }
                         int nextDistance = results[toQuery].Distance + 1;
-                        foreach (var user in lookup.Distinct().Where(user => !queried.Contains(user.ScreenName)).Where(user => !remaining.Contains(user.ScreenName)))
+                        foreach (var user in lookup.Distinct().Where(user => !queried.Contains(user.ScreenName)).Where(user => !remaining.Contains(user.ScreenName)).Take(maxNodeConnections))
                         {
                             if (nextDistance < numberOfDegrees)
                                 remaining.Push(user.ScreenName);
@@ -295,13 +299,13 @@ namespace SixDegrees.Controllers
         /// <param name="maxCalls">The maximum integer number of Twitter API calls to make.</param>
         /// <returns></returns>
         [HttpGet("degrees/hashtags")]
-        public async Task<IActionResult> HashtagLink(string hashtag1, string hashtag2, int numberOfDegrees = 6, int maxCalls = 60)
+        public async Task<IActionResult> HashtagLink(string hashtag1, string hashtag2, int numberOfDegrees = 6, int maxCalls = 60, int maxNodeConnections = 500)
         {
             if (hashtag1 == null || hashtag2 == null || numberOfDegrees < 1 || maxCalls < 1)
                 return BadRequest("Invalid query.");
             int maxAPICalls = Math.Min(maxCalls, RateLimitCache.Get.MinimumRateLimits(QueryType.HashtagConnectionsByHashtag, rateLimitDb, userManager, User)[AuthenticationType.User]);
             
-            return await FindLink(hashtag1, hashtag2, numberOfDegrees, maxAPICalls,
+            return await FindLink(hashtag1, hashtag2, numberOfDegrees, maxAPICalls, maxNodeConnections, false,
                 async query =>
                 Ok((await GetResults<TweetSearchResults>(
                        query,
@@ -330,7 +334,7 @@ namespace SixDegrees.Controllers
         /// <param name="maxCalls">The maximum integer number of Twitter API calls to make.</param>
         /// <returns></returns>
         [HttpGet("degrees/users")]
-        public async Task<IActionResult> UserLink(string user1, string user2, int numberOfDegrees = 6, int maxCalls = 5)
+        public async Task<IActionResult> UserLink(string user1, string user2, int numberOfDegrees = 6, int maxCalls = 5, int maxNodeConnections = 50, bool lookupIDs = false)
         {
 
             if (user1 == null || user2 == null || numberOfDegrees < 1 || maxCalls < 1)
@@ -341,12 +345,12 @@ namespace SixDegrees.Controllers
             if (user1ID == null || user2ID == null)
                 return BadRequest("Unable to retrieve given users' ids.");
 
-            return await FindLink(user1ID, user2ID, numberOfDegrees, maxAPICalls,
+            return await FindLink(user1ID, user2ID, numberOfDegrees, maxAPICalls, maxNodeConnections, lookupIDs,
                 async query =>
                 Ok(((await GetUserConnectionIDs(query) as OkObjectResult)?.Value as IEnumerable<long>)?.Select(id => id.ToString())?.Distinct()));
         }
 
-        private async Task<IActionResult> FindLink<T>(T start, T end, int numberOfDegrees, int maxAPICalls, Func<T, Task<IActionResult>> lookupFunc)
+        private async Task<IActionResult> FindLink<T>(T start, T end, int numberOfDegrees, int maxAPICalls, int maxPerNode, bool lookupIDs, Func<T, Task<IActionResult>> lookupFunc)
             where T : class
         {
             if (maxAPICalls < 1)
@@ -382,7 +386,7 @@ namespace SixDegrees.Controllers
                         startList.Remove(toQuery);
                         var obj = (await lookupFunc(toQuery.Value) as OkObjectResult)?.Value;
                         if (obj != null)
-                            HandleSearchResults(obj, toQuery, ref foundLink, ref seenEnd, ref hashtagLinks, numberOfDegrees, ref startList, ref queried, ref seen, ref seenStart, ref connections);
+                            HandleSearchResults(obj, toQuery, ref foundLink, ref seenEnd, ref hashtagLinks, numberOfDegrees, maxPerNode, ref startList, ref queried, ref seen, ref seenStart, ref connections);
                     }
                     if (endList.Count > 0 && callsMade < maxAPICalls)
                     {
@@ -391,7 +395,7 @@ namespace SixDegrees.Controllers
                         endList.Remove(toQuery);
                         var obj = (await lookupFunc(toQuery.Value) as OkObjectResult)?.Value;
                         if (obj != null)
-                            HandleSearchResults(obj, toQuery, ref foundLink, ref seenStart, ref hashtagLinks, numberOfDegrees, ref endList, ref queried, ref seen, ref seenEnd, ref connections);
+                            HandleSearchResults(obj, toQuery, ref foundLink, ref seenStart, ref hashtagLinks, numberOfDegrees, maxPerNode, ref endList, ref queried, ref seen, ref seenEnd, ref connections);
                     }
                 }
 
@@ -413,7 +417,8 @@ namespace SixDegrees.Controllers
                                 TwitterAPIEndpoint.UsersLookup));
                             userIDs.RemoveRange(0, Math.Min(100, userIDs.Count()));
                         }
-                        ReplaceUserIDsWithScreenNames(ref connections, userResults);
+                        if (lookupIDs)
+                            ReplaceUserIDsWithScreenNames(ref connections, userResults);
                     }
                     return Ok(new
                     {
@@ -438,7 +443,8 @@ namespace SixDegrees.Controllers
                            AuthenticationType.Both,
                            TwitterAPIUtils.UserLookupQuery,
                            TwitterAPIEndpoint.UsersLookup);
-                    ReplaceUserIDsWithScreenNames(ref results, userResults);
+                    if (lookupIDs)
+                        ReplaceUserIDsWithScreenNames(ref results, userResults);
                 }
                 var expandedStart = seenStart.Aggregate(new HashSet<T>(), AggregateSetConnections(connections));
                 var expandedEnd = seenEnd.Aggregate(new HashSet<T>(), AggregateSetConnections(connections));
@@ -520,6 +526,7 @@ namespace SixDegrees.Controllers
             ref ISet<T> goals,
             ref Dictionary<Status, IEnumerable<T>> links,
             int numberOfDegrees,
+            int maxPerNode,
             ref List<ConnectionInfo<T>.Node> list,
             ref ISet<T> queried,
             ref ISet<T> seen,
@@ -529,7 +536,7 @@ namespace SixDegrees.Controllers
         {
             if (results is IEnumerable<T> lookup)
             {
-                StoreResults(numberOfDegrees, ref list, ref queried, ref seen, ref seenSubset, ref connections, ref toQuery, lookup.Where(result => !result.Equals(toQuery.Value)));
+                StoreResults(numberOfDegrees, maxPerNode, ref list, ref queried, ref seen, ref seenSubset, ref connections, ref toQuery, lookup.Where(result => !result.Equals(toQuery.Value)));
                 if (lookup.Intersect(goals).Count() > 0)
                     foundLink = true;
             }
@@ -538,7 +545,7 @@ namespace SixDegrees.Controllers
                 foreach (var entry in newLinks)
                     links.Add(entry.Key, entry.Value);
                 var tags = newLinks.Aggregate(new List<T>(), (collection, entry) => { collection.AddRange(entry.Value); return collection; });
-                StoreResults(numberOfDegrees, ref list, ref queried, ref seen, ref seenSubset, ref connections, ref toQuery, tags.Where(result => !result.Equals(toQuery.Value)));
+                StoreResults(numberOfDegrees, maxPerNode, ref list, ref queried, ref seen, ref seenSubset, ref connections, ref toQuery, tags.Where(result => !result.Equals(toQuery.Value)));
                 if (tags.Intersect(goals).Count() > 0)
                     foundLink = true;
             }
@@ -546,6 +553,7 @@ namespace SixDegrees.Controllers
 
         private void StoreResults<T>(
             int numberOfDegrees,
+            int maxPerNode,
             ref List<ConnectionInfo<T>.Node> list,
             ref ISet<T> queried,
             ref ISet<T> allSeen,
@@ -559,6 +567,8 @@ namespace SixDegrees.Controllers
             foreach (var entity in lookup.Distinct())
             {
                 connections[toQuery].Connections.Add(new ConnectionInfo<T>.Node(entity, nextDistance), 1);
+                if (connections[toQuery].Connections.Count >= maxPerNode)
+                    break;
             }
             var tempSeen = allSeen;
             foreach (var entity in lookup.Distinct().Where(entity => !tempSeen.Contains(entity)).Where(entity => !tempSeen.Contains(entity)))
