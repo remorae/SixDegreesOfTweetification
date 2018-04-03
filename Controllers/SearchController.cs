@@ -614,14 +614,14 @@ namespace SixDegrees.Controllers
         {
             queried.Add(toQuery.Value);
             int nextDistance = toQuery.Distance + 1;
-            foreach (var entity in lookup.Distinct())
+            foreach (T entity in lookup.Distinct())
             {
                 connections[toQuery].Connections.Add(new ConnectionInfo<T>.Node(entity, nextDistance), 1);
                 if (connections[toQuery].Connections.Count >= maxPerNode)
                     break;
             }
             var tempSeen = allSeen;
-            foreach (var entity in lookup.Distinct().Where(entity => !tempSeen.Contains(entity)).Where(entity => !tempSeen.Contains(entity)))
+            foreach (T entity in lookup.Distinct().Where(entity => !tempSeen.Contains(entity)).Where(entity => !tempSeen.Contains(entity)))
             {
                 ConnectionInfo<T>.Node node = new ConnectionInfo<T>.Node(entity, nextDistance);
                 if (nextDistance < numberOfDegrees)
@@ -700,22 +700,33 @@ namespace SixDegrees.Controllers
         /// <param name="screen_name">Returns information about a specified user.</param>
         /// <returns></returns>
         [HttpGet("user")]
-        public async Task<IActionResult> GetUser(string screen_name)
+        public async Task<IActionResult> GetUser(string screen_name, string id = null)
         {
-            if (screen_name == null)
+            if (screen_name == null && id == null)
                 return BadRequest("Invalid parameters.");
             try
             {
-                var results = await GetResults<UserSearchResults>(
-                    screen_name,
-                    AuthenticationType.Both,
-                    TwitterAPIUtils.UserSearchQuery,
-                    TwitterAPIEndpoint.UsersShow);
-                var user = ToUserResult(results);
-                if (twitterCacheDb.Users.Find(user.ID) == null)
-                    twitterCacheDb.Users.Add(user);
+                UserResult found = (id == null)
+                    ? twitterCacheDb.Users.FirstOrDefault(user => user.ScreenName == screen_name)
+                    : twitterCacheDb.Users.Find(id);
+                if (found != null)
+                    return Ok(found);
+                var results = (screen_name != null)
+                    ? await GetResults<UserSearchResults>(
+                        screen_name,
+                        AuthenticationType.Both,
+                        TwitterAPIUtils.UserSearchQuery,
+                        TwitterAPIEndpoint.UsersShow)
+                    : await GetResults<UserSearchResults>(
+                        id,
+                        AuthenticationType.Both,
+                        TwitterAPIUtils.UserIDSearchQuery,
+                        TwitterAPIEndpoint.UsersShow);
+                var userResult = ToUserResult(results);
+                if (twitterCacheDb.Users.Find(userResult.ID) == null)
+                    twitterCacheDb.Users.Add(userResult);
                 twitterCacheDb.SaveChanges();
-                return Ok(user);
+                return Ok(userResult);
             }
             catch (Exception ex)
             {
@@ -758,8 +769,14 @@ namespace SixDegrees.Controllers
                 return BadRequest("Invalid parameters.");
             try
             {
-                //if (QueryHistory.Get[TwitterAPIEndpoint.FollowersIDs].LastQuery == screen_name)
-                //TODO Cache results and return those?
+                if (!twitterCacheDb.Users.Any(user => user.ScreenName.ToLower() == screen_name.ToLower()))
+                    twitterCacheDb.Add(ToUserResult(await GetResults<UserSearchResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UsersShow)));
+                var queriedUser = twitterCacheDb.Users.First(user => user.ScreenName == screen_name);
+
+                if (twitterCacheDb.UserConnections.Any(connection => connection.Start == queriedUser.ID))
+                    return Ok(twitterCacheDb.UserConnections
+                        .Where(connection => connection.Start == queriedUser.ID)
+                        .Select(connection => connection.End));
 
                 int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User).Values.Min();
                 limit = Math.Min(limit, maxLookupCount * MaxUserLookupCount);
@@ -805,7 +822,16 @@ namespace SixDegrees.Controllers
                             results.Add(ToUserResult(user));
                     }
                 }
-                twitterCacheDb.Users.AddRange(results);
+                foreach (var user in results)
+                {
+                    if (twitterCacheDb.Users.Find(user.ID) == null)
+                        twitterCacheDb.Users.Add(user);
+                    if (twitterCacheDb.UserConnections.Find(queriedUser.ID, user.ID) == null)
+                    {
+                        twitterCacheDb.UserConnections.Add(new UserConnection() { Start = queriedUser.ID, End = user.ID });
+                        twitterCacheDb.UserConnections.Add(new UserConnection() { End = queriedUser.ID, Start = user.ID });
+                    }
+                }
                 twitterCacheDb.SaveChanges();
                 return Ok(results);
             }
@@ -828,6 +854,11 @@ namespace SixDegrees.Controllers
                 return BadRequest("Invalid parameters.");
             try
             {
+                if (twitterCacheDb.UserConnections.Any(connection => connection.Start == startID))
+                    return Ok(twitterCacheDb.UserConnections
+                        .Where(connection => connection.Start == startID)
+                        .Select(connection => connection.End));
+
                 var followerResults = await GetResults<UserIdsResults>(
                     startID,
                     AuthenticationType.Both,
@@ -847,6 +878,15 @@ namespace SixDegrees.Controllers
                             uniqueIds.Add(id);
                     }
 
+                foreach (var id in uniqueIds.Select(val => val.ToString()))
+                {
+                    if (twitterCacheDb.UserConnections.Find(startID, id) == null)
+                    {
+                        twitterCacheDb.UserConnections.Add(new UserConnection() { Start = startID, End = id });
+                        twitterCacheDb.UserConnections.Add(new UserConnection() { End = startID, Start = id });
+                    }
+                }
+                twitterCacheDb.SaveChanges();
                 return Ok(uniqueIds);
             }
             catch (Exception ex)
