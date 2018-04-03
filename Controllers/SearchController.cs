@@ -569,20 +569,40 @@ namespace SixDegrees.Controllers
                     TwitterAPIUtils.HashtagSearchQuery,
                     TwitterAPIEndpoint.SearchTweets);
                 IDictionary<string, Country> countries = new Dictionary<string, Country>();
+                var coords = new Dictionary<Coordinates, (ISet<string> hashtags, ICollection<string> sources)>();
                 foreach (Status status in results.Statuses)
                 {
                     if (status.Place != null)
                         UpdateCountriesWithPlace(countries, status);
-                    else if (status.Coordinates != null && status.Coordinates.Type == "Point")
-                    {
-                        //TODO - Look up city/country names based on longitude/latitude
-                    }
+                    else if (status.Coordinates != null)
+                        UpdateCoordinatesWithStatus(coords, status);
                 }
-                return Ok(GetFormattedCountries(countries.Values));
+                return Ok(new {
+                    Countries = GetFormattedCountries(countries.Values),
+                    CoordinateInfo = coords.Select(
+                        entry => new {
+                            Coordinates = new { CoordType = entry.Key.Type, X = entry.Key.Value[0], Y = entry.Key.Value[1] },
+                            Hashtags = entry.Value.hashtags.ToArray(),
+                            Sources = entry.Value.sources.ToArray()
+                        })
+                });
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
+            }
+        }
+
+        private void UpdateCoordinatesWithStatus(Dictionary<Coordinates, (ISet<string> sources, ICollection<string> hashtags)> coords, Status status)
+        {
+            Coordinates toUpdate = status.Coordinates;
+            if (!coords.ContainsKey(toUpdate))
+                coords[toUpdate] = (new HashSet<string>(), new List<string>());
+            coords[toUpdate].sources.Add(status.URL);
+            foreach (Hashtag tag in status.Entities.Hashtags)
+            {
+                if (!coords[toUpdate].hashtags.Contains(tag.Text))
+                    coords[toUpdate].hashtags.Add(tag.Text);
             }
         }
 
