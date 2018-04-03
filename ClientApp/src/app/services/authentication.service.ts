@@ -57,6 +57,9 @@ export class AuthenticationService {
             .do(next => {
                 localStorage.setItem('sixdegrees_auth', 'true');
                 this.loggedIn = true;
+            }, error => {
+                localStorage.removeItem('sixdegrees_auth');
+                this.loggedIn = false;
             });
     }
 
@@ -111,17 +114,21 @@ export class AuthenticationService {
     }
 
     isLoggedIn(): boolean {
-        this.updateLoginStatus()
+        this.getUpdatedLoginStatus()
         .subscribe(res => {
             if (res) {
                 localStorage.setItem('sixdegrees_auth', 'true');
                 this.loggedIn = true;
             }
+            else {
+                localStorage.removeItem('sixdegrees_auth');
+                this.loggedIn = false;
+            }
         });
         return this.loggedIn;
     }
 
-    updateLoginStatus(): Observable<boolean> {
+    getUpdatedLoginStatus(): Observable<boolean> {
         return this.http
             .post<boolean>(this.baseUrl + 'account/Authenticated', {
                 headers: new HttpHeaders({
