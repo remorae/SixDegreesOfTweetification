@@ -44,6 +44,8 @@ namespace SixDegrees
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
             services.AddDbContext<RateLimitDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("RateLimitConnection")));
+            services.AddDbContext<TwitterCacheDbContext>(options =>
+                options.UseSqlServer(Configuration.GetConnectionString("TwitterCacheConnection")));
 
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
                 {
