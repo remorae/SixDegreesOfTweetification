@@ -29,6 +29,9 @@ import { ExternalLoginComponent } from './external-login/external-login.componen
 import { AccountComponent } from './account/account.component';
 import { CloudBottleComponent } from './cloud-bottle/cloud-bottle.component';
 import { CloudDataService} from './services/cloud-data.service';
+import { GraphDataService} from './services/graph-data.service';
+import { GraphVisualizerComponent } from './graph-visualizer/graph-visualizer.component';
+import { HashVisualizerComponent } from './hash-visualizer/hash-visualizer.component';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
@@ -62,8 +65,10 @@ const appRoutes: Routes = [
         RegisterComponent,
         ExternalLoginComponent,
         AccountComponent,
-        ExternalLoginComponent,
-        CloudBottleComponent
+        CloudBottleComponent,
+        GraphVisualizerComponent,
+        HashVisualizerComponent,
+
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
@@ -81,7 +86,8 @@ const appRoutes: Routes = [
         AuthGuard,
         EndpointService,
         { provide: HTTP_INTERCEPTORS, useClass: HttpXsrfInterceptorService, multi: true },
-        CloudDataService
+        CloudDataService,
+        GraphDataService
     ],
     bootstrap: [AppComponent]
 })

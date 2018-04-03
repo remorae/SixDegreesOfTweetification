@@ -48,6 +48,10 @@ export class RateLimitDisplayComponent implements OnInit {
                 return [QueryType.LocationsByHashtag]; // TODO: update when adding components
             case 'word-cloud':
             return [QueryType.HashtagsFromHashtag];
+            case 'user-to-user':
+            return [QueryType.UserConnectionsByScreenName];
+            case 'hash-to-hash':
+            return [QueryType.HashtagConnectionsByHashtag];
             default:
                 return null;
         }

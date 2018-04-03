@@ -4,13 +4,16 @@ import { Observable } from 'rxjs/Observable';
 import { Country } from '../models';
 import { Subject } from 'rxjs/Subject';
 import 'rxjs/add/operator/finally';
+import { UserConnectionInfo, UserConnectionMap } from '../models/UserResult';
+import { HashConnectionMap } from '../models/HashConnectionInfo';
 
 export enum QueryType {
     TweetsByHashtag = 'TweetsByHashtag',
     LocationsByHashtag = 'LocationsByHashtag',
     UserByScreenName = 'UserByScreenName',
     UserConnectionsByScreenName = 'UserConnectionsByScreenName',
-    HashtagsFromHashtag = 'HashtagsFromHashtag'
+    HashtagsFromHashtag = 'HashtagsFromHashtag',
+    HashtagConnectionsByHashtag = 'HashtagConnectionsByHashtag'
 }
 export class AuthPair {
     Application: number;
@@ -64,5 +67,25 @@ export class EndpointService {
 
     public searchRelatedHashtags(hashtag: string): Observable<string[]> {
         return this.http.get<string[]>(this.baseUrl + 'api/search/hashtags?query=' + hashtag).finally(this.pushLatest);
+    }
+
+    public searchHashDegrees(hashtag: string) {
+        return this.http.get<HashConnectionMap>(this.baseUrl + 'api/search/degrees/hashtags?query=' + hashtag).finally(this.pushLatest);
+    }
+
+    public searchUserDegrees(user: string, numDegrees: number) {
+        return this.http.get<UserConnectionMap>(this.baseUrl +
+            'api/search/degrees/users/single?query='
+            + user + '&numberOfDegrees=' + numDegrees).finally(this.pushLatest);
+    }
+
+    public getUserSixDegrees(user1: string, user2: string) {
+        return this.http.get<any>(this.baseUrl + 'api/search/degrees/users?user1='
+            + user1 + '&user2=' + user2).finally(this.pushLatest);
+    }
+
+    public getHashSixDegrees(hashtag1: string, hashtag2: string) {
+        return this.http.get<any>(this.baseUrl + 'api/search/degrees/hashtags?hashtag1='
+            + hashtag1 + '&hashtag2=' + hashtag2).finally(this.pushLatest);
     }
 }
