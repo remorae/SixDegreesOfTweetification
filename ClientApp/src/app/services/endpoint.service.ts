@@ -26,6 +26,23 @@ export class RateInfo {
     UserConnectionsByScreenName: AuthPair;
 }
 
+export class LocationData {
+    countries: Country[];
+    coordinateInfo: CoordinateInfo[];
+}
+
+export class CoordinateInfo {
+    coordinates: GeoCoordinates;
+    hashtags: string[];
+    sources: string[];
+}
+
+export class GeoCoordinates {
+    type: string;
+    x: number;
+    y: number;
+}
+
 @Injectable()
 export class EndpointService {
     baseUrl: string;
@@ -53,9 +70,10 @@ export class EndpointService {
 
     public searchLocations(hashtag: string): Observable<Country[]> {
         return this.http
-            .get<Country[]>(
-                this.baseUrl + 'api/search/locations?query=' + hashtag
-            )
+            .get<LocationData>(
+            this.baseUrl + 'api/search/locations?query=' + hashtag
+        )
+            .map(val => val.countries)
             .finally(this.pushLatest);
     }
 
