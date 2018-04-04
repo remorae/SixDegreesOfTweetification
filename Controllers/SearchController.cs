@@ -20,7 +20,6 @@ namespace SixDegrees.Controllers
         private const int MaxUserFriendsCount = 5000;
         private readonly UserManager<ApplicationUser> userManager;
         private readonly RateLimitDbContext rateLimitDb;
-        private readonly TwitterCacheDbContext twitterCacheDb;
 
         private static void LogQuery(string query, TwitterAPIEndpoint endpoint, IQueryResults results)
         {
@@ -66,12 +65,11 @@ namespace SixDegrees.Controllers
 
         private IConfiguration Configuration { get; }
 
-        public SearchController(IConfiguration configuration, UserManager<ApplicationUser> userManager, RateLimitDbContext rateLimitDb, TwitterCacheDbContext twitterCacheDb)
+        public SearchController(IConfiguration configuration, UserManager<ApplicationUser> userManager, RateLimitDbContext rateLimitDb)
         {
             Configuration = configuration;
             this.userManager = userManager;
             this.rateLimitDb = rateLimitDb;
-            this.twitterCacheDb = twitterCacheDb;
         }
 
         private async Task<T> GetResults<T>(string query, AuthenticationType authType, Func<string, TwitterAPIEndpoint, string> buildQueryString, TwitterAPIEndpoint endpoint) where T : IQueryResults
@@ -260,16 +258,13 @@ namespace SixDegrees.Controllers
                     { query, new UserConnectionInfo(0) }
                 };
                 remaining.Push(query);
-                while ((callsMade == 0 || callsMade < maxAPICalls) && remaining.Count > 0)
+                while (callsMade < maxAPICalls && remaining.Count > 0)
                 {
-                    int currentLimit = RateLimitCache.Get.CurrentRateLimits(rateLimitDb, userManager, User)[QueryType.UserConnectionsByScreenName][AuthenticationType.User];
+                    ++callsMade;
                     string toQuery = remaining.Pop();
                     queried.Add(toQuery);
                     if (await GetUserConnections(toQuery) is OkObjectResult result && result.Value is IEnumerable<UserResult> lookup)
                     {
-                        int newLimit = RateLimitCache.Get.CurrentRateLimits(rateLimitDb, userManager, User)[QueryType.UserConnectionsByScreenName][AuthenticationType.User];
-                        if (newLimit < currentLimit)
-                            ++callsMade;
                         foreach (var user in lookup.Distinct())
                         {
                             results[toQuery].Connections.Add(user);
@@ -319,8 +314,7 @@ namespace SixDegrees.Controllers
                        TwitterAPIEndpoint.SearchTweets))
                     .Statuses
                     .Where(status => status.Entities.Hashtags.Any(tag => tag.Text.ToLower() == query))
-                    .Aggregate(new Dictionary<Status, IEnumerable<string>>(), (dict, status) => AppendHashtagsInStatus(status, dict))),
-                QueryType.HashtagConnectionsByHashtag
+                    .Aggregate(new Dictionary<Status, IEnumerable<string>>(), (dict, status) => AppendHashtagsInStatus(status, dict)))
             );
         }
 
@@ -340,7 +334,7 @@ namespace SixDegrees.Controllers
         /// <param name="maxCalls">The maximum integer number of Twitter API calls to make.</param>
         /// <returns></returns>
         [HttpGet("degrees/users")]
-        public async Task<IActionResult> UserLink(string user1, string user2, int numberOfDegrees = 6, int maxCalls = 5, int maxNodeConnections = 5000, bool lookupIDs = false)
+        public async Task<IActionResult> UserLink(string user1, string user2, int numberOfDegrees = 6, int maxCalls = 5, int maxNodeConnections = 50, bool lookupIDs = false)
         {
 
             if (user1 == null || user2 == null || numberOfDegrees < 1 || maxCalls < 1)
@@ -353,15 +347,14 @@ namespace SixDegrees.Controllers
 
             return await FindLink(user1ID, user2ID, numberOfDegrees, maxAPICalls, maxNodeConnections, lookupIDs,
                 async query =>
-                Ok(((await GetUserConnectionIDs(query) as OkObjectResult)?.Value as IEnumerable<long>)?.Select(id => id.ToString())?.Distinct()),
-                QueryType.UserConnectionsByScreenName);
+                Ok(((await GetUserConnectionIDs(query) as OkObjectResult)?.Value as IEnumerable<long>)?.Select(id => id.ToString())?.Distinct()));
         }
 
-        private async Task<IActionResult> FindLink<T>(T start, T end, int numberOfDegrees, int maxAPICalls, int maxPerNode, bool lookupIDs, Func<T, Task<IActionResult>> lookupFunc, QueryType queryType)
+        private async Task<IActionResult> FindLink<T>(T start, T end, int numberOfDegrees, int maxAPICalls, int maxPerNode, bool lookupIDs, Func<T, Task<IActionResult>> lookupFunc)
             where T : class
         {
-            if (maxAPICalls < 0)
-                return BadRequest("Authentication error.");
+            if (maxAPICalls < 1)
+                return BadRequest("Rate limit exceeded.");
             if (start.Equals(end))
                 return BadRequest("Start and end must differ.");
             DateTime startTime = DateTime.Now;
@@ -384,29 +377,23 @@ namespace SixDegrees.Controllers
                 };
 
                 bool foundLink = false;
-                while ((callsMade == 0 || callsMade < maxAPICalls) && (startList.Count > 0 || endList.Count > 0) && !foundLink)
+                while (callsMade < maxAPICalls && (startList.Count > 0 || endList.Count > 0) && !foundLink)
                 {
                     if (startList.Count > 0)
                     {
-                        int currentLimit = RateLimitCache.Get.CurrentRateLimits(rateLimitDb, userManager, User)[queryType][AuthenticationType.User];
+                        ++callsMade;
                         ConnectionInfo<T>.Node toQuery = startList.First();
                         startList.Remove(toQuery);
                         var obj = (await lookupFunc(toQuery.Value) as OkObjectResult)?.Value;
-                        int newLimit = RateLimitCache.Get.CurrentRateLimits(rateLimitDb, userManager, User)[queryType][AuthenticationType.User];
-                        if (newLimit < currentLimit)
-                            ++callsMade;
                         if (obj != null)
                             HandleSearchResults(obj, toQuery, ref foundLink, ref seenEnd, ref hashtagLinks, numberOfDegrees, maxPerNode, ref startList, ref queried, ref seen, ref seenStart, ref connections);
                     }
                     if (endList.Count > 0 && callsMade < maxAPICalls)
                     {
-                        int currentLimit = RateLimitCache.Get.CurrentRateLimits(rateLimitDb, userManager, User)[queryType][AuthenticationType.User];
+                        ++callsMade;
                         ConnectionInfo<T>.Node toQuery = endList.First();
                         endList.Remove(toQuery);
                         var obj = (await lookupFunc(toQuery.Value) as OkObjectResult)?.Value;
-                        int newLimit = RateLimitCache.Get.CurrentRateLimits(rateLimitDb, userManager, User)[queryType][AuthenticationType.User];
-                        if (newLimit < currentLimit)
-                            ++callsMade;
                         if (obj != null)
                             HandleSearchResults(obj, toQuery, ref foundLink, ref seenStart, ref hashtagLinks, numberOfDegrees, maxPerNode, ref endList, ref queried, ref seen, ref seenEnd, ref connections);
                     }
@@ -414,52 +401,25 @@ namespace SixDegrees.Controllers
 
                 List<ConnectionInfo<T>.Node> results = (!foundLink) ? null : LookForPath(connections, start, end);
 
-                if (hashtagLinks.Count == 0 && lookupIDs)
-                {
-                    var searchResults = new List<UserSearchResults>();
-                    var userResults = new List<UserResult>();
-                    var userIDs = (connections.Keys.Select(node => node.Value) as IEnumerable<string>).ToHashSet();
-                    var cached = from user in twitterCacheDb.Users
-                                 where userIDs.Contains(user.ID)
-                                 select user;
-                    userResults.AddRange(cached);
-                    var idsToLookup = userIDs.Except(cached.Select(user => user.ID)).ToList();
-                    while (idsToLookup.Count() > 0)
-                    {
-                        int count = Math.Min(100, idsToLookup.Count());
-                        try
-                        {
-                            var search = await GetResultCollection<UserSearchResults>(
-                               idsToLookup.Take(count),
-                               AuthenticationType.Both,
-                               TwitterAPIUtils.UserLookupQuery,
-                               TwitterAPIEndpoint.UsersLookup);
-                            searchResults.AddRange(search);
-                        }
-                        catch (Exception)
-                        {}
-                        idsToLookup.RemoveRange(0, count);
-                    }
-                    userResults.AddRange(searchResults.Select(user => ToUserResult(user)));
-
-                    int numberSeen = 0;
-                    foreach (var user in searchResults.Select(user => ToUserResult(user)))
-                    {
-                        twitterCacheDb.Users.Add(user);
-                        ++numberSeen;
-                        if (numberSeen % 100 == 0)
-                            twitterCacheDb.SaveChanges();
-                    }
-
-                    twitterCacheDb.SaveChanges();
-                    ReplaceUserIDsPairsWithScreenNames(ref connections, userResults);
-                    ReplaceUserIDsWithScreenNames(ref seenStart, userResults);
-                    ReplaceUserIDsWithScreenNames(ref seenEnd, userResults);
-                }
-
                 if (results == null || results.Count() == 0)
                 {
                     // Failed to find link
+                    if (hashtagLinks.Count == 0)
+                    {
+                        var userResults = new List<UserSearchResults>();
+                        var userIDs = (connections.Keys.Select(node => node.Value) as IEnumerable<string>).ToList();
+                        while (userIDs.Count() > 0)
+                        {
+                            userResults.AddRange(await GetResultCollection<UserSearchResults>(
+                                userIDs.Take(Math.Min(100, userIDs.Count())),
+                                AuthenticationType.Both,
+                                TwitterAPIUtils.UserLookupQuery,
+                                TwitterAPIEndpoint.UsersLookup));
+                            userIDs.RemoveRange(0, Math.Min(100, userIDs.Count()));
+                        }
+                        if (lookupIDs)
+                            ReplaceUserIDsWithScreenNames(ref connections, userResults);
+                    }
                     return Ok(new
                     {
                         Connections = connections
@@ -476,37 +436,24 @@ namespace SixDegrees.Controllers
                     for (int i = 0; i < results.Count() - 1; ++i)
                         resultLinks.Add(hashtagLinks.First(entry => entry.Value.Contains(results[i].Value) && entry.Value.Contains(results[i + 1].Value)).Key);
                 }
-                else if (lookupIDs)
+                else
                 {
-                    var userResults = new List<UserResult>();
-                    var ids = results.Select(node => node.Value as string).ToHashSet();
-                    var cached = from user in twitterCacheDb.Users
-                                 where ids.Contains(user.ID)
-                                 select user;
-                    userResults.AddRange(cached);
-                    var idsToLookup = ids.Except(cached.Select(user => user.ID)).ToList();
-                    if (idsToLookup.Count > 0)
-                    {
-                        var searchResults = await GetResultCollection<UserSearchResults>(
-                               idsToLookup,
-                               AuthenticationType.Both,
-                               TwitterAPIUtils.UserLookupQuery,
-                               TwitterAPIEndpoint.UsersLookup);
-                        userResults.AddRange(searchResults.Select(searchResult => ToUserResult(searchResult)));
-                        foreach (var user in searchResults.Select(result => ToUserResult(result)))
-                            twitterCacheDb.Users.Add(user);
-                        twitterCacheDb.SaveChanges();
-                    }
-                    ReplaceUserIDNodesWithScreenNames(ref results, userResults);
+                    var userResults = await GetResultCollection<UserSearchResults>(
+                           results.Select(node => node.Value) as IEnumerable<string>,
+                           AuthenticationType.Both,
+                           TwitterAPIUtils.UserLookupQuery,
+                           TwitterAPIEndpoint.UsersLookup);
+                    if (lookupIDs)
+                        ReplaceUserIDsWithScreenNames(ref results, userResults);
                 }
-                var expandedStart = seenStart.Except(results.Select(node => node.Value)).Aggregate(new HashSet<T>(), AggregateSetConnections(connections));
-                var expandedEnd = seenEnd.Except(results.Select(node => node.Value)).Aggregate(new HashSet<T>(), AggregateSetConnections(connections));
+                var expandedStart = seenStart.Aggregate(new HashSet<T>(), AggregateSetConnections(connections));
+                var expandedEnd = seenEnd.Aggregate(new HashSet<T>(), AggregateSetConnections(connections));
                 return Ok(new
                 {
                     Connections = connections
                             .Where(entry => entry.Value.Connections.Count > 0)
                             .ToDictionary(entry => entry.Key.Value, entry => entry.Value.Connections.Select(node => node.Key.Value)),
-                    Shared = expandedStart.Intersect(expandedEnd),
+                    Shared = expandedStart.Intersect(expandedEnd).Except(new T[] { start, end }),
                     Path = results.ToDictionary(node => node.Value, node => node.Distance),
                     Links = resultLinks.Select(status => status.URL),
                     Metadata = new { Time = DateTime.Now - startTime, Calls = callsMade }
@@ -543,56 +490,33 @@ namespace SixDegrees.Controllers
             return results;
         }
 
-        private void ReplaceUserIDsPairsWithScreenNames<T>(
+        private void ReplaceUserIDsWithScreenNames<T>(
             ref IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections,
-            IEnumerable<UserResult> userResults)
+            IEnumerable<UserSearchResults> userResults)
             where T : class
         {
             var newConnections = new Dictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>>();
-            foreach (var entry in connections.Where(con => userResults.Any(user => user.ID.Equals(con.Key.Value))))
+            foreach (var entry in connections.Where(con => userResults.Any(user => user.IdStr.Equals(con.Key.Value))))
             {
-                var newNode = new ConnectionInfo<T>.Node(userResults.First(user => user.ID.Equals(entry.Key.Value)).ScreenName as T, entry.Key.Distance);
+                var newNode = new ConnectionInfo<T>.Node(userResults.First(user => user.IdStr.Equals(entry.Key.Value)).ScreenName as T, entry.Key.Distance);
                 var newInfo = new ConnectionInfo<T>();
-                foreach (var connection in entry.Value.Connections.Where(con => userResults.Any(user => user.ID.Equals(con.Key.Value))))
-                    newInfo.Connections.Add(new ConnectionInfo<T>.Node(userResults.First(user => user.ID.Equals(connection.Key.Value)).ScreenName as T, connection.Key.Distance), connection.Value);
+                foreach (var connection in entry.Value.Connections.Where(con => userResults.Any(user => user.IdStr.Equals(con.Key.Value))))
+                    newInfo.Connections.Add(new ConnectionInfo<T>.Node(userResults.First(user => user.IdStr.Equals(connection.Key.Value)).ScreenName as T, connection.Key.Distance), connection.Value);
                 newConnections.Add(newNode, newInfo);
             }
 
             connections = newConnections;
         }
 
-        private void ReplaceUserIDNodesWithScreenNames<T>(
+        private void ReplaceUserIDsWithScreenNames<T>(
             ref List<ConnectionInfo<T>.Node> results,
-            IEnumerable<UserResult> userResults)
+            IEnumerable<UserSearchResults> userResults)
             where T : class
         {
-            var newSet = new List<ConnectionInfo<T>.Node>();
+            var newPath = new List<ConnectionInfo<T>.Node>();
             foreach (var node in results)
-            {
-                if (userResults.First(user => user.ID.Equals(node.Value)).ScreenName is T found)
-                    newSet.Add(new ConnectionInfo<T>.Node(found, node.Distance));
-                else if (twitterCacheDb.Users.FirstOrDefault(user => user.ID.Equals(node.Value))?.ScreenName is T lookup)
-                    newSet.Add(new ConnectionInfo<T>.Node(lookup, node.Distance));
-            }
-
-            results = newSet;
-        }
-
-        private void ReplaceUserIDsWithScreenNames<T>(
-           ref ISet<T> results,
-           IEnumerable<UserResult> userResults)
-           where T : class
-        {
-            var newSet = new HashSet<T>();
-            foreach (T val in results)
-            {
-                if (userResults.FirstOrDefault(user => user.ID.Equals(val))?.ScreenName is T found)
-                    newSet.Add(found);
-                else if (twitterCacheDb.Users.FirstOrDefault(user => user.ID.Equals(val))?.ScreenName is T lookup)
-                    newSet.Add(lookup);
-            }
-
-            results = newSet;
+                newPath.Add(new ConnectionInfo<T>.Node(userResults.First(user => user.IdStr.Equals(node.Value)).ScreenName as T, node.Distance));
+            results = newPath;
         }
 
         private void HandleSearchResults<T>(
@@ -625,7 +549,7 @@ namespace SixDegrees.Controllers
                 if (tags.Intersect(goals).Count() > 0)
                     foundLink = true;
             }
-        }
+    }
 
         private void StoreResults<T>(
             int numberOfDegrees,
@@ -634,20 +558,20 @@ namespace SixDegrees.Controllers
             ref ISet<T> queried,
             ref ISet<T> allSeen,
             ref ISet<T> subSetSeen,
-            ref IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections,
+            ref IDictionary<ConnectionInfo<T>.Node,ConnectionInfo<T>> connections,
             ref ConnectionInfo<T>.Node toQuery,
             IEnumerable<T> lookup)
         {
             queried.Add(toQuery.Value);
             int nextDistance = toQuery.Distance + 1;
-            foreach (T entity in lookup.Distinct())
+            foreach (var entity in lookup.Distinct())
             {
                 connections[toQuery].Connections.Add(new ConnectionInfo<T>.Node(entity, nextDistance), 1);
                 if (connections[toQuery].Connections.Count >= maxPerNode)
                     break;
             }
             var tempSeen = allSeen;
-            foreach (T entity in lookup.Distinct().Where(entity => !tempSeen.Contains(entity)).Where(entity => !tempSeen.Contains(entity)))
+            foreach (var entity in lookup.Distinct().Where(entity => !tempSeen.Contains(entity)).Where(entity => !tempSeen.Contains(entity)))
             {
                 ConnectionInfo<T>.Node node = new ConnectionInfo<T>.Node(entity, nextDistance);
                 if (nextDistance < numberOfDegrees)
@@ -686,12 +610,10 @@ namespace SixDegrees.Controllers
                     else if (status.Coordinates != null)
                         UpdateCoordinatesWithStatus(coords, status);
                 }
-                return Ok(new
-                {
+                return Ok(new {
                     Countries = GetFormattedCountries(countries.Values),
                     CoordinateInfo = coords.Select(
-                        entry => new
-                        {
+                        entry => new {
                             Coordinates = new { CoordType = entry.Key.Type, X = entry.Key.Value[0], Y = entry.Key.Value[1] },
                             Hashtags = entry.Value.hashtags.ToArray(),
                             Sources = entry.Value.sources.ToArray()
@@ -728,33 +650,18 @@ namespace SixDegrees.Controllers
         /// <param name="screen_name">Returns information about a specified user.</param>
         /// <returns></returns>
         [HttpGet("user")]
-        public async Task<IActionResult> GetUser(string screen_name, string id = null)
+        public async Task<IActionResult> GetUser(string screen_name)
         {
-            if (screen_name == null && id == null)
+            if (screen_name == null)
                 return BadRequest("Invalid parameters.");
             try
             {
-                UserResult found = (id == null)
-                    ? twitterCacheDb.Users.FirstOrDefault(user => user.ScreenName == screen_name)
-                    : twitterCacheDb.Users.Find(id);
-                if (found != null)
-                    return Ok(found);
-                var results = (screen_name != null)
-                    ? await GetResults<UserSearchResults>(
-                        screen_name,
-                        AuthenticationType.Both,
-                        TwitterAPIUtils.UserSearchQuery,
-                        TwitterAPIEndpoint.UsersShow)
-                    : await GetResults<UserSearchResults>(
-                        id,
-                        AuthenticationType.Both,
-                        TwitterAPIUtils.UserIDSearchQuery,
-                        TwitterAPIEndpoint.UsersShow);
-                var userResult = ToUserResult(results);
-                if (twitterCacheDb.Users.Find(userResult.ID) == null)
-                    twitterCacheDb.Users.Add(userResult);
-                twitterCacheDb.SaveChanges();
-                return Ok(userResult);
+                var results = await GetResults<UserSearchResults>(
+                    screen_name,
+                    AuthenticationType.Both,
+                    TwitterAPIUtils.UserSearchQuery,
+                    TwitterAPIEndpoint.UsersShow);
+                return Ok(ToUserResult(results));
             }
             catch (Exception ex)
             {
@@ -797,93 +704,53 @@ namespace SixDegrees.Controllers
                 return BadRequest("Invalid parameters.");
             try
             {
-                if (!twitterCacheDb.Users.Any(user => user.ScreenName.ToLower() == screen_name.ToLower()))
-                {
-                    twitterCacheDb.Add(ToUserResult(await GetResults<UserSearchResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UsersShow)));
-                    twitterCacheDb.SaveChanges();
-                }
-                var queriedUser = twitterCacheDb.Users.First(user => user.ScreenName == screen_name);
+                //if (QueryHistory.Get[TwitterAPIEndpoint.FollowersIDs].LastQuery == screen_name)
+                //TODO Cache results and return those?
 
-                ISet<string> idSet = new HashSet<string>();
-                if (twitterCacheDb.UserConnectionLookups.Find(queriedUser.ID) is UserConnectionLookupStatus status && status.Queried)
-                {
-                    idSet = twitterCacheDb.UserConnections
-                        .Where(connection => connection.Start == queriedUser.ID)
-                        .Select(connection => connection.End)
-                        .ToHashSet();
-                }
-                else
-                {
-                    twitterCacheDb.UserConnectionLookups.Add(new UserConnectionLookupStatus() { ID = queriedUser.ID, Queried = true });
-                    twitterCacheDb.SaveChanges();
+                int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User).Values.Min();
+                limit = Math.Min(limit, maxLookupCount * MaxUserLookupCount);
+                
+                var followerResults = await GetResults<UserIdsResults>(
+                    screen_name,
+                    AuthenticationType.Both,
+                    TwitterAPIUtils.FollowersFriendsIDsQuery,
+                    TwitterAPIEndpoint.FollowersIDs);
+                ISet<long> uniqueIds = new HashSet<long>(followerResults?.Ids ?? Enumerable.Empty<long>());
 
-                    var followerResults = await GetResults<UserIdsResults>(
+                if (uniqueIds.Count < limit)
+                {
+                    var friendResults = await GetResults<UserIdsResults>(
                         screen_name,
                         AuthenticationType.User,
                         TwitterAPIUtils.FollowersFriendsIDsQuery,
-                        TwitterAPIEndpoint.FollowersIDs);
-
-                    if (idSet.Count < limit)
-                    {
-                        var friendResults = await GetResults<UserIdsResults>(
-                            screen_name,
-                            AuthenticationType.User,
-                            TwitterAPIUtils.FollowersFriendsIDsQuery,
-                            TwitterAPIEndpoint.FriendsIDs);
-                        if (friendResults != null)
-                            foreach (string id in friendResults.Ids.Select(id => id.ToString()))
-                            {
-                                if (idSet.Count >= limit)
-                                    break;
-                                if (!idSet.Contains(id))
-                                    idSet.Add(id);
-                            }
-                    }
+                        TwitterAPIEndpoint.FriendsIDs);
+                    if (friendResults != null)
+                        foreach (long id in friendResults.Ids)
+                        {
+                            if (uniqueIds.Count >= limit)
+                                break;
+                            if (!uniqueIds.Contains(id))
+                                uniqueIds.Add(id);
+                        }
                 }
 
+                var ids = new List<long>(uniqueIds);
                 ICollection<UserResult> results = new List<UserResult>();
-                ISet<long> uniqueIDsToLookup = new HashSet<long>();
-                int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User).Values.Min();
-                limit = Math.Min(limit, maxLookupCount * MaxUserLookupCount);
-
-                var cachedUsers = twitterCacheDb.Users
-                    .Where(user => idSet.Contains(user.ID));
-                foreach (var user in cachedUsers)
-                    results.Add(user);
-                foreach (var id in idSet.Except(cachedUsers.Select(user => user.ID)))
-                    uniqueIDsToLookup.Add(long.Parse(id));
-
-                var ids = new List<long>(uniqueIDsToLookup);
-                var usersToCache = new List<UserResult>();
                 while (ids.Count > 0)
                 {
                     int count = Math.Min(100, ids.Count);
-                    var searchResults = await GetResultCollection<UserSearchResults>(
+                    var userResults = await GetResultCollection<UserSearchResults>(
                         ids.Take(count).Select(id => id.ToString()),
                         AuthenticationType.Both,
                         TwitterAPIUtils.UserLookupQuery,
                         TwitterAPIEndpoint.UsersLookup);
                     ids.RemoveRange(0, count);
-                    if (searchResults != null)
+                    if (userResults != null)
                     {
-                        foreach (var searchResult in searchResults)
-                        {
-                            var user = ToUserResult(searchResult);
-                            results.Add(user);
-                            usersToCache.Add(user);
-                        }
+                        foreach (var user in userResults)
+                            results.Add(ToUserResult(user));
                     }
                 }
-                foreach (var user in usersToCache.Distinct())
-                {
-                    twitterCacheDb.Users.Add(user);
-                    if (twitterCacheDb.UserConnections.Find(queriedUser.ID, user.ID) == null)
-                    {
-                        twitterCacheDb.UserConnections.Add(new UserConnection() { Start = queriedUser.ID, End = user.ID });
-                        twitterCacheDb.UserConnections.Add(new UserConnection() { End = queriedUser.ID, Start = user.ID });
-                    }
-                }
-                twitterCacheDb.SaveChanges();
                 return Ok(results);
             }
             catch (Exception ex)
@@ -905,26 +772,13 @@ namespace SixDegrees.Controllers
                 return BadRequest("Invalid parameters.");
             try
             {
-                if (twitterCacheDb.UserConnectionLookups.Find(startID) is UserConnectionLookupStatus status && status.Queried)
-                {
-                    return Ok(twitterCacheDb.UserConnections
-                        .Where(connection => connection.Start == startID)
-                        .Select(connection => long.Parse(connection.End))
-                        .AsEnumerable());
-                }
-                else
-                {
-                    twitterCacheDb.UserConnectionLookups.Add(new UserConnectionLookupStatus() { ID = startID, Queried = true });
-                    twitterCacheDb.SaveChanges();
-                }
-
                 var followerResults = await GetResults<UserIdsResults>(
                     startID,
                     AuthenticationType.User,
                     TwitterAPIUtils.FollowersFriendsIDsQueryByID,
                     TwitterAPIEndpoint.FollowersIDs);
                 ISet<long> uniqueIds = new HashSet<long>(followerResults?.Ids ?? Enumerable.Empty<long>());
-
+                
                 var friendResults = await GetResults<UserIdsResults>(
                     startID,
                     AuthenticationType.User,
@@ -937,15 +791,6 @@ namespace SixDegrees.Controllers
                             uniqueIds.Add(id);
                     }
 
-                foreach (var id in uniqueIds.Select(val => val.ToString()))
-                {
-                    if (twitterCacheDb.UserConnections.Find(startID, id) == null)
-                    {
-                        twitterCacheDb.UserConnections.Add(new UserConnection() { Start = startID, End = id });
-                        twitterCacheDb.UserConnections.Add(new UserConnection() { End = startID, Start = id });
-                    }
-                }
-                twitterCacheDb.SaveChanges();
                 return Ok(uniqueIds);
             }
             catch (Exception ex)
