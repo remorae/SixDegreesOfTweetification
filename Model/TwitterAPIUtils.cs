@@ -47,11 +47,6 @@ namespace SixDegrees.Model
             return $"screen_name={screenName}&include_entities={IncludeEntities}";
         }
 
-        internal static string UserIDSearchQuery(string id, TwitterAPIEndpoint endpoint)
-        {
-            return $"user_id={id}&include_entities={IncludeEntities}";
-        }
-
         internal static string HashtagSearchQuery(string hashtag, TwitterAPIEndpoint endpoint)
         {
             string result = $"q=%23{hashtag}&count={TweetCount}&tweet_mode={TweetMode}&include_entities={IncludeEntities}";
