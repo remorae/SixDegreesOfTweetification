@@ -819,7 +819,7 @@ namespace SixDegrees.Controllers
 
                     var followerResults = await GetResults<UserIdsResults>(
                         screen_name,
-                        AuthenticationType.Both,
+                        AuthenticationType.User,
                         TwitterAPIUtils.FollowersFriendsIDsQuery,
                         TwitterAPIEndpoint.FollowersIDs);
 
@@ -827,7 +827,7 @@ namespace SixDegrees.Controllers
                     {
                         var friendResults = await GetResults<UserIdsResults>(
                             screen_name,
-                            AuthenticationType.Both,
+                            AuthenticationType.User,
                             TwitterAPIUtils.FollowersFriendsIDsQuery,
                             TwitterAPIEndpoint.FriendsIDs);
                         if (friendResults != null)
@@ -920,14 +920,14 @@ namespace SixDegrees.Controllers
 
                 var followerResults = await GetResults<UserIdsResults>(
                     startID,
-                    AuthenticationType.Both,
+                    AuthenticationType.User,
                     TwitterAPIUtils.FollowersFriendsIDsQueryByID,
                     TwitterAPIEndpoint.FollowersIDs);
                 ISet<long> uniqueIds = new HashSet<long>(followerResults?.Ids ?? Enumerable.Empty<long>());
 
                 var friendResults = await GetResults<UserIdsResults>(
                     startID,
-                    AuthenticationType.Both,
+                    AuthenticationType.User,
                     TwitterAPIUtils.FollowersFriendsIDsQueryByID,
                     TwitterAPIEndpoint.FriendsIDs);
                 if (friendResults != null)
