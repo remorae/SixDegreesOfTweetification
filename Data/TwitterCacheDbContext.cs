@@ -13,6 +13,8 @@ namespace SixDegrees.Data
         public DbSet<UserResult> Users { get; set; }
         public DbSet<UserConnection> UserConnections { get; set; }
 
+        public DbSet<UserConnectionLookupStatus> UserConnectionLookups { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder
@@ -24,6 +26,12 @@ namespace SixDegrees.Data
                 .ToTable("UserConnections")
                 .HasKey(connection => new { connection.Start, connection.End });
         }
+    }
+
+    public class UserConnectionLookupStatus
+    {
+        public string ID { get; set; }
+        public bool Queried { get; set; } = false;
     }
 
     public class UserConnection
