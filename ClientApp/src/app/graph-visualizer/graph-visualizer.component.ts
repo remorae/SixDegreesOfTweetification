@@ -38,27 +38,57 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
 
     drawGraph() { // credit to https://bl.ocks.org/mbostock/4062045
         const svg = D3.select('svg.graph-container');
+        const filteredNodes: Node[] = this.graph.nodes;
+        const filteredLinks: Link[] = this.graph.links;
+        // const filteredNodes: Node[] = this.graph.nodes.filter((n) => n.isShown);
+        // const filteredLinks: Link[] = this.graph.links
+        //     .filter((l) => filteredNodes.some((n) => n.id === l.source) && filteredNodes.some(n => n.id === l.target));
         const simulation = this.createSimulation();
-        const links = this.createLinksGroup(svg);
-        const nodes = this.createNodesGroup(svg, simulation);
-
-        nodes.append('title')
-            .text((d: Node) => `User: ${d.id} Distance: ${d.group}`);
 
         simulation
-            .nodes(this.graph.nodes)
-            .on('tick', ticked);
+        .nodes(filteredNodes)
+        .on('tick', ticked);
 
-        simulation.force<ForceLink<Node, Link>>('link').links(this.graph.links);
+        simulation.force<ForceLink<Node, Link>>('link').links(filteredLinks);
+
+        D3.timeout(()=>{
+            if(filteredNodes.length >= 1000){
+                simulation.stop();
+
+                for (let i = 0; i < Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay())); i++) {
+                    simulation.tick();
+
+                }
+            }
+
+        });
+
+        const linkSelection = this.createLinksGroup(svg, filteredLinks);
+        const nodeSelection = this.createNodesGroup(svg, simulation, filteredNodes);
+
+        nodeSelection.append('title')
+            .text((d: Node) => `User: ${d.id} Distance: ${d.group}`);
+
+            nodeSelection.append("text")
+    .attr("x", 0)
+    .attr("dy", ".35em")
+    .attr("text-anchor", "middle")
+    .text('!' );
+
+
+
+
+
+
 
         function ticked() {
-            links
+            linkSelection
                 .attr('x1', (d: { source }) => d.source.x)
                 .attr('y1', (d: { source }) => d.source.y)
                 .attr('x2', (d: { target }) => d.target.x)
                 .attr('y2', (d: { target }) => d.target.y);
 
-            nodes
+            nodeSelection
                 .attr('cx', (d: { x }) => d.x)
                 .attr('cy', (d: { y }) => d.y);
         }
@@ -74,23 +104,24 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             .force('center', D3.forceCenter(this.svgWidth / 2, this.svgHeight / 2));
     }
 
-    createLinksGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>): D3.Selection<D3.BaseType, {}, D3.BaseType, {}> {
+    createLinksGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, links: Link[]): D3.Selection<D3.BaseType, {}, D3.BaseType, {}> {
+
         return svg.append('g')
             .attr('class', 'links')
             .attr('stroke', '#999')
             .attr('stroke-opacity', '0.6')
             .selectAll('line')
-            .data(this.graph.links)
+            .data(links)
             .enter().append('line')
             .attr('stroke-width', (d: Link) => Math.sqrt(d.value));
     }
 
-    createNodesGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, simulation: D3.Simulation<Node, Link>) {
+    createNodesGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, simulation: D3.Simulation<Node, Link>, nodes) {
         const color = D3.scaleOrdinal(D3.schemeCategory10);
         return svg.append('g')
             .attr('class', 'nodes')
             .selectAll('circle')
-            .data(this.graph.nodes)
+            .data(nodes)
             .enter().append('circle')
             .attr('r', (d: Node) => d.group ? 5 : 10)
             .attr('fill', (d: Node) => color(d.group.toString()))

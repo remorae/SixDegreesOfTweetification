@@ -8,6 +8,9 @@ import { UserConnectionMap } from '../models/UserResult';
 export interface Node extends SimulationNodeDatum {
     id: string;
     group: number;
+    isShown: boolean;
+    expandable: boolean;
+    opened: boolean;
 }
 
 export interface Link extends SimulationLinkDatum<Node> {
@@ -27,6 +30,12 @@ export interface SixDegreesConnection {
     metadata: { time: string, calls: number };
 }
 
+export class TestPath{
+    getPath(){
+        return { path: {'BarackObama': 0, 'Francis08563494': 1}, "daddy_yankee": 2, "eliazaroxlaj": 3, "A24": 4, "MUKASAJAMES18": 5};
+    }
+}
+
 
 @Injectable()
 export class GraphDataService {
@@ -34,6 +43,7 @@ export class GraphDataService {
     userGraphSub: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
     hashGraphSub: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
     constructor(private endpoint: EndpointService) {
+        this.userGraphSub.next(    this.userConnectionsToGraph(this.testData.getUserData()));
     }
 
 
@@ -75,7 +85,7 @@ export class GraphDataService {
                 },
                 (error) => {
                     console.log(error);
-                    this.userGraphSub.next(this.hashGraphSub.value);
+                    this.userGraphSub.next(this.userGraphSub.value);
                 });
     }
 
@@ -88,7 +98,12 @@ export class GraphDataService {
     }
     userConnectionsToGraph = (data): Graph => {
         const nodes: Node[] = Object.keys(data)
-            .map((user) => ({ id: user, group: data[user].distance }));
+            .map((user) => (
+                { id: user,
+                group: data[user].distance,
+                isShown: data[user].distance <= 1,
+                expandable: !!data[user].connections.length,
+                opened: data[user].distance === 0   }));
 
         const links: Link[] = this.createUserLinks(data, nodes);
 
@@ -101,7 +116,7 @@ export class GraphDataService {
 
         Object.keys(data.path).forEach((point) => {
             const position = data.path[point];
-            nodes[position] = { id: point, group: position };
+            nodes[position] = { id: point, group: position, isShown: true, expandable: false, opened: true };
         });
 
         const links: Link[] = [];
