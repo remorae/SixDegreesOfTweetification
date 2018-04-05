@@ -626,6 +626,8 @@ namespace SixDegrees.Controllers
 
         private static UserResult ToUserResult(UserSearchResults results)
         {
+            if (results == null)
+                return null;
             return new UserResult()
             {
                 CreatedAt = results.CreatedAt,
@@ -662,7 +664,9 @@ namespace SixDegrees.Controllers
                 int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User).Values.Min();
                 limit = Math.Min(limit, maxLookupCount * MaxSingleQueryUserLookupCount);
 
-                string userID = (await GetResults<UserSearchResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UsersShow))?.IdStr;
+                UserResult queried = ToUserResult(await GetResults<UserSearchResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UsersShow));
+
+                string userID = queried?.ID;
                 if (userID == null)
                     return BadRequest("Invalid user screen name.");
                 var remainingIDsToLookup = ((await GetUserConnectionIDs(userID) as OkObjectResult)?.Value as IEnumerable<long> ?? Enumerable.Empty<long>()).ToList();
@@ -679,6 +683,8 @@ namespace SixDegrees.Controllers
                     foreach (var searchResult in searchResults.Take(limit - results.Count))
                         results.Add(ToUserResult(searchResult));
                 }
+                TwitterCache.UpdateUsers(Configuration, results.Union(queried.Yield()));
+                TwitterCache.UpdateUserConnections(Configuration, queried, results);
                 return Ok(results);
             }
             catch (Exception ex)
