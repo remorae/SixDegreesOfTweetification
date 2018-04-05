@@ -17,7 +17,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
 
     }
 
-    onDragEvent(e: Event){
+    onDragEvent(e: Event) {
         e.preventDefault();
     }
     ngOnInit() {
@@ -41,11 +41,8 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
 
     drawGraph() { // credit to https://bl.ocks.org/mbostock/4062045
         const svg = D3.select('svg.graph-container');
-        const filteredNodes: Node[] = this.graph.nodes;
-        const filteredLinks: Link[] = this.graph.links;
-        // const filteredNodes: Node[] = this.graph.nodes.filter((n) => n.isShown);
-        // const filteredLinks: Link[] = this.graph.links
-        //     .filter((l) => filteredNodes.some((n) => n.id === l.source) && filteredNodes.some(n => n.id === l.target));
+        const filteredNodes: Node[] = this.filterNodes();
+        const filteredLinks: Link[] = this.filterLinks(filteredNodes);
         const simulation = this.createSimulation();
 
         simulation
@@ -54,32 +51,21 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
 
         simulation.force<ForceLink<Node, Link>>('link').links(filteredLinks);
 
-        D3.timeout(() => {
-            if (filteredNodes.length >= 1000) {
-                simulation.stop();
+        // D3.timeout(() => {
+        //     if (filteredNodes.length >= 1000) {
+        //         simulation.stop();
 
-                for (let i = 0; i < Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay())); i++) {
-                    simulation.tick();
-
-                }
-            }
-
-        });
+        //         for (let i = 0; i < Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay())); i++) {
+        //             simulation.tick();
+        //         }
+        //     }
+        // });
 
         const linkSelection = this.createLinksGroup(svg, filteredLinks);
-
         const nodeSelection = this.createNodesGroup(svg, simulation, filteredNodes);
         const textSelection = this.createTextGroup(svg, filteredNodes);
         nodeSelection.append('title')
             .text((d: Node) => `User: ${d.id} Distance: ${d.group}`);
-
-
-
-
-
-
-
-
 
         function ticked() {
             linkSelection
@@ -96,8 +82,17 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
                 .attr('x', (d) => d.x)
                 .attr('y', (d) => d.y);
         }
+    }
 
+    filterNodes(): Node[] {
+        return this.graph.nodes;
+        //return this.graph.nodes.filter((n) => n.isShown);
+    }
 
+    filterLinks(filteredNodes: Node[]): Link[] {
+        return this.graph.links;
+        // return this.graph.links
+        //     .filter((l) => filteredNodes.some((n) => n.id === l.source) && filteredNodes.some(n => n.id === l.target));
     }
 
     createSimulation(): D3.Simulation<Node, Link> {
@@ -129,12 +124,12 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             .attr('pointer-events', 'none')
             //.attr('class', 'unselectable')
             .attr('text-anchor', 'middle')
-          //  .attr("dx", 12)
-           // .attr("dy", ".35em")
+            .attr("dx", 0)
+            .attr("dy", ".30rem")
             //.style("font-size", "50px")
             //.style("fill", "black")
 
-            .text('!');
+            .text((d) => (d.expandable) ? '!' : '');
     }
 
     createNodesGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, simulation: D3.Simulation<Node, Link>, nodes) {
@@ -147,11 +142,11 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             .attr('r', (d: Node) => d.group ? 5 : 10)
             .attr('fill', (d: Node) => color(d.group.toString()))
             .call(D3.drag()
-                .on('start', dragstarted)
-                .on('drag', dragged)
-                .on('end', dragended));
+                .on('start', dragbegin)
+                .on('drag', dragging)
+                .on('end', dragend));
 
-        function dragstarted(d) {
+        function dragbegin(d) {
             if (!D3.event.active) {
                 simulation.alphaTarget(0.3).restart();
             }
@@ -159,12 +154,12 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             d.fy = d.y;
         }
 
-        function dragged(d) {
+        function dragging(d) {
             d.fx = D3.event.x;
             d.fy = D3.event.y;
         }
 
-        function dragended(d) {
+        function dragend(d) {
             if (!D3.event.active) {
                 simulation.alphaTarget(0);
             }
