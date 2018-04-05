@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, OnChanges, SimpleChange, SimpleChanges } from '@angular/core';
+import { Component, OnInit, Input, OnChanges, SimpleChange, SimpleChanges, HostListener } from '@angular/core';
 import * as D3 from 'd3';
 import { Node, Link, Graph, GraphDataService } from '../services/graph-data.service';
 import { ForceLink } from 'd3';
@@ -17,6 +17,9 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
 
     }
 
+    onDragEvent(e: Event){
+        e.preventDefault();
+    }
     ngOnInit() {
 
 
@@ -46,13 +49,13 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
         const simulation = this.createSimulation();
 
         simulation
-        .nodes(filteredNodes)
-        .on('tick', ticked);
+            .nodes(filteredNodes)
+            .on('tick', ticked);
 
         simulation.force<ForceLink<Node, Link>>('link').links(filteredLinks);
 
-        D3.timeout(()=>{
-            if(filteredNodes.length >= 1000){
+        D3.timeout(() => {
+            if (filteredNodes.length >= 1000) {
                 simulation.stop();
 
                 for (let i = 0; i < Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay())); i++) {
@@ -64,16 +67,13 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
         });
 
         const linkSelection = this.createLinksGroup(svg, filteredLinks);
-        const nodeSelection = this.createNodesGroup(svg, simulation, filteredNodes);
 
+        const nodeSelection = this.createNodesGroup(svg, simulation, filteredNodes);
+        const textSelection = this.createTextGroup(svg, filteredNodes);
         nodeSelection.append('title')
             .text((d: Node) => `User: ${d.id} Distance: ${d.group}`);
 
-            nodeSelection.append("text")
-    .attr("x", 0)
-    .attr("dy", ".35em")
-    .attr("text-anchor", "middle")
-    .text('!' );
+
 
 
 
@@ -91,6 +91,10 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             nodeSelection
                 .attr('cx', (d: { x }) => d.x)
                 .attr('cy', (d: { y }) => d.y);
+
+            textSelection
+                .attr('x', (d) => d.x)
+                .attr('y', (d) => d.y);
         }
 
 
@@ -114,6 +118,23 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             .data(links)
             .enter().append('line')
             .attr('stroke-width', (d: Link) => Math.sqrt(d.value));
+    }
+
+    createTextGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, nodes: Node[]) {
+        return svg.append('g')
+            .attr('class', 'node-text')
+            .selectAll('text')
+            .data(nodes)
+            .enter().append('text')
+            .attr('pointer-events', 'none')
+            //.attr('class', 'unselectable')
+            .attr('text-anchor', 'middle')
+          //  .attr("dx", 12)
+           // .attr("dy", ".35em")
+            //.style("font-size", "50px")
+            //.style("fill", "black")
+
+            .text('!');
     }
 
     createNodesGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, simulation: D3.Simulation<Node, Link>, nodes) {
