@@ -30,9 +30,9 @@ export interface SixDegreesConnection {
     metadata: { time: string, calls: number };
 }
 
-export class TestPath{
-    getPath(){
-        return { path: {'BarackObama': 0, 'Francis08563494': 1}, "daddy_yankee": 2, "eliazaroxlaj": 3, "A24": 4, "MUKASAJAMES18": 5};
+export class TestPath {
+    getPath() {
+        return { path: { 'BarackObama': 0, 'Francis08563494': 1 }, "daddy_yankee": 2, "eliazaroxlaj": 3, "A24": 4, "MUKASAJAMES18": 5 };
     }
 }
 
@@ -43,7 +43,7 @@ export class GraphDataService {
     userGraphSub: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
     hashGraphSub: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
     constructor(private endpoint: EndpointService) {
-        this.userGraphSub.next(    this.userConnectionsToGraph(this.testData.getUserData()));
+        this.userGraphSub.next(this.userConnectionsToGraph(this.testData.getUserData()));
     }
 
 
@@ -99,11 +99,13 @@ export class GraphDataService {
     userConnectionsToGraph = (data): Graph => {
         const nodes: Node[] = Object.keys(data)
             .map((user) => (
-                { id: user,
-                group: data[user].distance,
-                isShown: data[user].distance <= 1,
-                expandable: !!data[user].connections.length,
-                opened: data[user].distance === 0   }));
+                {
+                    id: user,
+                    group: data[user].distance,
+                    isShown: data[user].distance <= 1,
+                    expandable: !!data[user].connections.length,
+                    opened: data[user].distance === 0
+                }));
 
         const links: Link[] = this.createUserLinks(data, nodes);
 
@@ -111,13 +113,23 @@ export class GraphDataService {
         return { nodes: nodes, links: links };
     }
 
+    trimMatchingEntries<T>(array: T[], filter: (e, i) => boolean): T[] {
+        let i = array.length;
+        const deleted = [];
+        while (i--) {
+            if (filter(this[i], i)) {
+                deleted.push(array.splice(i, 1));
+            }
+        }
+
+        return deleted;
+    }
+
     sixDegreesToGraph = (data: SixDegreesConnection): Graph => {
         const nodes: Node[] = [];
-
-        Object.keys(data.path).forEach((point) => {
-            const position = data.path[point];
-            nodes[position] = { id: point, group: position, isShown: true, expandable: false, opened: true };
-        });
+        for (const [key, value] of Object.entries(data.path)) {
+            nodes[+value] = { id: key, group: +value, isShown: true, expandable: false, opened: true }
+        }
 
         const links: Link[] = [];
         for (let i = 1; i < nodes.length; i++) {
@@ -129,7 +141,7 @@ export class GraphDataService {
     }
 
 
-    createUserLinks(data, nodes: Node[]) {
+    createUserLinks(data, nodes: Node[]) { // TODO: look into bidirectional links
         const links: Link[] = [];
 
         nodes.forEach(element => {
