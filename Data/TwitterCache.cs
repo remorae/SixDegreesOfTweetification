@@ -91,22 +91,24 @@ namespace SixDegrees.Data
                 .SingleOrDefault()?.As<string>();
         }
 
-        internal static IEnumerable<UserResult> FindUserConnections(IConfiguration configuration, UserResult queried)
+        internal static IEnumerable<UserResult> FindUserConnections(IConfiguration configuration, UserResult queried) => FindUserConnections(configuration, queried.ID);
+
+        internal static IEnumerable<UserResult> FindUserConnections(IConfiguration configuration, string user_id)
         {
             using (IDriver driver = GraphDatabase.Driver(configuration["twitterCacheURI"], AuthTokens.Basic(configuration["twitterCacheUser"], configuration["twitterCachePassword"])))
             {
                 using (ISession session = driver.Session(AccessMode.Read))
                 {
-                    return session.ReadTransaction(tx => FindUserConnections(tx, queried));
+                    return session.ReadTransaction(tx => FindUserConnections(tx, user_id));
                 }
             }
         }
 
-        private static IEnumerable<UserResult> FindUserConnections(ITransaction tx, UserResult queried)
+        private static IEnumerable<UserResult> FindUserConnections(ITransaction tx, string user_id)
         {
             return tx.Run("MATCH (user:User {id: $ID})-[:FRIEND_FOLLOWER_OF]->(friend:User) " +
                 "RETURN friend",
-                new { queried.ID })
+                new { user_id })
                 .Select(record => new UserResult()
                 {
                     ID = record["ID"].As<string>(),
@@ -124,6 +126,34 @@ namespace SixDegrees.Data
                     Lang = record["Lang"].As<string>(),
                     ProfileImage = record["ProfileImage"].As<string>()
                 });
+        }
+
+        private static IEnumerable<UserResult> FindUserConnections(ITransaction tx, UserResult queried) => FindUserConnections(tx, queried.ID);
+
+        internal static bool UserConnectionsQueried(IConfiguration configuration, UserResult queried) => UserConnectionsQueried(configuration, queried.ID);
+
+        internal static bool UserConnectionsQueried(IConfiguration configuration, string user_id)
+        {
+            using (IDriver driver = GraphDatabase.Driver(configuration["twitterCacheURI"], AuthTokens.Basic(configuration["twitterCacheUser"], configuration["twitterCachePassword"])))
+            {
+                using (ISession session = driver.Session(AccessMode.Read))
+                {
+                    return session.ReadTransaction(tx => UserQueried(tx, user_id));
+                }
+            }
+        }
+
+        private static bool UserQueried(ITransaction tx, UserResult queried) => UserQueried(tx, queried.ID);
+
+        private static bool UserQueried(ITransaction tx, string userID)
+        {
+            bool? result = tx.Run("MATCH (user:User {id: $ID}) " +
+                "RETURN user.queried", new { ID = userID })
+                .SingleOrDefault()?[0].As<bool?>();
+            if (result.HasValue)
+                return result.Value;
+            else
+                return false;
         }
     }
 }

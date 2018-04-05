@@ -666,6 +666,9 @@ namespace SixDegrees.Controllers
 
                 UserResult queried = ToUserResult(await GetResults<UserSearchResults>(screen_name, AuthenticationType.Both, TwitterAPIUtils.UserSearchQuery, TwitterAPIEndpoint.UsersShow));
 
+                if (TwitterCache.UserConnectionsQueried(Configuration, queried))
+                    return Ok(TwitterCache.FindUserConnections(Configuration, queried));
+
                 string userID = queried?.ID;
                 if (userID == null)
                     return BadRequest("Invalid user screen name.");
@@ -706,6 +709,9 @@ namespace SixDegrees.Controllers
                 return BadRequest("Invalid parameters.");
             try
             {
+                if (TwitterCache.UserConnectionsQueried(Configuration, user_id))
+                    return Ok(TwitterCache.FindUserConnections(Configuration, user_id));
+
                 var followerResults = await GetResults<UserIdsResults>(
                     user_id,
                     AuthenticationType.User,
