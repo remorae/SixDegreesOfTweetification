@@ -11,6 +11,7 @@ export interface Node extends SimulationNodeDatum {
     isShown: boolean;
     expandable: boolean;
     opened: boolean;
+    compacted: boolean;
 }
 
 export interface Link extends SimulationLinkDatum<Node> {
@@ -104,11 +105,14 @@ export class GraphDataService {
                     group: data[user].distance,
                     isShown: data[user].distance <= 1,
                     expandable: !!data[user].connections.length,
-                    opened: data[user].distance === 0
+                    opened: data[user].distance === 0,
+                    compacted: false
                 }));
 
-        const links: Link[] = this.createUserLinks(data, nodes);
+       // const expandables = this.trimMatchingEntries<Node>(nodes, (e: Node, i) => e.expandable);
+       // let compactionFactor = 0;
 
+        const links: Link[] = this.createUserLinks(data, nodes);
 
         return { nodes: nodes, links: links };
     }
@@ -117,8 +121,8 @@ export class GraphDataService {
         let i = array.length;
         const deleted = [];
         while (i--) {
-            if (filter(this[i], i)) {
-                deleted.push(array.splice(i, 1));
+            if (filter(array[i], i)) {
+                deleted.push(...array.splice(i, 1));
             }
         }
 
@@ -128,7 +132,7 @@ export class GraphDataService {
     sixDegreesToGraph = (data: SixDegreesConnection): Graph => {
         const nodes: Node[] = [];
         for (const [key, value] of Object.entries(data.path)) {
-            nodes[+value] = { id: key, group: +value, isShown: true, expandable: false, opened: true }
+            nodes[+value] = { id: key, group: +value, isShown: true, expandable: false, opened: true, compacted: false };
         }
 
         const links: Link[] = [];
@@ -148,7 +152,9 @@ export class GraphDataService {
             const user = data[element.id];
             const connections = user ? user.connections : [];
             connections.forEach(connection => {
+                if(nodes.some((e: Node)=> e.id === connection.screenName)){
                 links.push({ source: element.id, target: connection.screenName, value: 1 });
+                }
             });
         });
 
