@@ -124,8 +124,8 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             .attr('pointer-events', 'none')
             //.attr('class', 'unselectable')
             .attr('text-anchor', 'middle')
-            .attr("dx", 0)
-            .attr("dy", ".30rem")
+            .attr('dx', 0)
+            .attr('dy', '.30rem')
             //.style("font-size", "50px")
             //.style("fill", "black")
 
