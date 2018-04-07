@@ -1,20 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using Neo4j.Driver.V1;
 using SixDegrees.Model;
+using SixDegrees.Model.JSON;
 
 namespace SixDegrees.Data
 {
     public class TwitterCache
     {
-        private static IDriver GetDriver(IConfiguration config) =>
-            GraphDatabase.Driver(config["twitterCacheURI"], AuthTokens.Basic(config["twitterCacheUser"], config["twitterCachePassword"]));
+        private static IDriver GetDriver(IConfiguration configuration) =>
+            GraphDatabase.Driver(configuration["twitterCacheURI"],
+                AuthTokens.Basic(configuration["twitterCacheUser"], configuration["twitterCachePassword"]));
 
-        internal static void UpdateUsers(IConfiguration config, IEnumerable<UserResult> users)
+        internal static void UpdateUsers(IConfiguration configuration, IEnumerable<UserResult> users)
         {
-            using (IDriver driver = GetDriver(config))
+            using (IDriver driver = GetDriver(configuration))
             {
                 ICollection<UserResult> toStore = new List<UserResult>();
                 using (ISession session = driver.Session(AccessMode.Write))
@@ -35,9 +38,9 @@ namespace SixDegrees.Data
                 new { user.ID, user.Name, user.ScreenName, user.Location, user.Description, user.FollowerCount, user.FriendCount, user.CreatedAt, user.TimeZone, user.GeoEnabled, user.Verified, user.StatusCount, user.Lang, user.ProfileImage });
         }
 
-        internal static void UpdateUsersByIDs(IConfiguration config, IEnumerable<string> userIDs)
+        internal static void UpdateUsersByIDs(IConfiguration configuration, IEnumerable<string> userIDs)
         {
-            using (IDriver driver = GetDriver(config))
+            using (IDriver driver = GetDriver(configuration))
             {
                 using (ISession session = driver.Session(AccessMode.Write))
                 {
@@ -53,9 +56,9 @@ namespace SixDegrees.Data
                 new { ID = userID });
         }
 
-        internal static UserResult LookupUserByName(IConfiguration config, string screenName)
+        internal static UserResult LookupUserByName(IConfiguration configuration, string screenName)
         {
-            using (IDriver driver = GetDriver(config))
+            using (IDriver driver = GetDriver(configuration))
             {
                 using (ISession session = driver.Session(AccessMode.Read))
                 {
@@ -72,9 +75,9 @@ namespace SixDegrees.Data
                 .SingleOrDefault()?[0].As<INode>().Properties);
         }
 
-        internal static UserResult LookupUser(IConfiguration config, string userID)
+        internal static UserResult LookupUser(IConfiguration configuration, string userID)
         {
-            using (IDriver driver = GetDriver(config))
+            using (IDriver driver = GetDriver(configuration))
             {
                 using (ISession session = driver.Session(AccessMode.Read))
                 {
@@ -258,12 +261,14 @@ namespace SixDegrees.Data
 
         private static List<List<ConnectionInfo<string>.Node>> ShortestHashtagPaths(ITransaction tx, string start, string end, int maxLength)
         {
-            return tx.Run("MATCH path=allShortestPaths((start:Hashtag {text: $start})-[*.." + maxLength + "]-(end:Hashtag {text: $end})) "
+            // Multiply max length by two since a hashtag-to-hashtag connection passes through a status node
+            return tx.Run("MATCH path=allShortestPaths((start:Hashtag {text: $start})-[*.." + maxLength * 2 + "]-(end:Hashtag {text: $end})) "
                 + "RETURN path",
                 new { start, end })
                 .Select(record => record[0]
                 .As<IPath>()
                 .Nodes
+                .Where(node => node.Properties.ContainsKey("text"))
                 .Select((node, index) => new ConnectionInfo<string>.Node(node.Properties["text"].ToString(), index))
                 .ToList())
                 .ToList();
@@ -282,20 +287,121 @@ namespace SixDegrees.Data
                 .ToList();
         }
 
-        internal static IEnumerable<T> Shared<T>(IConfiguration configuration, T start, T end) where T : class
+        internal static void UpdateHashtagConnections(IConfiguration configuration, string start, Status link, IEnumerable<string> connections)
+        {
+            using (IDriver driver = GetDriver(configuration))
+            {
+                using (ISession session = driver.Session(AccessMode.Write))
+                {
+                    foreach (string connection in connections)
+                        session.WriteTransaction(tx => UpdateHashtagConnection(tx, start, link, connection));
+                    session.WriteTransaction(tx => MarkHashtagQueried(tx, start));
+                }
+            }
+        }
+
+        private static void UpdateHashtagConnection(ITransaction tx, string start, Status status, string other)
+        {
+            tx.Run("MERGE (a:Hashtag {text: $Text}) " +
+                "MERGE (b:Hashtag {text: $Other}) " +
+                "MERGE (a)-[:TWEETED_IN]->(status:Status {idstr: $StatusIdStr})<-[:TWEETED_IN]-(b) " +
+                "SET status.favoriteCount = $FavoriteCount, status.inReplyToScreenName = $InReplyToScreenName, " +
+                "status.inReplyToStatusIdStr = $InReplyToStatusIdStr, status.inReplyToUserIdStr = $InReplyToUserIdStr, " +
+                "status.possiblySensitive = $PossiblySensitive, status.retweetCount = $RetweetCount, " +
+                "status.retweeted = $Retweeted, status.source = $Source, status.text = $StatusText, " +
+                "status.truncated = $Truncated, status.userScreenName = $UserScreenName, " +
+                "status.userIdStr = $UserIdStr",
+                new { Text = start, Other = other, StatusIdStr = status.IdStr, status.FavoriteCount,
+                    status.InReplyToScreenName, status.InReplyToStatusIdStr, status.InReplyToUserIdStr, status.PossiblySensitive,
+                    status.RetweetCount, status.Retweeted, status.Source, StatusText = status.Text, status.Truncated,
+                    UserScreenName = status.User.ScreenName, UserIdStr = status.User.IdStr});
+        }
+
+        private static void MarkHashtagQueried(ITransaction tx, string hashtag)
+        {
+            tx.Run("MATCH (tag:Hashtag {text: $Text}) " +
+                "SET tag.queried = true", new { Text = hashtag });
+        }
+
+        internal static bool HashtagConnectionsQueried(IConfiguration configuration, string hashtag)
         {
             using (IDriver driver = GetDriver(configuration))
             {
                 using (ISession session = driver.Session(AccessMode.Read))
                 {
-                    return session.ReadTransaction(tx => SharedConnections(tx, start, end));
+                    return session.ReadTransaction(tx => HashtagQueried(tx, hashtag));
                 }
             }
         }
 
-        private static IEnumerable<T> SharedConnections<T>(ITransaction tx, T start, T end) where T : class
+        private static bool HashtagQueried(ITransaction tx, string hashtag)
         {
-            return Enumerable.Empty<T>(); //TODO
+            bool? result = tx.Run("MATCH (tag:Hashtag {text: $Text}) " +
+                "RETURN tag.queried", new { Text = hashtag })
+                .SingleOrDefault()?[0].As<bool?>();
+            if (result.HasValue)
+                return result.Value;
+            else
+                return false;
+        }
+
+        internal static IDictionary<Status, IEnumerable<string>> FindHashtagConnections(IConfiguration configuration, string hashtag)
+        {
+            using (IDriver driver = GetDriver(configuration))
+            {
+                using (ISession session = driver.Session(AccessMode.Read))
+                {
+                    return session.ReadTransaction(tx => FindHashtagConnections(tx, hashtag));
+                }
+            }
+        }
+
+        private static IDictionary<Status, IEnumerable<string>> FindHashtagConnections(ITransaction tx, string hashtag)
+        {
+            return tx.Run("MATCH (start:Hashtag {text: $Text})-[:TWEETED_IN]->(status:Status)<-[TWEETED_IN]-(other) " +
+                "RETURN status, other.text",
+                new { Text = hashtag })
+                .Select(record => new
+                {
+                    Status = ToStatus(record[0].As<INode>().Properties),
+                    Tag = record[1].As<string>()
+                })
+                .GroupBy(link => link.Status)
+                .ToDictionary(group => (group.Key), group => group.AsEnumerable().Select(val => val.Tag));
+        }
+
+        private static Status ToStatus(IReadOnlyDictionary<string, object> properties)
+        {
+            if (properties == null)
+                return null;
+
+            properties.TryGetValue("favoriteCount", out object favoriteCount);
+            properties.TryGetValue("inReplyToScreenName", out object inReplyToScreenName);
+            properties.TryGetValue("inReplyToStatusIdStr", out object inReplyToStatusIdStr);
+            properties.TryGetValue("inReplyToUserIdStr", out object inReplyToUserIdStr);
+            properties.TryGetValue("possiblySensitive", out object possiblySensitive);
+            properties.TryGetValue("retweetCount", out object retweetCount);
+            properties.TryGetValue("retweeted", out object retweeted);
+            properties.TryGetValue("source", out object source);
+            properties.TryGetValue("text", out object text);
+            properties.TryGetValue("truncated", out object truncated);
+            properties.TryGetValue("userScreenName", out object userScreenName);
+            properties.TryGetValue("userIdStr", out object userIdStr);
+            return new Status()
+            {
+                IdStr = properties["idstr"].As<string>(),
+                FavoriteCount = favoriteCount?.As<long>(),
+                InReplyToScreenName = inReplyToScreenName?.As<string>(),
+                InReplyToStatusIdStr = inReplyToStatusIdStr?.As<string>(),
+                InReplyToUserIdStr = inReplyToUserIdStr?.As<string>(),
+                PossiblySensitive = possiblySensitive?.As<bool?>().GetValueOrDefault(),
+                RetweetCount = retweetCount?.As<long>() ?? 0,
+                Retweeted = retweeted?.As<bool>() ?? false,
+                Source = source?.As<string>(),
+                Text = text?.As<string>(),
+                Truncated = truncated?.As<bool>() ?? false,
+                User = new UserSearchResults() { IdStr = userIdStr?.As<string>(), ScreenName = userScreenName?.As<string>() }
+            };
         }
     }
 }
