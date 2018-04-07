@@ -397,7 +397,7 @@ namespace SixDegrees.Controllers
             {
                 DateTime startTime = DateTime.Now;
 
-                if (TwitterCache.ShortestPaths(Configuration, start, end, maxNumberOfDegrees, label) is List<List<ConnectionInfo<T>.Node>> cachedUserPaths)
+                if (TwitterCache.ShortestPaths(Configuration, start, end, maxNumberOfDegrees, label) is List<List<ConnectionInfo<T>.Node>> cachedUserPaths && cachedUserPaths.Count > 0)
                     return await FormatCachedLinkData(maxConnectionsPerNode, lookupFunc, startTime, cachedUserPaths);
 
                 IDictionary<Status, IEnumerable<T>> tweetLinksFound = new Dictionary<Status, IEnumerable<T>>();
