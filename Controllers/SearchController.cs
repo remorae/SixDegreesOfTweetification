@@ -207,7 +207,7 @@ namespace SixDegrees.Controllers
                     string toQuery = remaining.Pop();
                     queried.Add(toQuery);
                     int previousRateLimit = RateLimitController.GetCurrentUserInfo(rateLimitDb, TwitterAPIEndpoint.SearchTweets, userManager, User).Limit;
-                    if (await GetUniqueHashtags(toQuery) is OkObjectResult result && result.Value is IDictionary<Status, IEnumerable<string>> lookup)
+                    if (await GetUniqueHashtags(toQuery) is IDictionary<Status, IEnumerable<string>> lookup)
                     {
                         int newRateLimit = RateLimitController.GetCurrentUserInfo(rateLimitDb, TwitterAPIEndpoint.SearchTweets, userManager, User).Limit;
                         if (newRateLimit < previousRateLimit)
@@ -269,17 +269,18 @@ namespace SixDegrees.Controllers
                     queried.Add(toQuery);
                     if (await GetUserConnections(toQuery) is OkObjectResult result && result.Value is IEnumerable<UserResult> lookup)
                     {
+                        lookup = lookup.Distinct().Where(user => user.ScreenName != null);
                         int newRateLimit = RateLimitController.GetCurrentUserInfo(rateLimitDb, TwitterAPIEndpoint.FollowersIDs, userManager, User).Limit;
                         if (newRateLimit < previousRateLimit)
                             ++callsMade;
-                        foreach (var user in lookup.Distinct())
+                        foreach (var user in lookup)
                         {
                             results[toQuery].Connections.Add(user);
                             if (results[toQuery].Connections.Count >= maxNodeConnections)
                                 break;
                         }
                         int nextDistance = results[toQuery].Distance + 1;
-                        foreach (var user in lookup.Distinct().Where(user => !queried.Contains(user.ScreenName)).Where(user => !remaining.Contains(user.ScreenName)).Take(maxNodeConnections))
+                        foreach (var user in lookup.Where(user => !queried.Contains(user.ScreenName)).Where(user => !remaining.Contains(user.ScreenName)).Take(maxNodeConnections))
                         {
                             if (nextDistance < numberOfDegrees)
                                 remaining.Push(user.ScreenName);
@@ -733,7 +734,12 @@ namespace SixDegrees.Controllers
                     return BadRequest("Invalid user screen name.");
 
                 if (TwitterCache.UserConnectionsQueried(Configuration, queried))
+                {
+                    IEnumerable<UserResult> cachedResults = TwitterCache.FindUserConnections(Configuration, queried).Take(limit);
+                    TwitterCache.UpdateUsers(Configuration, await LookupIDs(maxLookupCount * MaxSingleQueryUserLookupCount, cachedResults.Where(user => user.ScreenName == null).Select(user => user.ID).ToList()));
+                    // Now that all cached users have been looked up, return the updated cached results.
                     return Ok(TwitterCache.FindUserConnections(Configuration, queried).Take(limit));
+                }
 
                 var remainingIDsToLookup = ((await GetUserConnectionIDs(userID) as OkObjectResult)?.Value as IEnumerable<string> ?? Enumerable.Empty<string>()).ToList();
                 ICollection<UserResult> results = await LookupIDs(lookupLimit, remainingIDsToLookup);

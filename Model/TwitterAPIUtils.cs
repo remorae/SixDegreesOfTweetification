@@ -99,6 +99,13 @@ namespace SixDegrees.Model
                             throw new Exception($"Unable to authenticate Twitter API call of type {authType}, endpoint {endpoint}.");
                         using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
                         {
+                            if (!response.IsSuccessStatusCode)
+                            {
+                                if (authTypeUsed.Value == AuthenticationType.Application)
+                                    RateLimitCache.Get[endpoint].Update(RateLimitCache.Get[endpoint].Limit - 1);
+                                else
+                                    userStatus?.Update(userStatus.Limit - 1);
+                            }
                             response.EnsureSuccessStatusCode();
                             if (response.Headers.TryGetValues("x-rate-limit-remaining", out IEnumerable<string> remaining) &&
                                 response.Headers.TryGetValues("x-rate-limit-reset", out IEnumerable<string> reset))
