@@ -129,7 +129,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             //.style("font-size", "50px")
             //.style("fill", "black")
 
-            .text((d) => (d.expandable) ? '!' : '');
+            .text((d) => (d.onPath) ? '!' : '');
     }
 
     createNodesGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, simulation: D3.Simulation<Node, Link>, nodes) {
