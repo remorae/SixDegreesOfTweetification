@@ -9,27 +9,36 @@ export interface Node extends SimulationNodeDatum {
     id: string;
     group: number;
     isShown: boolean;
-    expandable: boolean;
-    opened: boolean;
-    compacted: boolean;
+    onPath: boolean;
 }
 
 export interface Link extends SimulationLinkDatum<Node> {
     source: string;
     target: string;
     value: number;
+    onPath: boolean;
 }
 
 export interface Graph {
     links: Link[];
     nodes: Node[];
+    metaData: ConnectionMetaData;
 }
 
-export interface SixDegreesConnection {
-    path: {};
+export interface SixDegreesConnection<T> {
+
+
+    connections: { [hashtag: string]: T[] };
+    paths: { [distance: number]: T }[];
     links: string[];
-    metadata: { time: string, calls: number };
+    metaData: ConnectionMetaData;
+
 }
+export interface ConnectionMetaData {
+    time: string;
+    calls: number;
+}
+
 
 export class TestPath {
     getPath() {
@@ -44,14 +53,14 @@ export class GraphDataService {
     userGraphSub: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
     hashGraphSub: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
     constructor(private endpoint: EndpointService) {
-        this.userGraphSub.next(this.userConnectionsToGraph(this.testData.getUserData()));
+        //this.userGraphSub.next(this.userConnectionsToGraph(this.testData.getUserData()));
     }
 
 
     getHashConnectionData(hashtag1: string, hashtag2: string) {
         this.endpoint
             .getHashSixDegrees(hashtag1, hashtag2)
-            .map(this.sixDegreesToGraph)
+            .map(this.hashDegreesToGraph)
             .subscribe(
                 (graph: Graph) => {
                     this.hashGraphSub.next(graph);
@@ -104,17 +113,18 @@ export class GraphDataService {
                     id: user,
                     group: data[user].distance,
                     isShown: data[user].distance <= 1,
-                    expandable: !!data[user].connections.length,
-                    opened: data[user].distance === 0,
-                    compacted: false
+                   // expandable: !!data[user].connections.length,
+                   // opened: data[user].distance === 0,
+                   // compacted: false
+                   onPath: false
                 }));
 
-       // const expandables = this.trimMatchingEntries<Node>(nodes, (e: Node, i) => e.expandable);
-       // let compactionFactor = 0;
+        // const expandables = this.trimMatchingEntries<Node>(nodes, (e: Node, i) => e.expandable);
+        // let compactionFactor = 0;
 
         const links: Link[] = this.createUserLinks(data, nodes);
 
-        return { nodes: nodes, links: links };
+        return { nodes: nodes, links: links, metaData: null };
     }
 
     trimMatchingEntries<T>(array: T[], filter: (e, i) => boolean): T[] {
@@ -129,19 +139,45 @@ export class GraphDataService {
         return deleted;
     }
 
-    sixDegreesToGraph = (data: SixDegreesConnection): Graph => {
+    hashDegreesToGraph(data: SixDegreesConnection<string>) {
+        const nodes = Array.from(new Set([].concat(...Object.values(data.connections)).concat(Object.keys(data))))
+                        .map((e): Node => ({ id: e, group: 0, isShown: true, onPath: false }));
+
+        //TODO: include orphan purge
+
+        const nodeMap = new Map<string, Node>();
+        nodes.forEach((node) => {
+            nodeMap.set(node.id, node);
+        });
+
+        const keys = Object.keys(data.connections);
+        const links: Link[] = [];
+        for (let index = keys.length - 1; index >= 0; index--) {
+            const element = keys[index];
+            data.connections[element].forEach((c) => {
+                links.push({ source: element, target: c, value: 1, onPath: false });
+            });
+             nodeMap.get(element).group = index;
+        }
+
+
+
+        return { nodes: nodes, links: links, metaData: data.metaData };
+    }
+
+    sixDegreesToGraph = (data): Graph => {
         const nodes: Node[] = [];
         for (const [key, value] of Object.entries(data.path)) {
-            nodes[+value] = { id: key, group: +value, isShown: true, expandable: false, opened: true, compacted: false };
+            nodes[+value] = { id: key, group: +value, isShown: true, onPath: false};
         }
 
         const links: Link[] = [];
         for (let i = 1; i < nodes.length; i++) {
             const source = nodes[i - 1];
             const target = nodes[i];
-            links.push({ source: source.id, target: target.id, value: 10 });
+            links.push({ source: source.id, target: target.id, value: 10, onPath: false });
         }
-        return { nodes: nodes, links: links };
+        return { nodes: nodes, links: links, metaData: null };
     }
 
 
@@ -152,8 +188,8 @@ export class GraphDataService {
             const user = data[element.id];
             const connections = user ? user.connections : [];
             connections.forEach(connection => {
-                if(nodes.some((e: Node)=> e.id === connection.screenName)){
-                links.push({ source: element.id, target: connection.screenName, value: 1 });
+                if (nodes.some((e: Node) => e.id === connection.screenName)) {
+                    links.push({ source: element.id, target: connection.screenName, value: 1, onPath: false });
                 }
             });
         });
