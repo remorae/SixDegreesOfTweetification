@@ -10,6 +10,7 @@ export interface Node extends SimulationNodeDatum {
     group: number;
     isShown: boolean;
     onPath: boolean;
+
 }
 
 export interface Link extends SimulationLinkDatum<Node> {
@@ -113,10 +114,10 @@ export class GraphDataService {
                     id: user,
                     group: data[user].distance,
                     isShown: data[user].distance <= 1,
-                   // expandable: !!data[user].connections.length,
-                   // opened: data[user].distance === 0,
-                   // compacted: false
-                   onPath: false
+                    // expandable: !!data[user].connections.length,
+                    // opened: data[user].distance === 0,
+                    // compacted: false
+                    onPath: false
                 }));
 
         // const expandables = this.trimMatchingEntries<Node>(nodes, (e: Node, i) => e.expandable);
@@ -126,6 +127,77 @@ export class GraphDataService {
 
         return { nodes: nodes, links: links, metaData: null };
     }
+
+
+
+    hashDegreesToGraph = (data: SixDegreesConnection<string>) => {
+        const nodes = Array.from(new Set([].concat(...Object.values(data.connections)).concat(Object.keys(data.connections))))
+            .map((e): Node => ({ id: e, group: 1, isShown: true, onPath: false }));
+
+
+        const nodeMap = new Map<string, Node>();
+        const linkMap = new Map<string, Link>();
+        nodes.forEach((node) => {
+            nodeMap.set(node.id, node);
+        });
+
+        const keys = Object.keys(data.connections);
+        const links: Link[] = [];
+        for (let index = 0; index < keys.length; index++) {
+            const element = keys[index];
+            data.connections[element].forEach((c) => {
+                const link = { source: element, target: c, value: 1, onPath: false };
+                links.push(link);
+                linkMap.set(`${link.source} ${link.target}`, link);
+            });
+        }
+        const paths = data.paths;
+        let start = null;
+        let end = null;
+        paths.forEach(path => {
+            const array: string[] = [];
+            for (const [key, value] of Object.entries(path)) {
+                array[key] = value;
+            }
+            start = array[0];
+            end = array[array.length - 1];
+            for (let i = 1; i < array.length; i++) {
+                const sourceNode = array[i - 1];
+                const targetNode = array[i];
+                nodeMap.get(sourceNode).onPath = true;
+                nodeMap.get(targetNode).onPath = true;
+                const link = linkMap.get(`${sourceNode} ${targetNode}`);
+                link.onPath = true;
+                link.value = 5;
+
+            }
+        });
+
+        const queue: string[] = [];
+        const visited = new Set<string>();
+        const startNode = nodeMap.get(start);
+        startNode.group = 0;
+        visited.add(startNode.id);
+        queue.push(startNode.id);
+
+        while (queue.length > 0) {
+
+            const curr = queue.shift();
+            const currNode = nodeMap.get(curr);
+            const neighbors = links.filter((e) => e.source === curr);
+            neighbors.forEach(n => {
+
+                if (!visited.has(n.target)) {
+                    visited.add(n.target);
+                    queue.push(n.target);
+                    nodeMap.get(n.target).group = currNode.group + 1;
+                }
+            });
+        }
+
+        return { nodes: nodes, links: links, metaData: data.metaData };
+    }
+
 
     trimMatchingEntries<T>(array: T[], filter: (e, i) => boolean): T[] {
         let i = array.length;
@@ -139,36 +211,10 @@ export class GraphDataService {
         return deleted;
     }
 
-    hashDegreesToGraph(data: SixDegreesConnection<string>) {
-        const nodes = Array.from(new Set([].concat(...Object.values(data.connections)).concat(Object.keys(data))))
-                        .map((e): Node => ({ id: e, group: 0, isShown: true, onPath: false }));
-
-        //TODO: include orphan purge
-
-        const nodeMap = new Map<string, Node>();
-        nodes.forEach((node) => {
-            nodeMap.set(node.id, node);
-        });
-
-        const keys = Object.keys(data.connections);
-        const links: Link[] = [];
-        for (let index = keys.length - 1; index >= 0; index--) {
-            const element = keys[index];
-            data.connections[element].forEach((c) => {
-                links.push({ source: element, target: c, value: 1, onPath: false });
-            });
-             nodeMap.get(element).group = index;
-        }
-
-
-
-        return { nodes: nodes, links: links, metaData: data.metaData };
-    }
-
     sixDegreesToGraph = (data): Graph => {
         const nodes: Node[] = [];
         for (const [key, value] of Object.entries(data.path)) {
-            nodes[+value] = { id: key, group: +value, isShown: true, onPath: false};
+            nodes[+value] = { id: key, group: +value, isShown: true, onPath: false };
         }
 
         const links: Link[] = [];
