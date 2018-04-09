@@ -100,19 +100,23 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
         return D3.forceSimulation<Node, Link>()
             .force('link', D3.forceLink().id((d: { id }) => d.id))
             .force('charge', D3.forceManyBody().distanceMax(this.maxForceDistance))
-            .force('center', D3.forceCenter(this.svgWidth / 2, this.svgHeight / 2));
+            .force('center', D3.forceCenter(this.svgWidth / 2, this.svgHeight / 2))
+            // .force('collision', D3.forceCollide().radius((d: Node)=> d.group ? 5 : 10 ))
+            ;
     }
 
     createLinksGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, links: Link[]): D3.Selection<D3.BaseType, {}, D3.BaseType, {}> {
 
         return svg.append('g')
             .attr('class', 'links')
-            .attr('stroke', '#999')
-            .attr('stroke-opacity', '0.6')
+            //.attr('stroke', '#999')
+           // .attr('stroke-opacity',   '0.6')
             .selectAll('line')
             .data(links)
             .enter().append('line')
-            .attr('stroke-width', (d: Link) => Math.sqrt(d.value));
+            .attr('stroke-width', (d: Link) => Math.sqrt(d.value))
+            .attr('stroke', (d: Link) => d.onPath ? 'black' :'#999')
+            .attr('stroke-opacity',   (d: Link) => d.onPath ? '1' :'0.6');
     }
 
     createTextGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, nodes: Node[]) {
@@ -132,6 +136,8 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             .text((d) => (d.onPath) ? '!' : '');
     }
 
+
+
     createNodesGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, simulation: D3.Simulation<Node, Link>, nodes) {
         const color = D3.scaleOrdinal(D3.schemeCategory10);
         return svg.append('g')
@@ -141,6 +147,8 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             .enter().append('circle')
             .attr('r', (d: Node) => d.group ? 5 : 10)
             .attr('fill', (d: Node) => color(d.group.toString()))
+            .attr('stroke', (d: Node) => d.onPath ? 'black' : '')
+            .attr('stroke-width', (d: Node) => d.onPath ? 1 : 0)
             .call(D3.drag()
                 .on('start', dragbegin)
                 .on('drag', dragging)
