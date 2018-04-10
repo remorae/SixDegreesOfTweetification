@@ -162,7 +162,7 @@ namespace SixDegrees.Data
             if (other == null)
                 return null;
 
-            other.TryGetValue("timeZone", out object name);
+            other.TryGetValue("name", out object name);
             other.TryGetValue("screenName", out object screenName);
             other.TryGetValue("location", out object location);
             other.TryGetValue("description", out object description);
