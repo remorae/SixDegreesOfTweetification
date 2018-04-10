@@ -6,8 +6,7 @@ namespace SixDegrees.Controllers
     internal class LinkData<T>
     {
         public Dictionary<string, IEnumerable<T>> Connections { get; set; }
-        public IEnumerable<Dictionary<int, T>> Paths { get; set; }
-        public IEnumerable<string> Links { get; set; }
+        public IEnumerable<LinkPath<T>> Paths { get; set; }
         public LinkMetaData Metadata { get; set; }
     }
 
@@ -15,5 +14,11 @@ namespace SixDegrees.Controllers
     {
         public TimeSpan Time { get; set; }
         public int Calls { get; set; }
+    }
+
+    public class LinkPath<T>
+    {
+        public Dictionary<int, T> Path { get; set; }
+        public IEnumerable<string> Links { get; set; }
     }
 }
