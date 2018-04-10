@@ -376,13 +376,12 @@ namespace SixDegrees.Controllers
                 var pathResults = await findPath();
                 if (pathResults is LinkData<UserResult> originalLinkData)
                 {
-                    var idsToLookup = originalLinkData.Connections.Select(connection => connection.Key)
-                        .Union(originalLinkData.Paths.Aggregate(new List<string>(), (set, path) =>
+                    var idsToLookup = originalLinkData.Paths.Aggregate(new List<string>(), (set, path) =>
                         {
-                            foreach (var id in path.Select(link => link.Value.ID))
+                            foreach (var id in path.Where(link => link.Value.ScreenName == null).Select(link => link.Value.ID))
                                 set.Add(id);
                             return set;
-                        }))
+                        })
                         .Distinct();
                     if (idsToLookup.Count() > 0)
                     {
@@ -512,12 +511,15 @@ namespace SixDegrees.Controllers
                     var node = path[i];
                     string key = (node.Value is UserResult user) ? user.ScreenName : node.Value as string;
                     var lookupResults = (await connectionLookupFunc(node.Value) as OkObjectResult)?.Value;
-                    cachedConnections[key] = ExtractConnections<T>(maxConnectionsPerNode, lookupResults);
-
-                    if (node.Value is string)
+                    if (lookupResults != null)
                     {
-                        foreach (var entry in ((IDictionary<Status, IEnumerable<T>>)lookupResults).Where(entry => !cachedLinks.ContainsKey(entry.Key)))
-                            cachedLinks.Add(entry.Key, entry.Value);
+                        cachedConnections[key] = ExtractConnections<T>(maxConnectionsPerNode, lookupResults);
+
+                        if (node.Value is string)
+                        {
+                            foreach (var entry in ((IDictionary<Status, IEnumerable<T>>)lookupResults).Where(entry => !cachedLinks.ContainsKey(entry.Key)))
+                                cachedLinks.Add(entry.Key, entry.Value);
+                        }
                     }
                 }
             }
