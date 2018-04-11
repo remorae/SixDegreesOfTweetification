@@ -211,6 +211,7 @@ export class GraphDataService {
         return deleted;
     }
 
+
     sixDegreesToGraph = (data): Graph => {
         const nodes: Node[] = [];
         for (const [key, value] of Object.entries(data.path)) {
