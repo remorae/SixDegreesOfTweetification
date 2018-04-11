@@ -162,7 +162,7 @@ namespace SixDegrees.Data
             if (other == null)
                 return null;
 
-            other.TryGetValue("timeZone", out object name);
+            other.TryGetValue("name", out object name);
             other.TryGetValue("screenName", out object screenName);
             other.TryGetValue("location", out object location);
             other.TryGetValue("description", out object description);
@@ -237,7 +237,7 @@ namespace SixDegrees.Data
                 .Select(record => record[0].As<string>());
         }
 
-        internal static List<List<ConnectionInfo<T>.Node>> ShortestPaths<T>(IConfiguration configuration, T start, T end, int maxLength, string label) where T : class
+        internal static List<(List<ConnectionInfo<T>.Node> Path, List<Status> Links)> ShortestPaths<T>(IConfiguration configuration, T start, T end, int maxLength, string label) where T : class
         {
             using (IDriver driver = GetDriver(configuration))
             {
@@ -246,32 +246,19 @@ namespace SixDegrees.Data
                     if (label == "User")
                         if (start is UserResult)
                             return session.ReadTransaction(tx => ShortestUserPaths(tx, (start as UserResult).ID, (end as UserResult).ID, maxLength))
-                            .As<List<List<ConnectionInfo<T>.Node>>>();
+                            .As<List<List<ConnectionInfo<T>.Node>>>()
+                            .Select(list => (list, new List<Status>()))
+                            .ToList();
                         else
                             return session.ReadTransaction(tx => ShortestUserPaths(tx, start as string, end as string, maxLength))
                             .As<List<List<ConnectionInfo<UserResult>.Node>>>()
-                            ?.Select(list => list.Select(node => new ConnectionInfo<T>.Node(node.Value.ID as T, node.Distance)).ToList())
+                            ?.Select(list => (list.Select(node => new ConnectionInfo<T>.Node(node.Value.ID as T, node.Distance)).ToList(), new List<Status>()))
                             .ToList();
                     else
                         return session.ReadTransaction(tx => ShortestHashtagPaths(tx, start as string, end as string, maxLength))
-                            .As<List<List<ConnectionInfo<T>.Node>>>();
+                            .As<List<(List<ConnectionInfo<T>.Node>, List<Status>)>>();
                 }
             }
-        }
-
-        private static List<List<ConnectionInfo<string>.Node>> ShortestHashtagPaths(ITransaction tx, string start, string end, int maxLength)
-        {
-            // Multiply max length by two since a hashtag-to-hashtag connection passes through a status node
-            return tx.Run("MATCH path=allShortestPaths((start:Hashtag {text: $start})-[*.." + maxLength * 2 + "]-(end:Hashtag {text: $end})) "
-                + "RETURN path",
-                new { start, end })
-                .Select(record => record[0]
-                .As<IPath>()
-                .Nodes
-                .Where(node => node.Properties.ContainsKey("text"))
-                .Select((node, index) => new ConnectionInfo<string>.Node(node.Properties["text"].ToString(), index))
-                .ToList())
-                .ToList();
         }
 
         private static List<List<ConnectionInfo<UserResult>.Node>> ShortestUserPaths(ITransaction tx, string start, string end, int maxLength)
@@ -284,6 +271,61 @@ namespace SixDegrees.Data
                 .Nodes
                 .Select((node, index) => new ConnectionInfo<UserResult>.Node(ToUserResult(node.Properties), index))
                 .ToList())
+                .ToList();
+        }
+
+        private static List<(List<ConnectionInfo<string>.Node> Path, List<Status> Links)> ShortestHashtagPaths(ITransaction tx, string start, string end, int maxLength)
+        {
+            // Multiply max length by two since a hashtag-to-hashtag connection passes through a status node
+            return tx.Run("MATCH path=allShortestPaths((start:Hashtag {text: $start})-[*.." + maxLength * 2 + "]-(end:Hashtag {text: $end})) " +
+                "RETURN path " +
+                "LIMIT 100",
+                new { start, end })
+                .Select(ToPathWithLinks())
+                .Distinct(new PathEqualityComparer())
+                .ToList();
+        }
+
+        private class PathEqualityComparer : EqualityComparer<(List<ConnectionInfo<string>.Node> Path, List<Status> Links)>
+        {
+            public override bool Equals((List<ConnectionInfo<string>.Node> Path, List<Status> Links) x, (List<ConnectionInfo<string>.Node> Path, List<Status> Links) y)
+            {
+                if (x.Path.Count != y.Path.Count)
+                    return false;
+                for (int i = 0; i < x.Path.Count; ++i)
+                    if (!x.Path[i].Value.Equals(y.Path[i].Value))
+                        return false;
+                return true;
+            }
+
+            public override int GetHashCode((List<ConnectionInfo<string>.Node> Path, List<Status> Links) obj)
+            {
+                return obj.Path
+                    .Select(node => node.Value.GetHashCode())
+                    .Aggregate((one, two) => one.GetHashCode() ^ two.GetHashCode());
+            }
+        }
+
+        private static Func<IRecord, (List<ConnectionInfo<string>.Node>, List<Status>)> ToPathWithLinks() =>
+            record => (GetPath(record), GetLinks(record));
+
+        private static List<Status> GetLinks(IRecord record)
+        {
+            return record[0]
+                .As<IPath>()
+                .Nodes
+                .Where(node => node.Labels.Contains("Status"))
+                .Select(node => ToStatus(node.Properties))
+                .ToList();
+        }
+
+        private static List<ConnectionInfo<string>.Node> GetPath(IRecord record)
+        {
+            return record[0]
+                .As<IPath>()
+                .Nodes
+                .Where(node => node.Labels.Contains("Hashtag"))
+                .Select((node, index) => new ConnectionInfo<string>.Node(node.Properties["text"].ToString(), index))
                 .ToList();
         }
 
@@ -345,21 +387,21 @@ namespace SixDegrees.Data
                 return false;
         }
 
-        internal static IDictionary<Status, IEnumerable<string>> FindHashtagConnections(IConfiguration configuration, string hashtag)
+        internal static IDictionary<Status, IEnumerable<string>> FindHashtagConnections(IConfiguration configuration, string hashtag, int max)
         {
             using (IDriver driver = GetDriver(configuration))
             {
                 using (ISession session = driver.Session(AccessMode.Read))
                 {
-                    return session.ReadTransaction(tx => FindHashtagConnections(tx, hashtag));
+                    return session.ReadTransaction(tx => FindHashtagConnections(tx, hashtag, max));
                 }
             }
         }
 
-        private static IDictionary<Status, IEnumerable<string>> FindHashtagConnections(ITransaction tx, string hashtag)
+        private static IDictionary<Status, IEnumerable<string>> FindHashtagConnections(ITransaction tx, string hashtag, int max)
         {
             return tx.Run("MATCH (start:Hashtag {text: $Text})-[:TWEETED_IN]->(status:Status)<-[TWEETED_IN]-(other) " +
-                "RETURN status, other.text",
+                "RETURN status, other.text LIMIT " + max,
                 new { Text = hashtag })
                 .Select(record => new
                 {
