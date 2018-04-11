@@ -320,10 +320,8 @@ namespace SixDegrees.Controllers
 
         private async Task<IDictionary<Status, IEnumerable<string>>> GetUniqueHashtags(string query, int max, bool allowAPICalls = true)
         {
-            if (TwitterCache.HashtagConnectionsQueried(Configuration, query.ToLower()))
+            if (TwitterCache.HashtagConnectionsQueried(Configuration, query.ToLower()) || !allowAPICalls)
                 return TwitterCache.FindHashtagConnections(Configuration, query.ToLower(), max);
-            if (!allowAPICalls)
-                return new Dictionary<Status, IEnumerable<string>>();
 
             IDictionary<Status, IEnumerable<string>> results = (await GetResults<TweetSearchResults>(
                 query,
@@ -720,15 +718,13 @@ namespace SixDegrees.Controllers
                 if (userID == null)
                     return BadRequest("Invalid user screen name.");
 
-                if (TwitterCache.UserConnectionsQueried(Configuration, queried))
+                if (TwitterCache.UserConnectionsQueried(Configuration, queried) || !allowAPICalls)
                 {
                     IEnumerable<UserResult> cachedResults = TwitterCache.FindUserConnections(Configuration, queried).Take(limit);
                     TwitterCache.UpdateUsers(Configuration, await LookupIDs(maxLookupCount * MaxSingleQueryUserLookupCount, cachedResults.Where(user => user.ScreenName == null).Select(user => user.ID).ToList()));
                     // Now that all cached users have been looked up, return the updated cached results.
                     return Ok(TwitterCache.FindUserConnections(Configuration, queried).Take(limit));
                 }
-                if (!allowAPICalls)
-                    return Ok(Enumerable.Empty<UserResult>());
 
                 var remainingIDsToLookup = ((await GetUserConnectionIDs(userID) as OkObjectResult)?.Value as IEnumerable<string> ?? Enumerable.Empty<string>()).ToList();
                 ICollection<UserResult> results = await LookupIDs(lookupLimit, remainingIDsToLookup);
@@ -773,10 +769,8 @@ namespace SixDegrees.Controllers
                 return BadRequest("Invalid parameters.");
             try
             {
-                if (TwitterCache.UserConnectionsQueried(Configuration, user_id))
+                if (TwitterCache.UserConnectionsQueried(Configuration, user_id) || !allowAPICalls)
                     return Ok(TwitterCache.FindUserConnectionIDs(Configuration, user_id));
-                if (!allowAPICalls)
-                    return Ok(Enumerable.Empty<string>());
 
                 var followerResults = await GetResults<UserIdsResults>(
                     user_id,
