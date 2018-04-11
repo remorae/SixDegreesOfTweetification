@@ -8,7 +8,12 @@
             <h3 *ngIf="latestSearchStart && latestSearchEnd && !hashGraph">
                     <i class="fa fa-spinner fa-spin mr-2"></i>Loading...
                 </h3>
-                <app-graph-visualizer [graph]="hashGraph"></app-graph-visualizer>
+                <button *ngIf="hashGraph" (click)="showModal()">Show connections for #{{latestSearchStart}} and #{{latestSearchEnd}}</button>
+
 
     </div>
 </div>
+
+
+            <app-graph-visualizer *ngIf="modalActive" [graph]="hashGraph"></app-graph-visualizer>
+

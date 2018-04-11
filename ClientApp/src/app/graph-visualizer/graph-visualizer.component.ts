@@ -10,8 +10,8 @@ import { ForceLink } from 'd3';
 export class GraphVisualizerComponent implements OnInit, OnChanges {
 
     @Input() graph: { links, nodes };
-    readonly svgHeight = 900;
-    readonly svgWidth = 900;
+   svgHeight = 900;
+     svgWidth = 900;
     readonly maxForceDistance = 250;
     constructor() {
 
@@ -41,6 +41,9 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
 
     drawGraph() { // credit to https://bl.ocks.org/mbostock/4062045
         const svg = D3.select('svg.graph-container');
+        const temp = document.querySelector('svg.graph-container') as SVGElement;
+        this.svgHeight = +temp.getBoundingClientRect().height;
+        this.svgWidth = +temp.getBoundingClientRect().width;
         const filteredNodes: Node[] = this.filterNodes();
         const filteredLinks: Link[] = this.filterLinks(filteredNodes);
         const simulation = this.createSimulation();
@@ -101,7 +104,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             .force('link', D3.forceLink().id((d: { id }) => d.id))
             .force('charge', D3.forceManyBody().distanceMax(this.maxForceDistance))
             .force('center', D3.forceCenter(this.svgWidth / 2, this.svgHeight / 2))
-            // .force('collision', D3.forceCollide().radius((d: Node)=> d.group ? 5 : 10 ))
+    //         .force('collision', D3.forceCollide().radius((d: Node)=> d.group ? 5 : 10 ))
             ;
     }
 

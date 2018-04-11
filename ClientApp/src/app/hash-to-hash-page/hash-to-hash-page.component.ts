@@ -12,11 +12,13 @@ export class HashToHashPageComponent implements OnInit {
     latestSearchStart;
     latestSearchEnd;
     hashGraph;
+    modalActive = true;
     constructor(private graphData: GraphDataService) { }
 
     ngOnInit() {
         this.graphData.getLatestHashData().subscribe((g: Graph) => {
             this.hashGraph = g;
+            this.showModal();
         });
     }
     onUserSubmit(input: UserInput) {
@@ -25,5 +27,9 @@ export class HashToHashPageComponent implements OnInit {
         this.graphData.getHashConnectionData(hashtag1, hashtag2);
         this.latestSearchStart = hashtag1;
         this.latestSearchEnd = hashtag2;
+    }
+
+    showModal() {
+        this.modalActive = !this.modalActive;
     }
 }
