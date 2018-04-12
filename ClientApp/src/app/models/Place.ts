@@ -7,3 +7,8 @@ export class PlaceResult {
     hashtags: string[];
     sources: string[];
 }
+
+export class Place extends PlaceResult {
+    lat: number;
+    lng: number;
+}
