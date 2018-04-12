@@ -1,35 +1,27 @@
 <div class="clearfix mb-4">
     <h1 class="mb-3 d-inline-block align-top">Geographical Statistics</h1>
     <app-single-input (userSubmit)="onUserSubmit($event)" inputType="hashtag"></app-single-input>
-    <app-select-geo-filter [countries]="countries"></app-select-geo-filter>
 </div>
 
 <div class="card mb-3">
     <div class="card-body">
-        <h3 *ngIf="!latestSearch && !countries">^ Search the Globe for Hashtags! ^</h3>
-        <h3 *ngIf="latestSearch && !countries">
+        <!--
+        <h3 *ngIf="loading">
             <i class="fa fa-spinner fa-spin mr-2"></i>Loading...
         </h3>
-        <h3 *ngIf="countries">Countries for #{{latestSearch}}:</h3>
-        <ul *ngIf="countries && !!countries.length" class="d-flex list-inline">
-            <li *ngFor="let country of countries" class="col list-inline-item">
-                <h4>{{ country.name }}</h4>
-                <ul class="list-unstyled">
-                    <li *ngFor="let place of country.places" class="card">
-                        <div class="card-body">
-                            <strong>{{ place.type }}: </strong>
-                            {{ place.name }}
-                            <h5 class="h6 mt-3 mb-1">Hashtags</h5>
-                            <ul class="list-group">
-                                <li *ngFor="let tag of place.hashtags" class="list-group-item">
-                                    {{ tag }}
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
-                </ul>
-            </li>
-        </ul>
-        <h3 *ngIf="countries && !countries.length">No results found.</h3>
+        <h3 *ngIf="!loading && !places.length">No results found.</h3>
+        -->
+
+        <agm-map [latitude]="latitude" [longitude]="longitude" [zoom]="zoom">
+            <agm-marker
+                *ngFor="let place of places"
+                [latitude]="place.lat"
+                [longitude]="place.lng"
+            >
+            </agm-marker>
+            <!-- [radius]="" <-- if agm-circle
+                [fillColor]=""
+                [fillOpacity]="" -->
+        </agm-map>
     </div>
 </div>
