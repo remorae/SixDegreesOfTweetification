@@ -18,7 +18,6 @@ import { DualInputComponent } from './dual-input/dual-input.component';
 import { SingleInputComponent } from './single-input/single-input.component';
 import { EndpointService } from './services/endpoint.service';
 import { SectionTileComponent } from './section-tile/section-tile.component';
-import { SelectGeoFilterComponent } from './select-geo-filter/select-geo-filter.component';
 import { RateLimitDisplayComponent } from './rate-limit-display/rate-limit-display.component';
 import { CanvasComponent } from './canvas/canvas.component';
 
@@ -58,7 +57,6 @@ const appRoutes: Routes = [
         DualInputComponent,
         SingleInputComponent,
         SectionTileComponent,
-        SelectGeoFilterComponent,
         RateLimitDisplayComponent,
         CanvasComponent,
         HashToHashPageComponent,
