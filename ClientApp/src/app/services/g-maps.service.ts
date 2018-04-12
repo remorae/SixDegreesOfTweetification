@@ -4,6 +4,8 @@ import { LatLng, LatLngLiteral } from '@agm/core/services/google-maps-types';
 import { Observable } from 'rxjs/Observable';
 import { Observer } from 'rxjs/Observer';
 
+// https://github.com/SebastianM/angular-google-maps/issues/689
+
 declare var google: any;
 
 @Injectable()
