@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { UserInput } from '../models/userInput';
 import { UserResult, UserConnectionInfo, UserConnectionMap } from '../models/UserResult';
 import { GraphDataService, Graph } from '../services/graph-data.service';
@@ -9,19 +9,36 @@ import { GraphDataService, Graph } from '../services/graph-data.service';
     styleUrls: ['./user-to-user-page.component.scss']
 })
 export class UserToUserPageComponent implements OnInit {
-    latestSearch;
+    latestSearchStart: string;
+    latestSearchEnd: string;
     userRelationshipGraph: Graph;
-    constructor(private graphService: GraphDataService) { }
+    modalActive = false;
+    constructor(private graphData: GraphDataService) { }
 
     ngOnInit() {
-        this.graphService.getLatestUserData()
-            .subscribe((g: Graph) => { this.userRelationshipGraph = g; });
+        this.graphData.getLatestUserData()
+            .subscribe((g: Graph) => {
+                this.userRelationshipGraph = g;
+                if (this.userRelationshipGraph) {
+                    this.showModal();
+                }
+            });
     }
+
     onUserSubmit(input: UserInput) {
-        this.latestSearch = input.inputs[0];
         const [start, end] = input.inputs;
         this.userRelationshipGraph = undefined;
-        this.graphService.getUserConnectionData(start, end);
-        // this.graphService.getSingleUserData(this.latestSearch);
+        this.graphData.getUserConnectionData(start, end);
+        this.latestSearchStart = start;
+        this.latestSearchEnd = end;
+        // this.graphData.getSingleUserData(this.latestSearch);
+    }
+
+    showModal() {
+        this.modalActive = true;
+    }
+
+    changeModal(value) {
+        this.modalActive = value;
     }
 }
