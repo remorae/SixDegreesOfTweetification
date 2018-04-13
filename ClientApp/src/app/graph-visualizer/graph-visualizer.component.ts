@@ -23,14 +23,14 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         e.preventDefault();
     }
     ngOnInit() {
-        if(this.graph){
-            setTimeout(()=>{this.drawGraph()}, 750);
+        if (this.graph) {
+            // setTimeout(()=>{this.drawGraph()}, 750);
             //this.drawGraph();
         }
 
     }
 
-    ngOnDestroy(){
+    ngOnDestroy() {
         this.deleteGraph();
     }
 
@@ -42,18 +42,18 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
     ngOnChanges(changes: SimpleChanges) {
         const graphChange = changes['graph'];
 
-        // if (graphChange.currentValue) {
-        //     this.deleteGraph();
+        if (graphChange.currentValue) {
+            this.deleteGraph();
 
-        //    // setTimeout(() => { this.drawGraph(); }, 1000);
-        //   this.drawGraph();
-        // }
+            setTimeout(() => { this.drawGraph() }, 750);
+            // this.drawGraph();
+        }
     }
 
     deleteGraph() {
         D3.select('svg.graph-container').selectAll('*').remove();
-        if(!this.graph.nodes){
-            return ;
+        if (!this.graph.nodes) {
+            return;
         }
     }
 
@@ -73,21 +73,11 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
         simulation.force<ForceLink<Node, Link>>('link').links(filteredLinks);
 
-        // D3.timeout(() => {
-        //     if (filteredNodes.length >= 1000) {
-        //         simulation.stop();
-
-        //         for (let i = 0; i < Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay())); i++) {
-        //             simulation.tick();
-        //         }
-        //     }
-        // });
-
         const linkSelection = this.createLinksGroup(svg, filteredLinks);
         const nodeSelection = this.createNodesGroup(svg, simulation, filteredNodes);
-        //const textSelection = this.createTextGroup(svg, filteredNodes);
+        const textSelection = this.createTextGroup(svg, filteredNodes);
         nodeSelection.append('title')
-            .text((d: Node) => `User: ${d.id} Distance: ${d.group}`);
+            .text((d: Node) => d.id);
 
         function ticked() {
             linkSelection
@@ -100,21 +90,18 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
                 .attr('cx', (d: { x }) => d.x)
                 .attr('cy', (d: { y }) => d.y);
 
-            // textSelection
-            //     .attr('x', (d) => d.x)
-            //     .attr('y', (d) => d.y);
+            textSelection
+                .attr('x', (d) => d.x)
+                .attr('y', (d) => d.y);
         }
     }
 
     filterNodes(): Node[] {
         return this.graph.nodes;
-        //return this.graph.nodes.filter((n) => n.isShown);
     }
 
     filterLinks(filteredNodes: Node[]): Link[] {
         return this.graph.links;
-        // return this.graph.links
-        //     .filter((l) => filteredNodes.some((n) => n.id === l.source) && filteredNodes.some(n => n.id === l.target));
     }
 
     createSimulation(): D3.Simulation<Node, Link> {
@@ -145,7 +132,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         return svg.append('g')
             .attr('class', 'node-text')
             .selectAll('text')
-            .data(nodes)
+            .data(nodes.filter((e: Node) => e.onPath))
             .enter().append('text')
             .attr('pointer-events', 'none')
             //.attr('class', 'unselectable')
@@ -155,7 +142,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             //.style("font-size", "50px")
             //.style("fill", "black")
 
-            .text((d) => (d.onPath) ? '!' : '');
+            .text((d) => (d.onPath) ? d.group : '');
     }
 
 
@@ -167,7 +154,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .selectAll('circle')
             .data(nodes)
             .enter().append('circle')
-            .attr('r', (d: Node) => d.group ? 5 : 10)
+            .attr('r', (d: Node) => d.onPath ? 10 : 5)
             .attr('fill', (d: Node) => color(d.group.toString()))
             .attr('stroke', (d: Node) => d.onPath ? 'black' : '')
             .attr('stroke-width', (d: Node) => d.onPath ? 1 : 0)
