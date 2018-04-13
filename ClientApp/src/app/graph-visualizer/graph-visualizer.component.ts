@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, OnChanges, SimpleChange, SimpleChanges, HostListener } from '@angular/core';
+import { Component, OnInit, Input, OnChanges, SimpleChange, SimpleChanges, HostListener, Output, EventEmitter, OnDestroy } from '@angular/core';
 import * as D3 from 'd3';
 import { Node, Link, Graph, GraphDataService } from '../services/graph-data.service';
 import { ForceLink } from 'd3';
@@ -7,11 +7,13 @@ import { ForceLink } from 'd3';
     templateUrl: './graph-visualizer.component.html',
     styleUrls: ['./graph-visualizer.component.scss']
 })
-export class GraphVisualizerComponent implements OnInit, OnChanges {
+export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
     @Input() graph: { links, nodes };
-   svgHeight = 900;
-     svgWidth = 900;
+    svgHeight = 900;
+    svgWidth = 900;
+
+    @Output() modalOpen: EventEmitter<boolean> = new EventEmitter<boolean>(true);
     readonly maxForceDistance = 250;
     constructor() {
 
@@ -21,21 +23,38 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
         e.preventDefault();
     }
     ngOnInit() {
+        if(this.graph){
+            setTimeout(()=>{this.drawGraph()}, 750);
+            //this.drawGraph();
+        }
 
+    }
 
+    ngOnDestroy(){
+        this.deleteGraph();
+    }
+
+    onXClick() {
+        this.deleteGraph();
+        this.modalOpen.emit(false);
     }
 
     ngOnChanges(changes: SimpleChanges) {
         const graphChange = changes['graph'];
 
-        if (graphChange.currentValue) {
-            this.deleteGraph();
-            this.drawGraph();
-        }
+        // if (graphChange.currentValue) {
+        //     this.deleteGraph();
+
+        //    // setTimeout(() => { this.drawGraph(); }, 1000);
+        //   this.drawGraph();
+        // }
     }
 
     deleteGraph() {
         D3.select('svg.graph-container').selectAll('*').remove();
+        if(!this.graph.nodes){
+            return ;
+        }
     }
 
 
@@ -66,7 +85,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
 
         const linkSelection = this.createLinksGroup(svg, filteredLinks);
         const nodeSelection = this.createNodesGroup(svg, simulation, filteredNodes);
-        const textSelection = this.createTextGroup(svg, filteredNodes);
+        //const textSelection = this.createTextGroup(svg, filteredNodes);
         nodeSelection.append('title')
             .text((d: Node) => `User: ${d.id} Distance: ${d.group}`);
 
@@ -81,9 +100,9 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
                 .attr('cx', (d: { x }) => d.x)
                 .attr('cy', (d: { y }) => d.y);
 
-            textSelection
-                .attr('x', (d) => d.x)
-                .attr('y', (d) => d.y);
+            // textSelection
+            //     .attr('x', (d) => d.x)
+            //     .attr('y', (d) => d.y);
         }
     }
 
@@ -104,7 +123,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
             .force('link', D3.forceLink().id((d: { id }) => d.id))
             .force('charge', D3.forceManyBody().distanceMax(this.maxForceDistance))
             .force('center', D3.forceCenter(this.svgWidth / 2, this.svgHeight / 2))
-    //         .force('collision', D3.forceCollide().radius((d: Node)=> d.group ? 5 : 10 ))
+            //         .force('collision', D3.forceCollide().radius((d: Node)=> d.group ? 5 : 10 ))
             ;
     }
 
@@ -113,13 +132,13 @@ export class GraphVisualizerComponent implements OnInit, OnChanges {
         return svg.append('g')
             .attr('class', 'links')
             //.attr('stroke', '#999')
-           // .attr('stroke-opacity',   '0.6')
+            // .attr('stroke-opacity',   '0.6')
             .selectAll('line')
             .data(links)
             .enter().append('line')
             .attr('stroke-width', (d: Link) => Math.sqrt(d.value))
-            .attr('stroke', (d: Link) => d.onPath ? 'black' :'#999')
-            .attr('stroke-opacity',   (d: Link) => d.onPath ? '1' :'0.6');
+            .attr('stroke', (d: Link) => d.onPath ? 'black' : '#999')
+            .attr('stroke-opacity', (d: Link) => d.onPath ? '1' : '0.6');
     }
 
     createTextGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, nodes: Node[]) {
