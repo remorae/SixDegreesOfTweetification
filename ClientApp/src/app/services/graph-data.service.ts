@@ -18,6 +18,7 @@ export interface Link extends SimulationLinkDatum<Node> {
     target: string;
     value: number;
     onPath: boolean;
+    linkUrl?: string;
 }
 
 export interface Graph {
@@ -30,9 +31,14 @@ export interface SixDegreesConnection<T> {
 
 
     connections: { [hashtag: string]: T[] };
-    paths: { [distance: number]: T }[];
-    links: string[];
+    paths: LinkPath<T>[];
     metaData: ConnectionMetaData;
+
+}
+
+export interface LinkPath<T> {
+    path: { [key: number]: T };
+    links: string[];
 
 }
 export interface ConnectionMetaData {
@@ -134,7 +140,7 @@ export class GraphDataService {
         const nodes = Array.from(new Set([].concat(...Object.values(data.connections)).concat(Object.keys(data.connections))))
             .map((e): Node => ({ id: e, group: 1, isShown: true, onPath: false }));
 
-
+        // TODO: Change size of nodes based on OnPath, click handler for highlighting, highlighting data, and closing the modal
         const nodeMap = new Map<string, Node>();
         const linkMap = new Map<string, Link>();
         nodes.forEach((node) => {
@@ -149,16 +155,20 @@ export class GraphDataService {
                 const link = { source: element, target: c, value: 1, onPath: false };
                 links.push(link);
                 linkMap.set(`${link.source} ${link.target}`, link);
+                const reverse = `${link.source} ${link.target}`;
+                // if(!linkMap.has(reverse)){
+                //     const reverseLink = { source: c, target: element, value: 1, onPath: false };
+                //     linkMap.set(reverse, reverseLink);
+                //     links.push(reverseLink);
+                // }
             });
         }
         const paths = data.paths;
         let start = null;
         let end = null;
-        paths.forEach(path => {
-            const array: string[] = [];
-            for (const [key, value] of Object.entries(path)) {
-                array[key] = value;
-            }
+        paths.forEach(linkPath => {
+            const array: string[] = Object.values(linkPath.path);
+
             start = array[0];
             end = array[array.length - 1];
             for (let i = 1; i < array.length; i++) {
@@ -169,6 +179,7 @@ export class GraphDataService {
                 const link = linkMap.get(`${sourceNode} ${targetNode}`);
                 link.onPath = true;
                 link.value = 5;
+                link.linkUrl = linkPath.links[i - 1];
 
             }
         });
@@ -213,19 +224,22 @@ export class GraphDataService {
 
 
     sixDegreesToGraph = (data): Graph => {
-        const nodes: Node[] = [];
-        for (const [key, value] of Object.entries(data.path)) {
-            nodes[+value] = { id: key, group: +value, isShown: true, onPath: false };
-        }
-
-        const links: Link[] = [];
-        for (let i = 1; i < nodes.length; i++) {
-            const source = nodes[i - 1];
-            const target = nodes[i];
-            links.push({ source: source.id, target: target.id, value: 10, onPath: false });
-        }
-        return { nodes: nodes, links: links, metaData: null };
+        return this.hashDegreesToGraph(data);
     }
+
+
+    // const nodes: Node[] = [];
+    // for (const [key, value] of Object.entries(data.path)) {
+    //     nodes[+value] = { id: key, group: +value, isShown: true, onPath: false };
+    // }
+
+    // const links: Link[] = [];
+    // for (let i = 1; i < nodes.length; i++) {
+    //     const source = nodes[i - 1];
+    //     const target = nodes[i];
+    //     links.push({ source: source.id, target: target.id, value: 10, onPath: false });
+    // }
+    // return { nodes: nodes, links: links, metaData: null };
 
 
     createUserLinks(data, nodes: Node[]) { // TODO: look into bidirectional links

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { UserInput } from '../models/userInput';
 import { HashConnectionMap } from '../models/HashConnectionInfo';
 import { GraphDataService, Graph } from '../services/graph-data.service';
@@ -12,15 +12,18 @@ export class HashToHashPageComponent implements OnInit {
     latestSearchStart;
     latestSearchEnd;
     hashGraph;
-    modalActive = true;
+    modalActive = false;
     constructor(private graphData: GraphDataService) { }
 
     ngOnInit() {
         this.graphData.getLatestHashData().subscribe((g: Graph) => {
             this.hashGraph = g;
-            this.showModal();
+            if (this.hashGraph) {
+                this.showModal();
+            }
         });
     }
+
     onUserSubmit(input: UserInput) {
         const [hashtag1, hashtag2] = input.inputs;
         this.hashGraph = undefined;
@@ -30,6 +33,10 @@ export class HashToHashPageComponent implements OnInit {
     }
 
     showModal() {
-        this.modalActive = !this.modalActive;
+        this.modalActive = true;
+    }
+
+    changeModal(value) {
+        this.modalActive = value;
     }
 }
