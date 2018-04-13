@@ -547,7 +547,7 @@ namespace SixDegrees.Controllers
 
         private static bool ContinueSearch<T>(int maxAPICalls, int callsMade, ICollection<ConnectionInfo<T>.Node> startList, ICollection<ConnectionInfo<T>.Node> endList, bool foundLink) where T : class
         {
-            return !foundLink && (callsMade == 0 || callsMade < maxAPICalls) && (startList.Count > 0 || endList.Count > 0);
+            return !foundLink && (callsMade == 0 || callsMade < maxAPICalls) && startList.Count > 0 && endList.Count > 0;
         }
 
         private static Func<HashSet<T>, T, HashSet<T>> AggregateSetConnections<T>(IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections) where T : class
