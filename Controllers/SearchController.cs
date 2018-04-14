@@ -633,15 +633,17 @@ namespace SixDegrees.Controllers
                 DateTime startTime = DateTime.Now;
 
                 if (TwitterCache.ShortestPaths(Configuration, start, end, maxNumberOfDegrees, label) is List<(List<ConnectionInfo<T>.Node>, List<Status>)> cachedUserPaths && cachedUserPaths.Count > 0)
+                {
+                    // Guarantee end node has its direct connections cached.
+                    await connectionLookupFunc(cachedUserPaths[0].Item1.Last().Value, true);
                     return await FormatCachedLinkData(maxConnectionsPerNode, connectionLookupFunc, startTime, cachedUserPaths);
+                }
 
                 IDictionary<Status, IEnumerable<T>> tweetLinksFound = new Dictionary<Status, IEnumerable<T>>();
                 var remainingFromStart = new List<ConnectionInfo<T>.Node>() { new ConnectionInfo<T>.Node(start, 0) };
                 var remainingFromEnd = new List<ConnectionInfo<T>.Node>() { new ConnectionInfo<T>.Node(end, 0) };
                 ISet<T> queriedNodes = new HashSet<T>();
                 ISet<T> seenValues = new HashSet<T>() { start, end };
-                ISet<T> seenValuesAtStart = new HashSet<T>() { start };
-                ISet<T> seenValuesAtEnd = new HashSet<T>() { end };
                 IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections = new Dictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>>(new ConnectionInfo<T>.Node.EqualityComparer())
                 {
                     { remainingFromStart.First(), new ConnectionInfo<T>() },
@@ -654,8 +656,6 @@ namespace SixDegrees.Controllers
                 while (ContinueSearch(maxAPICalls, callsMade, remainingFromStart, remainingFromEnd, foundLink))
                 {
                     var remaining = currentSearchIsFromStart ? remainingFromStart : remainingFromEnd;
-                    ISet<T> seenValuesInCurrentDirection = currentSearchIsFromStart ? seenValuesAtStart : seenValuesAtEnd;
-                    ISet<T> goalValues = currentSearchIsFromStart ? seenValuesAtEnd : seenValuesAtStart;
                     if (remaining.Count > 0)
                     {
                         ConnectionInfo<T>.Node nodeToQuery = remaining.First();
@@ -666,7 +666,7 @@ namespace SixDegrees.Controllers
                             int newLimit = RateLimitController.GetCurrentUserInfo(rateLimitDb, rateLimitEndpoint, userManager, User).Limit;
                             if (newLimit < previousLimit)
                                 ++callsMade;
-                            (IEnumerable<T> lookupValues, var resultsContainLink) = HandleSearchResults(lookupResult, tweetLinksFound);
+                            IEnumerable<T> lookupValues = ExtractValuesFromSearchResults(lookupResult, tweetLinksFound);
                             lookupValues = lookupValues.Where(result => !result.Equals(nodeToQuery.Value)).Distinct();
 
                             queriedNodes.Add(nodeToQuery.Value);
@@ -684,12 +684,11 @@ namespace SixDegrees.Controllers
                                         remaining.Add(node);
                                     connections[node] = new ConnectionInfo<T>();
                                     seenValues.Add(value);
-                                    seenValuesInCurrentDirection.Add(value);
                                 }
                             }
                             remaining.Sort((lhs, rhs) => lhs.Heuristic(nextDistance).CompareTo(rhs.Heuristic(nextDistance)));
 
-                            foundLink = resultsContainLink(lookupValues, goalValues);
+                            foundLink = TwitterCache.ShortestPaths(Configuration, start, end, maxNumberOfDegrees, label).Count > 0;
                         }
                     }
                     currentSearchIsFromStart = !currentSearchIsFromStart;
@@ -699,8 +698,6 @@ namespace SixDegrees.Controllers
                     return await FormatCachedLinkData(maxConnectionsPerNode, connectionLookupFunc, startTime,
                         TwitterCache.ShortestPaths(Configuration, start, end, maxNumberOfDegrees, label));
 
-                var expandedStart = seenValuesAtStart.Aggregate(new HashSet<T>(), AggregateSetConnections(connections));
-                var expandedEnd = seenValuesAtEnd.Aggregate(new HashSet<T>(), AggregateSetConnections(connections));
                 var formattedConnections = connections
                             .Where(entry => entry.Value.Connections.Count > 0)
                             .ToDictionary(entry => entry.Key.Value, entry => entry.Value.Connections.Select(node => node.Key.Value));
@@ -768,37 +765,18 @@ namespace SixDegrees.Controllers
             return !foundLink && (callsMade == 0 || callsMade < maxAPICalls) && startList.Count > 0 && endList.Count > 0;
         }
 
-        private static Func<HashSet<T>, T, HashSet<T>> AggregateSetConnections<T>(IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections) where T : class
-        {
-            return (set, next) =>
-            {
-                if (!set.Contains(next))
-                    set.Add(next);
-                set.UnionWith(connections.FirstOrDefault(conn => conn.Key.Value.Equals(next)).Value?.Connections.Select(c => c.Key.Value) ?? Enumerable.Empty<T>());
-                return set;
-            };
-        }
-
-        /// <summary>
-        /// Extracts the actual values in the results and provides a function to check whether a link was found.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="results"></param>
-        /// <param name="links"></param>
-        /// <returns></returns>
-        private (IEnumerable<T>, Func<IEnumerable<T>, IEnumerable<T>, bool>) HandleSearchResults<T>(object results, IDictionary<Status, IEnumerable<T>> links)
+        private IEnumerable<T> ExtractValuesFromSearchResults<T>(object results, IDictionary<Status, IEnumerable<T>> links)
             where T : class
         {
             if (results is IEnumerable<T> lookup)
-                return (lookup, (values, goals) => values.Intersect(goals).Count() > 0);
+                return lookup;
             else if (results is IDictionary<Status, IEnumerable<T>> newLinks)
             {
                 foreach (var entry in newLinks.Where(entry => !links.ContainsKey(entry.Key)))
                     links.Add(entry.Key, entry.Value);
-                var hashtags = newLinks.Aggregate(new List<T>(), (collection, entry) => { collection.AddRange(entry.Value); return collection; });
-                return (hashtags, (values, goals) => values.Intersect(goals).Count() > 0);
+                return newLinks.Aggregate(new List<T>(), (collection, entry) => { collection.AddRange(entry.Value); return collection; });
             }
-            return (Enumerable.Empty<T>(), (values, goals) => false);
+            return Enumerable.Empty<T>();
         }
     }
 }
