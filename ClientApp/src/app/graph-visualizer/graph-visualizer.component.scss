@@ -1,14 +1,15 @@
 .graph-container {
    //overflow: visible;
-   // height: 900px;
-   // width: 900px;
-   //height: 100%;
    height: calc(100vh - 64px);
    width: 100%;
   }
 
 .animate {
         animation: drop-fade-in 0.75s ease-out;
+}
+
+.card-header {
+    font-size: 1.75rem;
 }
 
 svg text {
