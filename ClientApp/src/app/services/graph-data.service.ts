@@ -25,7 +25,7 @@ export interface Link extends SimulationLinkDatum<Node> {
 export interface Graph {
     links: Link[];
     nodes: Node[];
-    metaData: ConnectionMetaData;
+    metadata: ConnectionMetaData;
 }
 
 export interface SixDegreesConnection<T> {
@@ -33,7 +33,7 @@ export interface SixDegreesConnection<T> {
 
     connections: { [hashtag: string]: T[] };
     paths: LinkPath<T>[];
-    metaData: ConnectionMetaData;
+    metadata: ConnectionMetaData;
 
 }
 
@@ -241,7 +241,7 @@ export class GraphDataService {
         const links: Link[] = this.createLinks(data, linkMap);
         const [start, end] = this.markPath(data, nodeMap, linkMap);
         this.colorizeGraph(nodeMap, links, start);
-        return { nodes: nodes, links: links, metaData: data.metaData };
+        return { nodes: nodes, links: links, metadata: data.metadata };
     }
 
 
