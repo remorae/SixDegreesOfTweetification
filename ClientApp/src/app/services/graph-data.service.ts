@@ -10,6 +10,7 @@ export interface Node extends SimulationNodeDatum {
     group: number;
     isShown: boolean;
     onPath: boolean;
+    isUser: boolean;
     user?: UserResult;
 
 }
@@ -100,16 +101,16 @@ export class GraphDataService {
 
     createHashNodes(data: SixDegreesConnection<string>) {
         return Array.from(new Set([].concat(...Object.values(data.connections))))
-            .map((e): Node => ({ id: e, group: 1, isShown: true, onPath: false }));
+            .map((e): Node => ({ id: e, group: 1, isShown: true, onPath: false, isUser: false }));
     }
 
     createNodes(data: SixDegreesConnection<UserResult | string>, nodeMap: Map<string, Node>) {
         const values = [].concat(...(Object.values(data.connections).concat(Object.keys(data.connections))));
         const nodes: Node[] = values.map((e) => {
             if (!e.screenName) {
-                return { id: e, group: 1, isShown: true, onPath: false };
+                return { id: e, group: 1, isShown: true, onPath: false, isUser: false };
             } else {
-                return { id: e.screenName, group: 1, isShown: true, onPath: false, user: e };
+                return { id: e.screenName, group: 1, isShown: true, onPath: false, user: e, isUser: true };
             }
         });
         nodes.forEach((e: Node, i: number) => {
@@ -153,14 +154,10 @@ export class GraphDataService {
 
     pointToNodeID(nodeMap: Map<string, Node>, pathPoint: any) {
 
-        if (pathPoint.screenName) {
-            const node = nodeMap.get(pathPoint.screenName);
-            node.user = pathPoint;
-            return node.id;
-        } else {
+
             const node = nodeMap.get(pathPoint);
             return node.id;
-        }
+
     }
 
 

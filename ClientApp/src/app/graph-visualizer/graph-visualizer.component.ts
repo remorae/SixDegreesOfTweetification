@@ -208,8 +208,8 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
     updateCardContent(data) {
         this.cardBody = [];
-        if (data.user) {
-            this.cardTitle = `User: ${data.id}`;
+        this.cardTitle = data.id;
+        if (data.isUser && data.user) {
             for (const [key, value] of Object.entries(data.user)) {
                 if (key === 'profileImage') {
                     continue;
@@ -217,8 +217,6 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
                 this.cardBody.push([key, value]);
             }
         } else {
-            this.cardTitle = `Hashtag: ${data.id}`;
-
 
             const { calls, time } = this.graph.metadata;
             const [hours, minutes, seconds] = time.toLocaleString().split(':');
