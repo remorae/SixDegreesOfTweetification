@@ -1,7 +1,7 @@
-import { Component, OnInit, Input, OnChanges, SimpleChange, SimpleChanges, HostListener, Output, EventEmitter, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
 import * as D3 from 'd3';
-import { Node, Link, Graph, GraphDataService, ConnectionMetaData } from '../services/graph-data.service';
 import { ForceLink } from 'd3';
+import { ConnectionMetaData, Link, Node } from '../services/graph-data.service';
 @Component({
     selector: 'app-graph-visualizer',
     templateUrl: './graph-visualizer.component.html',
@@ -9,11 +9,11 @@ import { ForceLink } from 'd3';
 })
 export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
-    @Input() graph: { links, nodes, metadata: ConnectionMetaData };
+    @Input() graph: { links, nodes, metadata: ConnectionMetaData, nodeMap: Map<string, Node>, linkMap: Map<string, Link> };
     headerContent: string;
     svgHeight = 900;
     svgWidth = 900;
-
+    highlightedIndex = -1;
     @Output() modalOpen: EventEmitter<boolean> = new EventEmitter<boolean>(true);
     readonly maxForceDistance = 250;
     constructor() {
@@ -24,6 +24,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         e.preventDefault();
     }
     ngOnInit() {
+        this.headerContent = 'Click and Drag a Node to move it around, Click Without Dragging to Highlight and See More Information! ';
         if (this.graph) {
             // setTimeout(()=>{this.drawGraph()}, 750);
             //this.drawGraph();
@@ -33,6 +34,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
     ngOnDestroy() {
         this.deleteGraph();
+        this.headerContent = '';
     }
 
     onXClick() {
@@ -79,10 +81,8 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         const textSelection = this.createTextGroup(svg, filteredNodes);
         nodeSelection.append('title')
             .text((d: Node) => d.id);
-
-            // linkSelection.append('a')
-            // .attr('href', (l: Link)=> l.linkUrl);
-
+        linkSelection.append('title')
+            .text('Click here to see a tweet!');
         this.updateHeaderContent();
 
         function ticked() {
@@ -106,7 +106,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
     updateHeaderContent() {
         const { calls, time } = this.graph.metadata;
         const [hours, minutes, seconds] = time.toLocaleString().split(':');
-        this.headerContent = `Calls: ${calls} | Time Taken: ${time}`;
+        this.headerContent += `Calls: ${calls} | Time Taken: ${time}`;
     }
 
     filterNodes(): Node[] {
@@ -128,16 +128,20 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     createLinksGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, links: Link[]): D3.Selection<D3.BaseType, {}, D3.BaseType, {}> {
-
+        const color = D3.scaleOrdinal(D3.schemeCategory10);
         return svg.append('g')
             .attr('class', 'links')
             //.attr('stroke', '#999')
             // .attr('stroke-opacity',   '0.6')
             .selectAll('line')
             .data(links)
-            .enter().append('line')
+            .enter()
+            .append('a')
+            .attr('xlink:href', (l: Link) => l.linkUrl)
+            .attr('target', '_blank')
+            .append('line')
             .attr('stroke-width', (d: Link) => Math.sqrt(d.value))
-            .attr('stroke', (d: Link) => d.onPath ? 'black' : '#999')
+            .attr('stroke', (d: Link) => d.onPath ? 'black' : '#999') // TODO: colorize based on target node.
             .attr('stroke-opacity', (d: Link) => d.onPath ? '1' : '0.6');
     }
 
@@ -158,7 +162,25 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .text((d) => (d.onPath) ? d.group : '');
     }
 
+    highlightNode(d, i: number, selection, color) {
+        if (this.highlightedIndex >= 0) {
+            const reference = selection[this.highlightedIndex];
+            const data = reference.__data__;
+            //const node = this.graph.nodeMap.get(data.id);
+            D3.select(reference)
+                .attr('stroke', data.onPath ? 'black' : '')
+                .attr('stroke-width', data.onPath ? 1 : 0)
+                .attr('fill', color(data.group.toString()));
+        }
 
+        this.highlightedIndex = i;
+
+        D3.select(selection[i])
+            .attr('stroke', '#1dcaff')
+            .attr('fill', '#1dcaff')
+            .attr('stroke-width', '3');
+        this.headerContent = 'changed';
+    }
 
     createNodesGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, simulation: D3.Simulation<Node, Link>, nodes) {
         const color = D3.scaleOrdinal(D3.schemeCategory10);
@@ -171,10 +193,14 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .attr('fill', (d: Node) => color(d.group.toString()))
             .attr('stroke', (d: Node) => d.onPath ? 'black' : '')
             .attr('stroke-width', (d: Node) => d.onPath ? 1 : 0)
+            .on('click', (d, i, selection) => {
+                this.highlightNode(d, i, selection, color);
+            })
             .call(D3.drag()
                 .on('start', dragbegin)
                 .on('drag', dragging)
                 .on('end', dragend));
+
 
         function dragbegin(d) {
             if (!D3.event.active) {
