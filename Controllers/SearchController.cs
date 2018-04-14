@@ -124,7 +124,7 @@ namespace SixDegrees.Controllers
         /// <param name="query">The hashtag to search for (minus the '#').</param>
         /// <returns></returns>
         [HttpGet("tweets")]
-        public async Task<IActionResult> Tweets(string query)
+        public async Task<IActionResult> GetTweets(string query)
         {
             if (query == null)
                 return BadRequest("Invalid parameters.");
@@ -144,12 +144,74 @@ namespace SixDegrees.Controllers
         }
 
         /// <summary>
+        /// Returns search results for the given hashtag with any associated hashtags and the source tweet urls organized by location.
+        /// </summary>
+        /// <param name="query">The hashtag to search for (minus the '#').</param>
+        /// <returns></returns>
+        [HttpGet("locations")]
+        public async Task<IActionResult> GetLocations(string query)
+        {
+            if (query == null)
+                return BadRequest("Invalid parameters.");
+            try
+            {
+                var results = await GetResults<TweetSearchResults>(
+                    query,
+                    AuthenticationType.Both,
+                    TwitterAPIUtils.HashtagSearchQuery,
+                    TwitterAPIEndpoint.SearchTweets);
+                IDictionary<string, Country> countries = new Dictionary<string, Country>();
+                var coords = new Dictionary<Coordinates, (ISet<string> hashtags, ICollection<string> sources)>();
+                foreach (Status status in results.Statuses)
+                {
+                    if (status.Place != null)
+                        UpdateCountriesWithPlace(countries, status);
+                    else if (status.Coordinates != null)
+                        UpdateCoordinatesWithStatus(coords, status);
+                }
+                return Ok(new
+                {
+                    Countries = GetFormattedCountries(countries.Values),
+                    CoordinateInfo = coords.Select(
+                        entry => new
+                        {
+                            Coordinates = new { CoordType = entry.Key.Type, X = entry.Key.Value[0], Y = entry.Key.Value[1] },
+                            Hashtags = entry.Value.hashtags.ToArray(),
+                            Sources = entry.Value.sources.ToArray()
+                        })
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        private void UpdateCoordinatesWithStatus(Dictionary<Coordinates, (ISet<string> sources, ICollection<string> hashtags)> coords, Status status)
+        {
+            Coordinates toUpdate = status.Coordinates;
+            if (!coords.ContainsKey(toUpdate))
+                coords[toUpdate] = (new HashSet<string>(), new List<string>());
+            coords[toUpdate].sources.Add(status.URL);
+            foreach (Hashtag tag in status.Entities.Hashtags)
+            {
+                if (!coords[toUpdate].hashtags.Contains(tag.Text))
+                    coords[toUpdate].hashtags.Add(tag.Text);
+            }
+        }
+
+        private IEnumerable<CountryResult> GetFormattedCountries(IEnumerable<Country> countries)
+        {
+            return countries.Select(country => new CountryResult() { Name = country.Name, Places = country.Places.Values });
+        }
+
+        /// <summary>
         /// Returns a list of hashtags (will contain duplicates) associated directly (contained within the same tweet) with the given hashtag.
         /// </summary>
         /// <param name="query">The hashtag to search for (minus the '#').</param>
         /// <returns></returns>
         [HttpGet("hashtags")]
-        public async Task<IActionResult> Hashtags(string query)
+        public async Task<IActionResult> GetHashtags(string query)
         {
             if (query == null)
                 return BadRequest("Invalid parameters.");
@@ -179,6 +241,162 @@ namespace SixDegrees.Controllers
         }
 
         /// <summary>
+        /// Returns information about a specified Twitter user.
+        /// </summary>
+        /// <param name="screen_name">Returns information about a specified user.</param>
+        /// <returns></returns>
+        [HttpGet("user")]
+        public async Task<IActionResult> GetUser(string screen_name)
+        {
+            if (screen_name == null)
+                return BadRequest("Invalid parameters.");
+            try
+            {
+                // Look for a cached user, but ensure they have been looked up (and don't just have a cached ID)
+                if (TwitterCache.LookupUserByName(Configuration, screen_name) is UserResult cached && cached.ScreenName != null)
+                    return Ok(cached);
+                var results = await GetResults<UserSearchResults>(
+                    screen_name,
+                    AuthenticationType.Both,
+                    TwitterAPIUtils.UserSearchQuery,
+                    TwitterAPIEndpoint.UsersShow);
+                return Ok(ToUserResult(results));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        private static UserResult ToUserResult(UserSearchResults results)
+        {
+            if (results == null)
+                return null;
+            return new UserResult()
+            {
+                CreatedAt = results.CreatedAt,
+                Description = results.Description,
+                FollowerCount = results.FollowersCount,
+                FriendCount = results.FriendsCount,
+                GeoEnabled = results.GeoEnabled,
+                ID = results.IdStr,
+                Lang = results.Lang,
+                Location = results.Location,
+                Name = results.Name,
+                ProfileImage = results.ProfileImageUrlHttps,
+                ScreenName = results.ScreenName,
+                StatusCount = results.StatusesCount,
+                TimeZone = results.TimeZone,
+                Verified = results.Verified
+            };
+        }
+
+        /// <summary>
+        /// Returns information about the friends and followers of the specified user.
+        /// </summary>
+        /// <param name="screen_name">The screen name of the Twitter user to search for (minus the '@').</param>
+        /// <param name="limit">The maximum number of users to return.
+        /// The maximum number of friends/followers to lookup in one query is 1500 (for each) due to rate limiting.</param>
+        /// <param name="allowAPICalls">Whether or not Twitter API calls are allowed.</param>
+        /// <returns></returns>
+        [HttpGet("user/connections")]
+        public async Task<IActionResult> GetUserConnections(string screen_name, int limit = MaxSingleQueryUserLookupCount, bool allowAPICalls = true)
+        {
+            if (screen_name == null || limit < 1)
+                return BadRequest("Invalid parameters.");
+            try
+            {
+                int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User).Values.Min();
+                int lookupLimit = Math.Min(limit, maxLookupCount * MaxSingleQueryUserLookupCount);
+
+                UserResult queried = (await GetUser(screen_name) as OkObjectResult)?.Value as UserResult;
+                string userID = queried?.ID;
+                if (userID == null)
+                    return BadRequest("Invalid user screen name.");
+
+                if (TwitterCache.UserConnectionsQueried(Configuration, queried) || !allowAPICalls)
+                {
+                    IEnumerable<UserResult> cachedResults = TwitterCache.FindUserConnections(Configuration, queried).Take(limit);
+                    TwitterCache.UpdateUsers(Configuration, await LookupIDs(maxLookupCount * MaxSingleQueryUserLookupCount, cachedResults.Where(user => user.ScreenName == null).Select(user => user.ID).ToList()));
+                    // Now that all cached users have been looked up, return the updated cached results.
+                    return Ok(TwitterCache.FindUserConnections(Configuration, queried).Take(limit));
+                }
+
+                var remainingIDsToLookup = ((await GetUserConnectionIDs(userID) as OkObjectResult)?.Value as IEnumerable<string> ?? Enumerable.Empty<string>()).ToList();
+                ICollection<UserResult> results = await LookupIDs(lookupLimit, remainingIDsToLookup);
+                TwitterCache.UpdateUserConnections(Configuration, queried, results);
+                return Ok(results);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        private async Task<ICollection<UserResult>> LookupIDs(int limit, List<string> remainingIDsToLookup)
+        {
+            ICollection<UserResult> results = new List<UserResult>();
+            while (remainingIDsToLookup.Count > 0 && results.Count < limit)
+            {
+                int count = Math.Min(100, remainingIDsToLookup.Count);
+                var searchResults = await GetResultCollection<UserSearchResults>(
+                    remainingIDsToLookup.Take(count),
+                    AuthenticationType.Both,
+                    TwitterAPIUtils.UserLookupQuery,
+                    TwitterAPIEndpoint.UsersLookup) ?? Enumerable.Empty<UserSearchResults>();
+                remainingIDsToLookup.RemoveRange(0, count);
+                foreach (var searchResult in searchResults.Take(limit - results.Count))
+                    results.Add(ToUserResult(searchResult));
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// Returns IDs of the friends and followers of the specified user.
+        /// </summary>
+        /// <param name="user_id">The ID of the Twitter user to search for.</param>
+        /// <param name="allowAPICalls">Whether or not Twitter API calls are allowed.</param>
+        /// <returns></returns>
+        [HttpGet("user/connectionids")]
+        public async Task<IActionResult> GetUserConnectionIDs(string user_id, bool allowAPICalls = true)
+        {
+            if (user_id == null)
+                return BadRequest("Invalid parameters.");
+            try
+            {
+                if (TwitterCache.UserConnectionsQueried(Configuration, user_id) || !allowAPICalls)
+                    return Ok(TwitterCache.FindUserConnectionIDs(Configuration, user_id));
+
+                var followerResults = await GetResults<UserIdsResults>(
+                    user_id,
+                    AuthenticationType.User,
+                    TwitterAPIUtils.FollowersFriendsIDsQueryByID,
+                    TwitterAPIEndpoint.FollowersIDs);
+                ISet<long> uniqueIds = new HashSet<long>(followerResults?.Ids ?? Enumerable.Empty<long>());
+
+                var friendResults = await GetResults<UserIdsResults>(
+                    user_id,
+                    AuthenticationType.User,
+                    TwitterAPIUtils.FollowersFriendsIDsQueryByID,
+                    TwitterAPIEndpoint.FriendsIDs);
+                if (friendResults != null)
+                    foreach (long id in friendResults.Ids)
+                    {
+                        if (!uniqueIds.Contains(id))
+                            uniqueIds.Add(id);
+                    }
+
+                TwitterCache.UpdateUserConnections(Configuration, user_id, uniqueIds.Select(id => id.ToString()));
+                return Ok(uniqueIds.Select(id => id.ToString()));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Returns a list of hashtags within the given number of "degrees" of the given hashtag (each tweet represents one degree).
         /// </summary>
         /// <param name="query">The hashtag to search for (minus the '#').</param>
@@ -187,7 +405,7 @@ namespace SixDegrees.Controllers
         /// <param name="maxNodeConnections">The maximum integer number of per-node connections to handle.</param>
         /// <returns></returns>
         [HttpGet("degrees/hashtags/single")]
-        public async Task<IActionResult> SingleHashtagConnections(string query, int numberOfDegrees = 6, int maxCalls = 60, int maxNodeConnections = 500)
+        public async Task<IActionResult> GetSingleHashtagConnections(string query, int numberOfDegrees = 6, int maxCalls = 60, int maxNodeConnections = 500)
         {
             if (query == null || numberOfDegrees < 1 || maxCalls < 1 || maxNodeConnections < 1)
                 return BadRequest("Invalid query.");
@@ -247,7 +465,7 @@ namespace SixDegrees.Controllers
         /// <param name="maxNodeConnections">The maximum integer number of per-node connections to handle.</param>
         /// <returns></returns>
         [HttpGet("degrees/users/single")]
-        public async Task<IActionResult> SingleUserConnections(string query, int numberOfDegrees = 6, int maxCalls = 5, int maxNodeConnections = 50)
+        public async Task<IActionResult> GetSingleUserConnections(string query, int numberOfDegrees = 6, int maxCalls = 5, int maxNodeConnections = 50)
         {
             if (query == null || numberOfDegrees < 1 || maxCalls < 1 || maxNodeConnections < 1)
                 return BadRequest("Invalid query.");
@@ -306,7 +524,7 @@ namespace SixDegrees.Controllers
         /// <param name="maxCalls">The maximum integer number of Twitter API calls to make.</param>
         /// <returns></returns>
         [HttpGet("degrees/hashtags")]
-        public async Task<IActionResult> HashtagLink(string hashtag1, string hashtag2, int numberOfDegrees = 6, int maxCalls = 60, int maxNodeConnections = 500)
+        public async Task<IActionResult> GetHashtagLink(string hashtag1, string hashtag2, int numberOfDegrees = 6, int maxCalls = 60, int maxNodeConnections = 500)
         {
             if (hashtag1 == null || hashtag2 == null || numberOfDegrees < 1 || maxCalls < 1)
                 return BadRequest("Invalid query.");
@@ -354,7 +572,7 @@ namespace SixDegrees.Controllers
         /// <param name="lookupIDs">Whether or not to return users by name after performing a lookup.</param>
         /// <returns></returns>
         [HttpGet("degrees/users")]
-        public async Task<IActionResult> UserLink(string user1, string user2, int numberOfDegrees = 6, int maxCalls = 5, int maxNodeConnections = 50, bool lookupIDs = false)
+        public async Task<IActionResult> GetUserLink(string user1, string user2, int numberOfDegrees = 6, int maxCalls = 5, int maxNodeConnections = 50, bool lookupIDs = false)
         {
 
             if (user1 == null || user2 == null || numberOfDegrees < 1 || maxCalls < 1)
@@ -415,15 +633,17 @@ namespace SixDegrees.Controllers
                 DateTime startTime = DateTime.Now;
 
                 if (TwitterCache.ShortestPaths(Configuration, start, end, maxNumberOfDegrees, label) is List<(List<ConnectionInfo<T>.Node>, List<Status>)> cachedUserPaths && cachedUserPaths.Count > 0)
+                {
+                    // Guarantee end node has its direct connections cached.
+                    await connectionLookupFunc(cachedUserPaths[0].Item1.Last().Value, true);
                     return await FormatCachedLinkData(maxConnectionsPerNode, connectionLookupFunc, startTime, cachedUserPaths);
+                }
 
                 IDictionary<Status, IEnumerable<T>> tweetLinksFound = new Dictionary<Status, IEnumerable<T>>();
                 var remainingFromStart = new List<ConnectionInfo<T>.Node>() { new ConnectionInfo<T>.Node(start, 0) };
                 var remainingFromEnd = new List<ConnectionInfo<T>.Node>() { new ConnectionInfo<T>.Node(end, 0) };
                 ISet<T> queriedNodes = new HashSet<T>();
                 ISet<T> seenValues = new HashSet<T>() { start, end };
-                ISet<T> seenValuesAtStart = new HashSet<T>() { start };
-                ISet<T> seenValuesAtEnd = new HashSet<T>() { end };
                 IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections = new Dictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>>(new ConnectionInfo<T>.Node.EqualityComparer())
                 {
                     { remainingFromStart.First(), new ConnectionInfo<T>() },
@@ -436,8 +656,6 @@ namespace SixDegrees.Controllers
                 while (ContinueSearch(maxAPICalls, callsMade, remainingFromStart, remainingFromEnd, foundLink))
                 {
                     var remaining = currentSearchIsFromStart ? remainingFromStart : remainingFromEnd;
-                    ISet<T> seenValuesInCurrentDirection = currentSearchIsFromStart ? seenValuesAtStart : seenValuesAtEnd;
-                    ISet<T> goalValues = currentSearchIsFromStart ? seenValuesAtEnd : seenValuesAtStart;
                     if (remaining.Count > 0)
                     {
                         ConnectionInfo<T>.Node nodeToQuery = remaining.First();
@@ -448,7 +666,7 @@ namespace SixDegrees.Controllers
                             int newLimit = RateLimitController.GetCurrentUserInfo(rateLimitDb, rateLimitEndpoint, userManager, User).Limit;
                             if (newLimit < previousLimit)
                                 ++callsMade;
-                            (IEnumerable<T> lookupValues, var resultsContainLink) = HandleSearchResults(lookupResult, tweetLinksFound);
+                            IEnumerable<T> lookupValues = ExtractValuesFromSearchResults(lookupResult, tweetLinksFound);
                             lookupValues = lookupValues.Where(result => !result.Equals(nodeToQuery.Value)).Distinct();
 
                             queriedNodes.Add(nodeToQuery.Value);
@@ -466,12 +684,11 @@ namespace SixDegrees.Controllers
                                         remaining.Add(node);
                                     connections[node] = new ConnectionInfo<T>();
                                     seenValues.Add(value);
-                                    seenValuesInCurrentDirection.Add(value);
                                 }
                             }
                             remaining.Sort((lhs, rhs) => lhs.Heuristic(nextDistance).CompareTo(rhs.Heuristic(nextDistance)));
 
-                            foundLink = resultsContainLink(lookupValues, goalValues);
+                            foundLink = TwitterCache.ShortestPaths(Configuration, start, end, maxNumberOfDegrees, label).Count > 0;
                         }
                     }
                     currentSearchIsFromStart = !currentSearchIsFromStart;
@@ -481,8 +698,6 @@ namespace SixDegrees.Controllers
                     return await FormatCachedLinkData(maxConnectionsPerNode, connectionLookupFunc, startTime,
                         TwitterCache.ShortestPaths(Configuration, start, end, maxNumberOfDegrees, label));
 
-                var expandedStart = seenValuesAtStart.Aggregate(new HashSet<T>(), AggregateSetConnections(connections));
-                var expandedEnd = seenValuesAtEnd.Aggregate(new HashSet<T>(), AggregateSetConnections(connections));
                 var formattedConnections = connections
                             .Where(entry => entry.Value.Connections.Count > 0)
                             .ToDictionary(entry => entry.Key.Value, entry => entry.Value.Connections.Select(node => node.Key.Value));
@@ -550,254 +765,18 @@ namespace SixDegrees.Controllers
             return !foundLink && (callsMade == 0 || callsMade < maxAPICalls) && startList.Count > 0 && endList.Count > 0;
         }
 
-        private static Func<HashSet<T>, T, HashSet<T>> AggregateSetConnections<T>(IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections) where T : class
-        {
-            return (set, next) =>
-            {
-                if (!set.Contains(next))
-                    set.Add(next);
-                set.UnionWith(connections.FirstOrDefault(conn => conn.Key.Value.Equals(next)).Value?.Connections.Select(c => c.Key.Value) ?? Enumerable.Empty<T>());
-                return set;
-            };
-        }
-
-        /// <summary>
-        /// Extracts the actual values in the results and provides a function to check whether a link was found.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="results"></param>
-        /// <param name="links"></param>
-        /// <returns></returns>
-        private (IEnumerable<T>, Func<IEnumerable<T>, IEnumerable<T>, bool>) HandleSearchResults<T>(object results, IDictionary<Status, IEnumerable<T>> links)
+        private IEnumerable<T> ExtractValuesFromSearchResults<T>(object results, IDictionary<Status, IEnumerable<T>> links)
             where T : class
         {
             if (results is IEnumerable<T> lookup)
-                return (lookup, (values, goals) => values.Intersect(goals).Count() > 0);
+                return lookup;
             else if (results is IDictionary<Status, IEnumerable<T>> newLinks)
             {
                 foreach (var entry in newLinks.Where(entry => !links.ContainsKey(entry.Key)))
                     links.Add(entry.Key, entry.Value);
-                var hashtags = newLinks.Aggregate(new List<T>(), (collection, entry) => { collection.AddRange(entry.Value); return collection; });
-                return (hashtags, (values, goals) => values.Intersect(goals).Count() > 0);
+                return newLinks.Aggregate(new List<T>(), (collection, entry) => { collection.AddRange(entry.Value); return collection; });
             }
-            return (Enumerable.Empty<T>(), (values, goals) => false);
-        }
-
-        /// <summary>
-        /// Returns search results for the given hashtag with any associated hashtags and the source tweet urls organized by location.
-        /// </summary>
-        /// <param name="query">The hashtag to search for (minus the '#').</param>
-        /// <returns></returns>
-        [HttpGet("locations")]
-        public async Task<IActionResult> Locations(string query)
-        {
-            if (query == null)
-                return BadRequest("Invalid parameters.");
-            try
-            {
-                var results = await GetResults<TweetSearchResults>(
-                    query,
-                    AuthenticationType.Both,
-                    TwitterAPIUtils.HashtagSearchQuery,
-                    TwitterAPIEndpoint.SearchTweets);
-                IDictionary<string, Country> countries = new Dictionary<string, Country>();
-                var coords = new Dictionary<Coordinates, (ISet<string> hashtags, ICollection<string> sources)>();
-                foreach (Status status in results.Statuses)
-                {
-                    if (status.Place != null)
-                        UpdateCountriesWithPlace(countries, status);
-                    else if (status.Coordinates != null)
-                        UpdateCoordinatesWithStatus(coords, status);
-                }
-                return Ok(new
-                {
-                    Countries = GetFormattedCountries(countries.Values),
-                    CoordinateInfo = coords.Select(
-                        entry => new
-                        {
-                            Coordinates = new { CoordType = entry.Key.Type, X = entry.Key.Value[0], Y = entry.Key.Value[1] },
-                            Hashtags = entry.Value.hashtags.ToArray(),
-                            Sources = entry.Value.sources.ToArray()
-                        })
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        private void UpdateCoordinatesWithStatus(Dictionary<Coordinates, (ISet<string> sources, ICollection<string> hashtags)> coords, Status status)
-        {
-            Coordinates toUpdate = status.Coordinates;
-            if (!coords.ContainsKey(toUpdate))
-                coords[toUpdate] = (new HashSet<string>(), new List<string>());
-            coords[toUpdate].sources.Add(status.URL);
-            foreach (Hashtag tag in status.Entities.Hashtags)
-            {
-                if (!coords[toUpdate].hashtags.Contains(tag.Text))
-                    coords[toUpdate].hashtags.Add(tag.Text);
-            }
-        }
-
-        private IEnumerable<CountryResult> GetFormattedCountries(IEnumerable<Country> countries)
-        {
-            return countries.Select(country => new CountryResult() { Name = country.Name, Places = country.Places.Values });
-        }
-
-        /// <summary>
-        /// Returns information about a specified Twitter user.
-        /// </summary>
-        /// <param name="screen_name">Returns information about a specified user.</param>
-        /// <returns></returns>
-        [HttpGet("user")]
-        public async Task<IActionResult> GetUser(string screen_name)
-        {
-            if (screen_name == null)
-                return BadRequest("Invalid parameters.");
-            try
-            {
-                // Look for a cached user, but ensure they have been looked up (and don't just have a cached ID)
-                if (TwitterCache.LookupUserByName(Configuration, screen_name) is UserResult cached && cached.ScreenName != null)
-                    return Ok(cached);
-                var results = await GetResults<UserSearchResults>(
-                    screen_name,
-                    AuthenticationType.Both,
-                    TwitterAPIUtils.UserSearchQuery,
-                    TwitterAPIEndpoint.UsersShow);
-                return Ok(ToUserResult(results));
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        private static UserResult ToUserResult(UserSearchResults results)
-        {
-            if (results == null)
-                return null;
-            return new UserResult()
-            {
-                CreatedAt = results.CreatedAt,
-                Description = results.Description,
-                FollowerCount = results.FollowersCount,
-                FriendCount = results.FriendsCount,
-                GeoEnabled = results.GeoEnabled,
-                ID = results.IdStr,
-                Lang = results.Lang,
-                Location = results.Location,
-                Name = results.Name,
-                ProfileImage = results.ProfileImageUrlHttps,
-                ScreenName = results.ScreenName,
-                StatusCount = results.StatusesCount,
-                TimeZone = results.TimeZone,
-                Verified = results.Verified
-            };
-        }
-
-        /// <summary>
-        /// Returns information about the friends and followers of the specified user.
-        /// </summary>
-        /// <param name="screen_name">The screen name of the Twitter user to search for (minus the '@').</param>
-        /// <param name="limit">The maximum number of users to return.
-        /// The maximum number of friends/followers to lookup in one query is 1500 (for each) due to rate limiting.</param>
-        /// <returns></returns>
-        [HttpGet("user/connections")]
-        public async Task<IActionResult> GetUserConnections(string screen_name, int limit = MaxSingleQueryUserLookupCount, bool allowAPICalls = true)
-        {
-            if (screen_name == null || limit < 1)
-                return BadRequest("Invalid parameters.");
-            try
-            {
-                int maxLookupCount = RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User).Values.Min();
-                int lookupLimit = Math.Min(limit, maxLookupCount * MaxSingleQueryUserLookupCount);
-
-                UserResult queried = (await GetUser(screen_name) as OkObjectResult)?.Value as UserResult;
-                string userID = queried?.ID;
-                if (userID == null)
-                    return BadRequest("Invalid user screen name.");
-
-                if (TwitterCache.UserConnectionsQueried(Configuration, queried) || !allowAPICalls)
-                {
-                    IEnumerable<UserResult> cachedResults = TwitterCache.FindUserConnections(Configuration, queried).Take(limit);
-                    TwitterCache.UpdateUsers(Configuration, await LookupIDs(maxLookupCount * MaxSingleQueryUserLookupCount, cachedResults.Where(user => user.ScreenName == null).Select(user => user.ID).ToList()));
-                    // Now that all cached users have been looked up, return the updated cached results.
-                    return Ok(TwitterCache.FindUserConnections(Configuration, queried).Take(limit));
-                }
-
-                var remainingIDsToLookup = ((await GetUserConnectionIDs(userID) as OkObjectResult)?.Value as IEnumerable<string> ?? Enumerable.Empty<string>()).ToList();
-                ICollection<UserResult> results = await LookupIDs(lookupLimit, remainingIDsToLookup);
-                TwitterCache.UpdateUserConnections(Configuration, queried, results);
-                return Ok(results);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        private async Task<ICollection<UserResult>> LookupIDs(int limit, List<string> remainingIDsToLookup)
-        {
-            ICollection<UserResult> results = new List<UserResult>();
-            while (remainingIDsToLookup.Count > 0 && results.Count < limit)
-            {
-                int count = Math.Min(100, remainingIDsToLookup.Count);
-                var searchResults = await GetResultCollection<UserSearchResults>(
-                    remainingIDsToLookup.Take(count),
-                    AuthenticationType.Both,
-                    TwitterAPIUtils.UserLookupQuery,
-                    TwitterAPIEndpoint.UsersLookup) ?? Enumerable.Empty<UserSearchResults>();
-                remainingIDsToLookup.RemoveRange(0, count);
-                foreach (var searchResult in searchResults.Take(limit - results.Count))
-                    results.Add(ToUserResult(searchResult));
-            }
-
-            return results;
-        }
-
-        /// <summary>
-        /// Returns IDs of the friends and followers of the specified user.
-        /// </summary>
-        /// <param name="user_id">The id of the Twitter user to search for.</param>
-        /// <param name="limit">The maximum number of users to return (capped at 5000 followers and 5000 friends).</param>
-        /// <returns></returns>
-        [HttpGet("user/connectionids")]
-        public async Task<IActionResult> GetUserConnectionIDs(string user_id, bool allowAPICalls = true)
-        {
-            if (user_id == null)
-                return BadRequest("Invalid parameters.");
-            try
-            {
-                if (TwitterCache.UserConnectionsQueried(Configuration, user_id) || !allowAPICalls)
-                    return Ok(TwitterCache.FindUserConnectionIDs(Configuration, user_id));
-
-                var followerResults = await GetResults<UserIdsResults>(
-                    user_id,
-                    AuthenticationType.User,
-                    TwitterAPIUtils.FollowersFriendsIDsQueryByID,
-                    TwitterAPIEndpoint.FollowersIDs);
-                ISet<long> uniqueIds = new HashSet<long>(followerResults?.Ids ?? Enumerable.Empty<long>());
-
-                var friendResults = await GetResults<UserIdsResults>(
-                    user_id,
-                    AuthenticationType.User,
-                    TwitterAPIUtils.FollowersFriendsIDsQueryByID,
-                    TwitterAPIEndpoint.FriendsIDs);
-                if (friendResults != null)
-                    foreach (long id in friendResults.Ids)
-                    {
-                        if (!uniqueIds.Contains(id))
-                            uniqueIds.Add(id);
-                    }
-
-                TwitterCache.UpdateUserConnections(Configuration, user_id, uniqueIds.Select(id => id.ToString()));
-                return Ok(uniqueIds.Select(id => id.ToString()));
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            return Enumerable.Empty<T>();
         }
     }
 }

@@ -93,8 +93,11 @@ namespace SixDegrees.Data
                 .SingleOrDefault()?[0].As<INode>().Properties);
         }
 
-        internal static void UpdateUserConnections(IConfiguration configuration, UserResult queried, ICollection<UserResult> users) =>
+        internal static void UpdateUserConnections(IConfiguration configuration, UserResult queried, ICollection<UserResult> users)
+        {
+            UpdateUsers(configuration, users);
             UpdateUserConnections(configuration, queried.ID, users.Select(user => user.ID));
+        }
 
         internal static void UpdateUserConnections(IConfiguration configuration, string queried, IEnumerable<string> userIDs)
         {
