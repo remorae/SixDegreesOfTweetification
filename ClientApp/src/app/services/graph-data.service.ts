@@ -209,6 +209,9 @@ export class GraphDataService {
         const queue: string[] = [];
         const visited = new Set<string>();
         const startNode = nodeMap.get(start);
+        if(!startNode){
+            return;
+        }
         startNode.group = 0;
         visited.add(startNode.id);
         queue.push(startNode.id);
@@ -225,7 +228,7 @@ export class GraphDataService {
                     queue.push(n.target);
                     node.group = currNode.group + 1;
                 } else if (currNode.group + 1 < node.group) {
-                    node.group = currNode.group + 1;
+                   // node.group = currNode.group + 1;
                 }
             });
         }
