@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { UserInput } from '../models/userInput';
 import { UserResult, UserConnectionInfo, UserConnectionMap } from '../models/UserResult';
 import { GraphDataService, Graph } from '../services/graph-data.service';
+import { InputCacheService } from '../services/input-cache.service';
 
 @Component({
     selector: 'app-user-to-user-page',
@@ -13,16 +14,23 @@ export class UserToUserPageComponent implements OnInit {
     latestSearchEnd: string;
     userRelationshipGraph: Graph;
     modalActive = false;
-    constructor(private graphData: GraphDataService) { }
+    freshNavigation = false;
+    constructor(private graphData: GraphDataService, private inputCache: InputCacheService) { }
 
     ngOnInit() {
         this.graphData.getLatestUserData()
             .subscribe((g: Graph) => {
                 this.userRelationshipGraph = g;
-                if (this.userRelationshipGraph) {
+                if (this.userRelationshipGraph &&  this.freshNavigation) {
                     this.showModal();
                 }
             });
+
+        this.inputCache.getPreviousUsers().subscribe((s: string[]) => {
+            [this.latestSearchStart, this.latestSearchEnd] = s;
+        });
+
+        this.freshNavigation = true;
     }
 
     onUserSubmit(input: UserInput) {
@@ -31,7 +39,7 @@ export class UserToUserPageComponent implements OnInit {
         this.graphData.getUserConnectionData(start, end);
         this.latestSearchStart = start;
         this.latestSearchEnd = end;
-        // this.graphData.getSingleUserData(this.latestSearch);
+        this.inputCache.cachePreviousUsers(start, end);
     }
 
     showModal() {
