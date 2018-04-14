@@ -401,6 +401,7 @@ namespace SixDegrees.Data
         private static IDictionary<Status, IEnumerable<string>> FindHashtagConnections(ITransaction tx, string hashtag, int max)
         {
             return tx.Run("MATCH (start:Hashtag {text: $Text})-[:TWEETED_IN]->(status:Status)<-[TWEETED_IN]-(other) " +
+                "WHERE other.text <> $Text " +
                 "RETURN status, other.text LIMIT " + max,
                 new { Text = hashtag })
                 .Select(record => new
