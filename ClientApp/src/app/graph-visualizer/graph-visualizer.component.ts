@@ -110,7 +110,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .force('link', D3.forceLink().id((d: { id }) => d.id))
             .force('charge', D3.forceManyBody().distanceMax(this.maxForceDistance))
             .force('center', D3.forceCenter(this.svgWidth / 2, this.svgHeight / 2))
-            //         .force('collision', D3.forceCollide().radius((d: Node)=> d.group ? 5 : 10 ))
+                  .force('collision', D3.forceCollide().radius((d: Node)=> d.onPath ? 10 : 5 ))
             ;
     }
 
