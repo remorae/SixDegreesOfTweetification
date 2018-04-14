@@ -181,8 +181,6 @@ export class GraphDataService {
             start = this.pointToNodeID(nodeMap, pathPoints[0]);
             end = this.pointToNodeID(nodeMap, pathPoints[pathPoints.length - 1]);
 
-
-
             for (let i = 1; i < pathPoints.length; i++) {
                 const sourceNode = pathPoints[i - 1];
                 const targetNode = pathPoints[i];
@@ -197,7 +195,7 @@ export class GraphDataService {
                 }
                 if (link) {
                     link.onPath = true;
-                    link.value = 9;
+                    link.value = 4;
                     link.linkUrl = url;
                 }
             }
@@ -227,9 +225,7 @@ export class GraphDataService {
                     visited.add(n.target);
                     queue.push(n.target);
                     node.group = currNode.group + 1;
-                } else if ((currNode.group + 1) < node.group) {
-                    node.group = currNode.group + 1;
-                }
+                 }
             });
         }
     }

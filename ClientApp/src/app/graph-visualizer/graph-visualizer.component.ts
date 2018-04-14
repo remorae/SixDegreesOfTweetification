@@ -26,7 +26,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         e.preventDefault();
     }
     ngOnInit() {
-        this.headerContent = 'Click and Drag a Node to move it around, Click Without Dragging to Highlight and See More Information! ';
+        this.headerContent = 'Click and Drag a Node to move it around! Click Without Dragging to Highlight and See More Information! ';
     }
 
     ngOnDestroy() {
@@ -76,9 +76,6 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         const textSelection = this.createTextGroup(svg, filteredNodes);
         nodeSelection.append('title')
             .text((d: Node) => d.id);
-        linkSelection.append('title')
-            .text('Click here to see a connecting snztweet!');
-        this.updateHeaderContent();
 
         function ticked() {
             linkSelection
@@ -96,12 +93,6 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
                 .attr('y', (d) => d.y);
         }
 
-    }
-
-    updateHeaderContent() {
-        const { calls, time } = this.graph.metadata;
-        const [hours, minutes, seconds] = time.toLocaleString().split(':');
-        this.headerContent += `Calls: ${calls} | Time Taken: ${time}`;
     }
 
     filterNodes(): Node[] {
@@ -128,9 +119,9 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .selectAll('line')
             .data(links)
             .enter()
-            .append('a')
-            .attr('xlink:href', (l: Link) => l.linkUrl)
-            .attr('target', '_blank')
+            // .append('a')
+            // .attr('xlink:href', (l: Link) => l.linkUrl) // Allow this one day, when we have content filtering
+            // .attr('target', '_blank')
             .append('line')
             .attr('stroke-width', (d: Link) => Math.sqrt(d.value))
             .attr('stroke', (d: Link) => d.onPath ? 'black' : '#999') // TODO: colorize based on target node.
@@ -227,7 +218,15 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             }
         } else {
             this.cardTitle = `Hashtag: ${data.id}`;
-            this.cardBody.push([`Tweets found: `, 'test']);
+
+
+            const { calls, time } = this.graph.metadata;
+            const [hours, minutes, seconds] = time.toLocaleString().split(':');
+            this.cardBody.push(['Calls:', `${this.graph.metadata.calls}`]);
+            this.cardBody.push(['Time Taken:', '']);
+            this.cardBody.push(['Hours', hours]);
+            this.cardBody.push(['Minutes', minutes]);
+            this.cardBody.push(['Seconds', seconds]);
         }
 
     }
