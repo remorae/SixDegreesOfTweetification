@@ -14,6 +14,8 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
     svgHeight = 900;
     svgWidth = 900;
     highlightedIndex = -1;
+    cardTitle = '';
+    cardBody = [];
     @Output() modalOpen: EventEmitter<boolean> = new EventEmitter<boolean>(true);
     readonly maxForceDistance = 250;
     constructor() {
@@ -25,11 +27,6 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
     }
     ngOnInit() {
         this.headerContent = 'Click and Drag a Node to move it around, Click Without Dragging to Highlight and See More Information! ';
-        if (this.graph) {
-            // setTimeout(()=>{this.drawGraph()}, 750);
-            //this.drawGraph();
-        }
-
     }
 
     ngOnDestroy() {
@@ -47,9 +44,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
         if (graphChange.currentValue) {
             this.deleteGraph();
-
-            setTimeout(() => { this.drawGraph() }, 750);
-            // this.drawGraph();
+            setTimeout(() => { this.drawGraph(); }, 750);
         }
     }
 
@@ -82,7 +77,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         nodeSelection.append('title')
             .text((d: Node) => d.id);
         linkSelection.append('title')
-            .text('Click here to see a tweet!');
+            .text('Click here to see a connecting snztweet!');
         this.updateHeaderContent();
 
         function ticked() {
@@ -123,16 +118,13 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .force('link', D3.forceLink().id((d: { id }) => d.id))
             .force('charge', D3.forceManyBody().distanceMax(this.maxForceDistance))
             .force('center', D3.forceCenter(this.svgWidth / 2, this.svgHeight / 2))
-            .force('collision', D3.forceCollide().radius((d: Node) => d.onPath ? 10 : 5))
-            ;
+            .force('collision', D3.forceCollide().radius((d: Node) => d.onPath ? 10 : 5));
     }
 
     createLinksGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, links: Link[]): D3.Selection<D3.BaseType, {}, D3.BaseType, {}> {
         const color = D3.scaleOrdinal(D3.schemeCategory10);
         return svg.append('g')
             .attr('class', 'links')
-            //.attr('stroke', '#999')
-            // .attr('stroke-opacity',   '0.6')
             .selectAll('line')
             .data(links)
             .enter()
@@ -152,35 +144,13 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .data(nodes.filter((e: Node) => e.onPath))
             .enter().append('text')
             .attr('pointer-events', 'none')
-            //.attr('class', 'unselectable')
             .attr('text-anchor', 'middle')
             .attr('dx', 0)
             .attr('dy', '.30rem')
-            //.style("font-size", "50px")
-            //.style("fill", "black")
-
             .text((d) => (d.onPath) ? d.group : '');
     }
 
-    highlightNode(d, i: number, selection, color) {
-        if (this.highlightedIndex >= 0) {
-            const reference = selection[this.highlightedIndex];
-            const data = reference.__data__;
-            //const node = this.graph.nodeMap.get(data.id);
-            D3.select(reference)
-                .attr('stroke', data.onPath ? 'black' : '')
-                .attr('stroke-width', data.onPath ? 1 : 0)
-                .attr('fill', color(data.group.toString()));
-        }
 
-        this.highlightedIndex = i;
-
-        D3.select(selection[i])
-            .attr('stroke', '#1dcaff')
-            .attr('fill', '#1dcaff')
-            .attr('stroke-width', '3');
-        this.headerContent = 'changed';
-    }
 
     createNodesGroup(svg: D3.Selection<D3.BaseType, {}, HTMLElement, any>, simulation: D3.Simulation<Node, Link>, nodes) {
         const color = D3.scaleOrdinal(D3.schemeCategory10);
@@ -222,6 +192,44 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             d.fx = null;
             d.fy = null;
         }
+    }
+
+    highlightNode(d, i: number, selection, color) {
+        if (this.highlightedIndex >= 0) {
+            const reference = selection[this.highlightedIndex];
+            const data = reference.__data__;
+            D3.select(reference)
+                .attr('stroke', data.onPath ? 'black' : '')
+                .attr('stroke-width', data.onPath ? 1 : 0)
+                .attr('fill', color(data.group.toString()));
+        }
+
+        this.highlightedIndex = i;
+        const newHighlight = selection[i];
+        const newData = newHighlight.__data__;
+        D3.select(newHighlight)
+            .attr('stroke', '#1dcaff')
+            .attr('fill', '#1dcaff')
+            .attr('stroke-width', '3');
+
+        this.updateCardContent(newData);
+    }
+
+    updateCardContent(data) {
+        this.cardBody = [];
+        if (data.user) {
+            this.cardTitle = `User: ${data.id}`;
+            for (const [key, value] of Object.entries(data.user)) {
+                if (key === 'profileImage') {
+                    continue;
+                }
+                this.cardBody.push([key, value]);
+            }
+        } else {
+            this.cardTitle = `Hashtag: ${data.id}`;
+            this.cardBody.push([`Tweets found: `, 'test']);
+        }
+
     }
 
 }

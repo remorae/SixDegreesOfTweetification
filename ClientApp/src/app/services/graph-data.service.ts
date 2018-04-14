@@ -137,15 +137,15 @@ export class GraphDataService {
                 const linkKey = `${link.source} ${link.target}`;
                 const reverse = `${link.target} ${link.source}`;
 
-                if (!linkMap.has(linkKey) && !linkMap.has(reverse)) {
+                if (!linkMap.has(linkKey)) {
                     linkMap.set(linkKey, link);
                     links.push(link);
                 }
 
-                // if (!linkMap.has(reverse)) {
-                //     linkMap.set(reverse, reverseLink);
-                //     links.push(reverseLink);
-                // }
+                if (!linkMap.has(reverse)) {
+                    linkMap.set(reverse, reverseLink);
+                    links.push(reverseLink);
+                }
             });
         }
         return links;
@@ -197,7 +197,7 @@ export class GraphDataService {
                 }
                 if (link) {
                     link.onPath = true;
-                    link.value = 16;
+                    link.value = 9;
                     link.linkUrl = url;
                 }
             }
