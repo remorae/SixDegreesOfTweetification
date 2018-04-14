@@ -11,10 +11,15 @@
         <div class="row">
             <div class="card text-white bg-primary col-sm px-0" style="max-width: 18rem;">
                 <!-- style="max-width: 18rem;"-->
-                <div class="card-header">Header</div>
+                <div *ngIf="cardTitle" class="card-header text-center">{{cardTitle}}</div>
                 <div class="card-body">
-                    <h5 class="card-title">Primary card title</h5>
-                    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    <!--<h5 class="card-title">{{cardTitle}}</h5>-->
+                    <table style="table-layout: fixed; width: 100%">
+                            <ng-container *ngFor="let entry of cardBody">
+                                    <tr><td>{{entry[0]}}</td><td>{{entry[1]}}</td></tr>
+                            </ng-container>
+                       </table>
+                    <!--<p *ngFor="let entry of cardBody" class="card-text">{{entry}}</p>-->
                 </div>
             </div>
             <svg class="graph-container col-xl" (mousemove)="onDragEvent($event)"></svg>
