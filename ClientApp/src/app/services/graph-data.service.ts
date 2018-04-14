@@ -74,7 +74,6 @@ export class GraphDataService {
                 },
                 (error) => {
                     console.log(error);
-                    this.hashGraphSub.next(this.hashGraphSub.value);
                 });
     }
 
@@ -107,10 +106,10 @@ export class GraphDataService {
     createNodes(data: SixDegreesConnection<UserResult | string>, nodeMap: Map<string, Node>) {
         const values = [].concat(...(Object.values(data.connections).concat(Object.keys(data.connections))));
         const nodes: Node[] = values.map((e) => {
-            if (!e.ScreenName) {
+            if (!e.screenName) {
                 return { id: e, group: 1, isShown: true, onPath: false };
             } else {
-                return { id: e.ScreenName, group: 1, isShown: true, onPath: false, user: e };
+                return { id: e.screenName, group: 1, isShown: true, onPath: false, user: e };
             }
         });
         nodes.forEach((e: Node, i: number) => {
@@ -127,10 +126,10 @@ export class GraphDataService {
         for (const element of Object.keys(data.connections)) {
             data.connections[element].forEach((c: any) => {
                 let end: string = null;
-                if (!c.ScreenName) {
+                if (!c.screenName) {
                     end = c;
                 } else {
-                    end = c.ScreenName;
+                    end = c.screenName;
                 }
 
                 const link = { source: element, target: end, value: 1, onPath: false };
@@ -152,6 +151,19 @@ export class GraphDataService {
         return links;
     }
 
+    pointToNodeID(nodeMap: Map<string, Node>, pathPoint: any) {
+
+        if (pathPoint.screenName) {
+            const node = nodeMap.get(pathPoint.screenName);
+            node.user = pathPoint;
+            return node.id;
+        } else {
+            const node = nodeMap.get(pathPoint);
+            return node.id;
+        }
+    }
+
+
     markPath(data: SixDegreesConnection<string | UserResult>, nodeMap: Map<string, Node>, linkMap: Map<string, Link>) {
         const paths = data.paths;
         let start: string = null;
@@ -159,15 +171,18 @@ export class GraphDataService {
         paths.forEach(linkPath => {
             const pathPoints: string[] = Object.values(linkPath.path)
                 .map((e: any) => {
-                    if (e.ScreenName) {
-                        return e.ScreenName;
+                    if (e.screenName) {
+                        return e.screenName;
                     } else {
                         return e;
                     }
                 });
 
-            start = pathPoints[0];
-            end = pathPoints[pathPoints.length - 1];
+            start =  this.pointToNodeID(nodeMap, pathPoints[0]);
+            end = this.pointToNodeID(nodeMap, pathPoints[pathPoints.length - 1]);
+
+
+
             for (let i = 1; i < pathPoints.length; i++) {
                 const sourceNode = pathPoints[i - 1];
                 const targetNode = pathPoints[i];
@@ -210,7 +225,7 @@ export class GraphDataService {
                     queue.push(n.target);
                     node.group = currNode.group + 1;
                 } else if (currNode.group + 1 < node.group) {
-                        node.group = currNode.group + 1;
+                    node.group = currNode.group + 1;
                 }
             });
         }
