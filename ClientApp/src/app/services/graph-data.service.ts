@@ -137,15 +137,15 @@ export class GraphDataService {
                 const linkKey = `${link.source} ${link.target}`;
                 const reverse = `${link.target} ${link.source}`;
 
-                if (!linkMap.has(linkKey)) {
+                if (!linkMap.has(linkKey) && !linkMap.has(reverse)) {
                     linkMap.set(linkKey, link);
                     links.push(link);
                 }
 
-                if (!linkMap.has(reverse)) {
-                    linkMap.set(reverse, reverseLink);
-                    links.push(reverseLink);
-                }
+                // if (!linkMap.has(reverse)) {
+                //     linkMap.set(reverse, reverseLink);
+                //     links.push(reverseLink);
+                // }
             });
         }
         return links;
@@ -178,7 +178,7 @@ export class GraphDataService {
                     }
                 });
 
-            start =  this.pointToNodeID(nodeMap, pathPoints[0]);
+            start = this.pointToNodeID(nodeMap, pathPoints[0]);
             end = this.pointToNodeID(nodeMap, pathPoints[pathPoints.length - 1]);
 
 
@@ -197,7 +197,7 @@ export class GraphDataService {
                 }
                 if (link) {
                     link.onPath = true;
-                    link.value = 5;
+                    link.value = 16;
                     link.linkUrl = url;
                 }
             }
@@ -209,7 +209,7 @@ export class GraphDataService {
         const queue: string[] = [];
         const visited = new Set<string>();
         const startNode = nodeMap.get(start);
-        if(!startNode){
+        if (!startNode) {
             return;
         }
         startNode.group = 0;
@@ -227,8 +227,8 @@ export class GraphDataService {
                     visited.add(n.target);
                     queue.push(n.target);
                     node.group = currNode.group + 1;
-                } else if (currNode.group + 1 < node.group) {
-                   // node.group = currNode.group + 1;
+                } else if ((currNode.group + 1) < node.group) {
+                    node.group = currNode.group + 1;
                 }
             });
         }
@@ -241,7 +241,7 @@ export class GraphDataService {
         const links: Link[] = this.createLinks(data, linkMap);
         const [start, end] = this.markPath(data, nodeMap, linkMap);
         this.colorizeGraph(nodeMap, links, start);
-        return { nodes: nodes, links: links, metadata: data.metadata };
+        return { nodes,  links, metadata: data.metadata, nodeMap, linkMap };
     }
 
 
