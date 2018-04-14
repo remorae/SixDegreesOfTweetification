@@ -1,6 +1,6 @@
 import { Component, OnInit, Input, OnChanges, SimpleChange, SimpleChanges, HostListener, Output, EventEmitter, OnDestroy } from '@angular/core';
 import * as D3 from 'd3';
-import { Node, Link, Graph, GraphDataService } from '../services/graph-data.service';
+import { Node, Link, Graph, GraphDataService, ConnectionMetaData } from '../services/graph-data.service';
 import { ForceLink } from 'd3';
 @Component({
     selector: 'app-graph-visualizer',
@@ -9,7 +9,8 @@ import { ForceLink } from 'd3';
 })
 export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
-    @Input() graph: { links, nodes };
+    @Input() graph: { links, nodes, metadata: ConnectionMetaData };
+    headerContent: string;
     svgHeight = 900;
     svgWidth = 900;
 
@@ -79,6 +80,11 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         nodeSelection.append('title')
             .text((d: Node) => d.id);
 
+            // linkSelection.append('a')
+            // .attr('href', (l: Link)=> l.linkUrl);
+
+        this.updateHeaderContent();
+
         function ticked() {
             linkSelection
                 .attr('x1', (d: { source }) => d.source.x)
@@ -94,6 +100,13 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
                 .attr('x', (d) => d.x)
                 .attr('y', (d) => d.y);
         }
+
+    }
+
+    updateHeaderContent() {
+        const { calls, time } = this.graph.metadata;
+        const [hours, minutes, seconds] = time.toLocaleString().split(':');
+        this.headerContent = `Calls: ${calls} | Time Taken: ${time}`;
     }
 
     filterNodes(): Node[] {
@@ -110,7 +123,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .force('link', D3.forceLink().id((d: { id }) => d.id))
             .force('charge', D3.forceManyBody().distanceMax(this.maxForceDistance))
             .force('center', D3.forceCenter(this.svgWidth / 2, this.svgHeight / 2))
-                  .force('collision', D3.forceCollide().radius((d: Node)=> d.onPath ? 10 : 5 ))
+            .force('collision', D3.forceCollide().radius((d: Node) => d.onPath ? 10 : 5))
             ;
     }
 
