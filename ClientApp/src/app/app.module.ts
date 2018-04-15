@@ -33,6 +33,7 @@ import { CloudDataService} from './services/cloud-data.service';
 import { GraphDataService} from './services/graph-data.service';
 import { GraphVisualizerComponent } from './graph-visualizer/graph-visualizer.component';
 import { HashVisualizerComponent } from './hash-visualizer/hash-visualizer.component';
+import { InputCacheService} from './services/input-cache.service';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
@@ -89,7 +90,8 @@ const appRoutes: Routes = [
         EndpointService,
         { provide: HTTP_INTERCEPTORS, useClass: HttpXsrfInterceptorService, multi: true },
         CloudDataService,
-        GraphDataService
+        GraphDataService,
+        InputCacheService
     ],
     bootstrap: [AppComponent]
 })
