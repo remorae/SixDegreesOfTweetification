@@ -99,7 +99,7 @@ export class EndpointService {
 
     public getUserSixDegrees(user1: string, user2: string) {
         return this.http.get<any>(this.baseUrl + 'api/search/degrees/users?user1='
-            + user1 + '&user2=' + user2).finally(this.pushLatest);
+            + user1 + '&user2=' + user2 + '&lookupIDs=true').finally(this.pushLatest);
     }
 
     public getHashSixDegrees(hashtag1: string, hashtag2: string) {

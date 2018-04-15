@@ -2,13 +2,15 @@
     <h1 class="mb-3 d-inline-block align-top">User to User</h1>
     <app-dual-input (userSubmit)="onUserSubmit($event)" inputType="handle"></app-dual-input>
 </div>
-
-<div class="card mb-3">
+<h3 *ngIf="latestSearchStart && !userRelationshipGraph">
+    <i class="fa fa-spinner fa-spin mr-2"></i>Loading...
+</h3>
+<div *ngIf="userRelationshipGraph" class="card mb-3">
     <div class="card-body">
-        <h3 *ngIf="latestSearch && !userRelationshipGraph">
-            <i class="fa fa-spinner fa-spin mr-2"></i>Loading...
-        </h3>
-        <app-graph-visualizer [graph]="userRelationshipGraph"></app-graph-visualizer>
+
+        <button class="btn btn-primary"  (click)="showModal()">Show connections for @{{latestSearchStart}} and @{{latestSearchEnd}}</button>
 
     </div>
 </div>
+
+<app-graph-visualizer (modalOpen)="changeModal($event)" *ngIf="modalActive" [graph]="userRelationshipGraph"></app-graph-visualizer>

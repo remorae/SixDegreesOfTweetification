@@ -1,6 +1,38 @@
 .graph-container {
-    overflow: visible;
-    height: 900px;
-    width: 900px;
+   //overflow: visible;
+   height: calc(100vh - 64px);
+   width: 100%;
   }
 
+.animate {
+        animation: drop-fade-in 0.75s ease-out;
+}
+
+.card-header {
+    font-size: 1.75rem;
+}
+
+svg text {
+    cursor: default;
+    user-select: none;
+    pointer-events: none;
+}
+g {
+    cursor: default;
+    user-select: none;
+    pointer-events: none;
+}
+
+svg text::selection {
+    background: none;
+}
+
+.modal-fullscreen {
+    display: block;
+    height: 100%;
+    left: 0;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    margin: 0;
+}
