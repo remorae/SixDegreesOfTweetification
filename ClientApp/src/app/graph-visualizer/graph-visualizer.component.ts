@@ -26,7 +26,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         e.preventDefault();
     }
     ngOnInit() {
-        this.headerContent = 'Click and Drag a Node to move it around! Click Without Dragging to Highlight and See More Information! ';
+        this.headerContent = 'Left-click a node to view more information. Click and drag to move it around!';
     }
 
     ngOnDestroy() {
@@ -137,7 +137,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .attr('pointer-events', 'none')
             .attr('text-anchor', 'middle')
             .attr('dx', 0)
-            .attr('dy', '.30rem')
+            .attr('dy', '5px')
             .text((d) => (d.onPath) ? d.group : '');
     }
 
