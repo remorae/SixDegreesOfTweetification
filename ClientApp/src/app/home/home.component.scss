@@ -1,0 +1,21 @@
+/* I want this to conditionally display if it's the /home page, but doesn't seem to work at all */
+app-tile-column.tile-column {
+    width: initial !important;
+
+    ul {
+        display: flex;
+
+        li {
+            width: 300px;
+            margin: 0 15px;
+        }
+    }
+}
+
+ul {
+    list-style-position: inside;
+}
+
+.center {
+    width: 552px;
+}
