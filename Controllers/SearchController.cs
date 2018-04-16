@@ -226,12 +226,27 @@ namespace SixDegrees.Controllers
                 var hashtags = results.Statuses
                     .Aggregate(new HashSet<Hashtag>(), AppendHashtagsInStatus)
                     .Select(hashtag => hashtag.Text.ToLower());
-                return Ok(hashtags);
+                return Ok(FilterHashtags(hashtags));
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        private IEnumerable<string> FilterHashtags(IEnumerable<string> hashtags)
+        {
+            var filtered = hashtags.ToList();
+            try
+            {
+                foreach (string blacklist in System.IO.File.ReadLines("blacklist.txt"))
+                    filtered.RemoveAll(tag => (tag.Length - tag.Replace(blacklist, string.Empty).Length) / blacklist.Length > 0);
+            }
+            catch (System.IO.IOException)
+            {
+                return filtered;
+            }
+            return filtered;
         }
 
         private static HashSet<Hashtag> AppendHashtagsInStatus(HashSet<Hashtag> set, Status status)
@@ -539,7 +554,7 @@ namespace SixDegrees.Controllers
         private async Task<IDictionary<Status, IEnumerable<string>>> GetUniqueHashtags(string query, int max, bool allowAPICalls = true)
         {
             if (TwitterCache.HashtagConnectionsQueried(Configuration, query.ToLower()) || !allowAPICalls)
-                return TwitterCache.FindHashtagConnections(Configuration, query.ToLower(), max);
+                return FilterHashtags(TwitterCache.FindHashtagConnections(Configuration, query.ToLower(), max));
 
             IDictionary<Status, IEnumerable<string>> results = (await GetResults<TweetSearchResults>(
                 query,
@@ -551,7 +566,15 @@ namespace SixDegrees.Controllers
                 .Aggregate(new Dictionary<Status, IEnumerable<string>>(), StoreHashtagsInStatus);
             foreach (var statusTags in results)
                 TwitterCache.UpdateHashtagConnections(Configuration, query.ToLower(), statusTags.Key, statusTags.Value);
-            return results;
+            return FilterHashtags(results);
+        }
+
+        private IDictionary<Status, IEnumerable<string>> FilterHashtags(IDictionary<Status, IEnumerable<string>> dictionary)
+        {
+            var filtered = dictionary.ToDictionary(pair => pair.Key, pair => pair.Value);
+            foreach (var status in dictionary.Keys)
+                filtered[status] = FilterHashtags(filtered[status]);
+            return filtered;
         }
 
         private Dictionary<Status, IEnumerable<string>> StoreHashtagsInStatus(Dictionary<Status, IEnumerable<string>> dict, Status status)
