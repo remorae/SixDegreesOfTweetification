@@ -16,6 +16,7 @@ namespace SixDegrees.Controllers
     [Route("api/search")]
     public class SearchController : Controller
     {
+        private const int MaxNodesPerDegreeSearch = 1000;
         private const int MaxSingleQueryUserLookupCount = 100;
         private const int MaxSingleQueryUserConnectionsCount = 5000;
         private readonly UserManager<ApplicationUser> userManager;
@@ -744,16 +745,22 @@ namespace SixDegrees.Controllers
         {
             var cachedConnections = new Dictionary<string, IEnumerable<T>>();
             var cachedLinks = new Dictionary<Status, IEnumerable<T>>();
+            int count = 0;
             foreach (var (Path, Links) in cachedPaths)
             {
-                for (int i = 0; i < Path.Count; ++i)
+                for (int i = 0; i < Path.Count && count < MaxNodesPerDegreeSearch; ++i)
                 {
                     var node = Path[i];
                     string key = (node.Value is UserResult user) ? user.ScreenName : node.Value as string;
+                    if (cachedConnections.ContainsKey(key))
+                        continue;
                     // Passing in false prevents new connections from being queried
                     var lookupResults = (await connectionLookupFunc(node.Value, false) as OkObjectResult)?.Value;
                     if (lookupResults != null)
-                        cachedConnections[key] = ExtractConnections<T>(maxConnectionsPerNode, lookupResults);
+                    {
+                        cachedConnections[key] = ExtractConnections<T>(maxConnectionsPerNode, lookupResults).Take(MaxNodesPerDegreeSearch - count);
+                        count = cachedConnections.Values.Aggregate(new HashSet<T>(), (set, values) => { set.UnionWith(values); return set; }).Count;
+                    }
                 }
             }
 
