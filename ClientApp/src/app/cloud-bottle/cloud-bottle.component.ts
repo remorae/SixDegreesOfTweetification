@@ -91,7 +91,8 @@ export class CloudBottleComponent implements OnInit, OnChanges {
             )
             .text((d: WeightedWord) => d.text);
 
-
+        const cloudy = document.querySelector('.removable') as SVGElement;
+        cloudy.setAttribute('style', 'animation: grow-fade-in 0.75s cubic-bezier(0.17, 0.67, 0, 1)'); // cubic-bezier(0.17, 0.67, 0.2, 1)
 
     }
 }

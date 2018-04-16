@@ -41,14 +41,23 @@ svg {
     }
 }
 
-a[ng-reflect-router-link="/geo"] {
+a {
     // :not(a[routerlinkactive="link-active"]) ?
     span {
         float: left;
         width: calc(100% - 3rem);
     }
+}
 
+a[ng-reflect-router-link="/geo"],
+a[ng-reflect-router-link="/hash-to-hash"] {
     svg {
         margin-top: 2rem;
+    }
+}
+
+a[ng-reflect-router-link="/user-to-user"] {
+    svg {
+        margin-top: 3.5rem;
     }
 }

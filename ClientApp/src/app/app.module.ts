@@ -4,6 +4,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule, HttpClientXsrfModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { RouterModule, Routes } from '@angular/router';
 
+import { AgmCoreModule } from '@agm/core';
+
 import { AppComponent } from './app.component';
 import { HomeComponent } from './home/home.component';
 import { NavbarComponent } from './navbar/navbar.component';
@@ -16,7 +18,6 @@ import { DualInputComponent } from './dual-input/dual-input.component';
 import { SingleInputComponent } from './single-input/single-input.component';
 import { EndpointService } from './services/endpoint.service';
 import { SectionTileComponent } from './section-tile/section-tile.component';
-import { SelectGeoFilterComponent } from './select-geo-filter/select-geo-filter.component';
 import { RateLimitDisplayComponent } from './rate-limit-display/rate-limit-display.component';
 import { CanvasComponent } from './canvas/canvas.component';
 
@@ -32,6 +33,7 @@ import { CloudDataService} from './services/cloud-data.service';
 import { GraphDataService} from './services/graph-data.service';
 import { GraphVisualizerComponent } from './graph-visualizer/graph-visualizer.component';
 import { HashVisualizerComponent } from './hash-visualizer/hash-visualizer.component';
+import { InputCacheService} from './services/input-cache.service';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
@@ -56,7 +58,6 @@ const appRoutes: Routes = [
         DualInputComponent,
         SingleInputComponent,
         SectionTileComponent,
-        SelectGeoFilterComponent,
         RateLimitDisplayComponent,
         CanvasComponent,
         HashToHashPageComponent,
@@ -68,7 +69,6 @@ const appRoutes: Routes = [
         CloudBottleComponent,
         GraphVisualizerComponent,
         HashVisualizerComponent,
-
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
@@ -79,6 +79,9 @@ const appRoutes: Routes = [
         }),
         FormsModule,
         ReactiveFormsModule,
+        AgmCoreModule.forRoot({
+            apiKey: 'AIzaSyAhpnBNbe8Ydy584Fvf0VXf-lucco-gLAk'
+        }),
         RouterModule.forRoot(appRoutes) // , { enableTracing: true })
     ],
     providers: [
@@ -87,7 +90,8 @@ const appRoutes: Routes = [
         EndpointService,
         { provide: HTTP_INTERCEPTORS, useClass: HttpXsrfInterceptorService, multi: true },
         CloudDataService,
-        GraphDataService
+        GraphDataService,
+        InputCacheService
     ],
     bootstrap: [AppComponent]
 })
