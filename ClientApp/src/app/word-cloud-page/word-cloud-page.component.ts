@@ -3,7 +3,7 @@ import { UserInput } from '../models/userInput';
 import { CloudDataService } from '../services/cloud-data.service';
 import { WeightedWord } from '../cloud-bottle/cloud-bottle.component';
 
-export type CloudState = 'empty' | 'new' | 'unchanged';
+export type CloudState = 'empty' | 'new' | 'unchanged' | 'loading';
 @Component({
     selector: 'app-word-cloud-page',
     templateUrl: './word-cloud-page.component.html',
@@ -21,7 +21,7 @@ export class WordCloudPageComponent implements OnInit {
     }
     onUserSubmit(input: UserInput) {
         this.latestSearch = input.inputs[0];
-        this.cloudState = 'empty';
+        this.cloudState = 'loading';
         this.cloudData.getRelatedHashes(this.latestSearch).subscribe((newWords: WeightedWord[]) => {
 
             this.cloudWords = newWords;

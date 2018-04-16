@@ -13,4 +13,9 @@
     </div>
 </div>
 
-<app-graph-visualizer (modalOpen)="changeModal($event)" *ngIf="modalActive" [graph]="userRelationshipGraph"></app-graph-visualizer>
+<app-graph-visualizer
+    (modalOpen)="changeModal($event)"
+    *ngIf="modalActive"
+    [graph]="userRelationshipGraph"
+    [whatToWhat]="'@' + latestSearchStart + ' to @' + latestSearchEnd"
+></app-graph-visualizer>

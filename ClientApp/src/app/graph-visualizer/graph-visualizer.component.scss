@@ -5,7 +5,7 @@
   }
 
 .animate {
-        animation: drop-fade-in 0.75s ease-out;
+    animation: drop-fade-in 0.5s ease-out;
 }
 
 .card-header {
@@ -27,12 +27,37 @@ svg text::selection {
     background: none;
 }
 
+.modal {
+    top: 4rem;
+    right: 6rem;
+    bottom: 4rem;
+    left: 6rem;
+}
+
 .modal-fullscreen {
-    display: block;
-    height: 100%;
-    left: 0;
+    overflow: hidden;
+}
+
+.modal-header button.close {
+    margin-left: 1rem;
+}
+
+@keyframes fade-dim {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.dimmed-background {
     position: fixed;
+    z-index: 1040;
     top: 0;
-    width: 100%;
-    margin: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fade-dim 0.5s ease-out;
 }
