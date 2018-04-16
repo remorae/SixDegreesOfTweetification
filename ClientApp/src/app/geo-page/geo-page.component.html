@@ -5,18 +5,18 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <!--
         <h3 *ngIf="loading">
             <i class="fa fa-spinner fa-spin mr-2"></i>Loading...
         </h3>
-        <h3 *ngIf="!loading && !places.length">No results found.</h3>
-        -->
+        <h3 *ngIf="!loading && places && !places.length" class="text-danger">No results found.</h3>
+        <h4 *ngIf="places && !!places.length">Hover over a marker to see its address!</h4>
 
         <agm-map [latitude]="latitude" [longitude]="longitude" [zoom]="zoom">
             <agm-marker
                 *ngFor="let place of places"
                 [latitude]="place.lat"
                 [longitude]="place.lng"
+                [title]="place.name"
             >
             </agm-marker>
             <!-- [radius]="" <-- if agm-circle

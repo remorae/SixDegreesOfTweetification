@@ -12,7 +12,7 @@ import { LatLngLiteral } from '@agm/core/services/google-maps-types';
     providers: [GMapsService]
 })
 export class GeoPageComponent implements OnInit {
-    places: Place[] = [];
+    places: Place[] = undefined;
     latestSearch: string;
     testInput: string;
     latitude = 0;
@@ -27,17 +27,23 @@ export class GeoPageComponent implements OnInit {
     onUserSubmit(input: UserInput) {
         this.latestSearch = input.inputs[0];
         this.places = [];
-        this.loading = true; // this doesn't seem to be working
+        this.loading = true;
         this.endpoint.searchLocations(this.latestSearch).subscribe((countries: Country[]) => {
-            countries.forEach((country: Country) => {
-                country.places.forEach((placeResult: PlaceResult) => {
+            countries.forEach((country: Country, cIndex: number) => {
+                country.places.forEach((placeResult: PlaceResult, pIndex: number) => {
                     this.googleMap.getLatLongFromAddress(placeResult.name).subscribe((latLong: LatLngLiteral) => {
                         const place: Place = { ...placeResult, ...latLong };
                         this.places.push(place);
+                    }).add(() => {
+                        if (cIndex === countries.length - 1 && pIndex === country.places.length - 1) {
+                            this.loading = false;
+                        }
                     });
                 });
             });
-            this.loading = false;
+            if (!countries.length) {
+                this.loading = false;
+            }
         });
     }
 }
