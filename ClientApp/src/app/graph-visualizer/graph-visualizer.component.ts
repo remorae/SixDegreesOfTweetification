@@ -10,6 +10,7 @@ import { ConnectionMetaData, Link, Node } from '../services/graph-data.service';
 export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
     @Input() graph: { links, nodes, metadata: ConnectionMetaData, nodeMap: Map<string, Node>, linkMap: Map<string, Link> };
+    @Input() whatToWhat: string;
     headerContent: string;
     svgHeight = 900;
     svgWidth = 900;
@@ -44,7 +45,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
         if (graphChange.currentValue) {
             this.deleteGraph();
-            setTimeout(() => { this.drawGraph(); }, 750);
+            setTimeout(() => { this.drawGraph(); }, 500);
         }
     }
 
