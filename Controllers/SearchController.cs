@@ -727,9 +727,10 @@ namespace SixDegrees.Controllers
                             .ToDictionary(entry => entry.Key.Value, entry => entry.Value.Connections.Select(node => node.Key.Value));
                 return Ok(new LinkData<T>()
                 {
-                    Connections = (start is UserResult)
+                    Connections = ((start is UserResult)
                     ? formattedConnections.ToDictionary(entry => (entry.Key as UserResult).ScreenName, entry => entry.Value)
-                    : formattedConnections as Dictionary<string, IEnumerable<T>>,
+                    : formattedConnections as Dictionary<string, IEnumerable<T>>)
+                    .ToDictionary(entry => entry.Key, entry => entry.Value.ToList() as ICollection<T>),
                     Paths = Enumerable.Empty<LinkPath<T>>(),
                     Metadata = new LinkMetaData() { Time = DateTime.Now - startTime, Calls = callsMade }
                 });
@@ -744,23 +745,21 @@ namespace SixDegrees.Controllers
             DateTime startTime, int calls, List<(List<ConnectionInfo<T>.Node> Path, List<Status> Links)> cachedPaths)
             where T : class
         {
-            var cachedConnections = new Dictionary<string, IEnumerable<T>>();
-            var cachedLinks = new Dictionary<Status, IEnumerable<T>>();
+            var cachedConnections = new Dictionary<string, ICollection<T>>();
+            var cachedLinks = new Dictionary<Status, ICollection<T>>();
             int count = 0;
             foreach (var (Path, Links) in cachedPaths)
             {
                 for (int i = 0; i < Path.Count; ++i)
                 {
                     var node = Path[i];
-                    string key = (node.Value is UserResult user) ? user.ScreenName ?? user.ID : node.Value as string;
-                    if (cachedConnections.ContainsKey(key))
-                        continue;
+                    string key = (node.Value is UserResult user) ? user.ScreenName : node.Value as string;
                     // Passing in false prevents new connections from being queried
                     var lookupResults = (await connectionLookupFunc(node.Value, false) as OkObjectResult)?.Value;
                     if (lookupResults != null)
                     {
                         cachedConnections[key] = ExtractConnections<T>(maxConnectionsPerNode, lookupResults);
-                        count += cachedConnections[key].Count();
+                        count += cachedConnections[key].Count;
                     }
                 }
                 if (count >= MaxNodesPerDegreeSearch)
@@ -779,13 +778,12 @@ namespace SixDegrees.Controllers
             });
         }
 
-        private static IEnumerable<T> ExtractConnections<T>(int maxConnectionsPerNode, object lookup) where T : class
+        private static ICollection<T> ExtractConnections<T>(int maxConnectionsPerNode, object lookup) where T : class
         {
             return (lookup is IEnumerable<T> connections)
-                ? connections.Take(maxConnectionsPerNode)
+                ? connections.Take(maxConnectionsPerNode).ToList()
                 : (lookup as IDictionary<Status, IEnumerable<T>>)?
-                .Aggregate(new HashSet<T>(), AppendValuesInStatus)
-                .AsEnumerable();
+                .Aggregate(new HashSet<T>(), AppendValuesInStatus) as ICollection<T>;
         }
 
         private static HashSet<T> AppendValuesInStatus<T>(HashSet<T> set, KeyValuePair<Status, IEnumerable<T>> statusConnections) where T : class
