@@ -660,7 +660,7 @@ namespace SixDegrees.Controllers
                 {
                     // Guarantee end node has its direct connections cached.
                     await connectionLookupFunc(cachedUserPaths[0].Item1.Last().Value, true);
-                    return await FormatCachedLinkData(maxConnectionsPerNode, connectionLookupFunc, startTime, cachedUserPaths);
+                    return await FormatCachedLinkData(maxConnectionsPerNode, connectionLookupFunc, startTime, 0, cachedUserPaths);
                 }
 
                 IDictionary<Status, IEnumerable<T>> tweetLinksFound = new Dictionary<Status, IEnumerable<T>>();
@@ -719,7 +719,7 @@ namespace SixDegrees.Controllers
                 }
 
                 if (foundLink)
-                    return await FormatCachedLinkData(maxConnectionsPerNode, connectionLookupFunc, startTime,
+                    return await FormatCachedLinkData(maxConnectionsPerNode, connectionLookupFunc, startTime, callsMade,
                         TwitterCache.ShortestPaths(Configuration, start, end, maxNumberOfDegrees, label));
 
                 var formattedConnections = connections
@@ -741,27 +741,30 @@ namespace SixDegrees.Controllers
         }
 
         private async Task<IActionResult> FormatCachedLinkData<T>(int maxConnectionsPerNode, Func<T, bool, Task<IActionResult>> connectionLookupFunc,
-            DateTime startTime, List<(List<ConnectionInfo<T>.Node> Path, List<Status> Links)> cachedPaths) where T : class
+            DateTime startTime, int calls, List<(List<ConnectionInfo<T>.Node> Path, List<Status> Links)> cachedPaths)
+            where T : class
         {
             var cachedConnections = new Dictionary<string, IEnumerable<T>>();
             var cachedLinks = new Dictionary<Status, IEnumerable<T>>();
             int count = 0;
             foreach (var (Path, Links) in cachedPaths)
             {
-                for (int i = 0; i < Path.Count && count < MaxNodesPerDegreeSearch; ++i)
+                for (int i = 0; i < Path.Count; ++i)
                 {
                     var node = Path[i];
-                    string key = (node.Value is UserResult user) ? user.ScreenName : node.Value as string;
+                    string key = (node.Value is UserResult user) ? user.ScreenName ?? user.ID : node.Value as string;
                     if (cachedConnections.ContainsKey(key))
                         continue;
                     // Passing in false prevents new connections from being queried
                     var lookupResults = (await connectionLookupFunc(node.Value, false) as OkObjectResult)?.Value;
                     if (lookupResults != null)
                     {
-                        cachedConnections[key] = ExtractConnections<T>(maxConnectionsPerNode, lookupResults).Take(MaxNodesPerDegreeSearch - count);
-                        count = cachedConnections.Values.Aggregate(new HashSet<T>(), (set, values) => { set.UnionWith(values); return set; }).Count;
+                        cachedConnections[key] = ExtractConnections<T>(maxConnectionsPerNode, lookupResults);
+                        count += cachedConnections[key].Count();
                     }
                 }
+                if (count >= MaxNodesPerDegreeSearch)
+                    break;
             }
 
             return Ok(new LinkData<T>()
@@ -772,7 +775,7 @@ namespace SixDegrees.Controllers
                     Path = tuple.Path.ToDictionary(node => node.Distance, node => node.Value),
                     Links = tuple.Links.Select(link => link.URL)
                 }) ?? Enumerable.Empty<LinkPath<T>>(),
-                Metadata = new LinkMetaData() { Time = DateTime.Now - startTime, Calls = 0 }
+                Metadata = new LinkMetaData() { Time = DateTime.Now - startTime, Calls = calls }
             });
         }
 
