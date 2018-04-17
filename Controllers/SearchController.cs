@@ -753,7 +753,7 @@ namespace SixDegrees.Controllers
                 for (int i = 0; i < Path.Count; ++i)
                 {
                     var node = Path[i];
-                    string key = (node.Value is UserResult user) ? user.ScreenName : node.Value as string;
+                    string key = (node.Value is UserResult user) ? user.ScreenName ?? user.ID : node.Value as string;
                     // Passing in false prevents new connections from being queried
                     var lookupResults = (await connectionLookupFunc(node.Value, false) as OkObjectResult)?.Value;
                     if (lookupResults != null)
