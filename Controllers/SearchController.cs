@@ -384,24 +384,9 @@ namespace SixDegrees.Controllers
                 if (TwitterCache.UserConnectionsQueried(Configuration, user_id) || !allowAPICalls)
                     return Ok(TwitterCache.FindUserConnectionIDs(Configuration, user_id));
 
-                var followerResults = await GetResults<UserIdsResults>(
-                    user_id,
-                    AuthenticationType.User,
-                    TwitterAPIUtils.FollowersFriendsIDsQueryByID,
-                    TwitterAPIEndpoint.FollowersIDs);
-                ISet<long> uniqueIds = new HashSet<long>(followerResults?.Ids ?? Enumerable.Empty<long>());
-
-                var friendResults = await GetResults<UserIdsResults>(
-                    user_id,
-                    AuthenticationType.User,
-                    TwitterAPIUtils.FollowersFriendsIDsQueryByID,
-                    TwitterAPIEndpoint.FriendsIDs);
-                if (friendResults != null)
-                    foreach (long id in friendResults.Ids)
-                    {
-                        if (!uniqueIds.Contains(id))
-                            uniqueIds.Add(id);
-                    }
+                ISet<long> uniqueIds = new HashSet<long>();
+                uniqueIds.UnionWith((await GetFollowerIDs(user_id))?.Ids ?? Enumerable.Empty<long>());
+                uniqueIds.UnionWith((await GetFriendIDs(user_id))?.Ids ?? Enumerable.Empty<long>());
 
                 TwitterCache.UpdateUserConnections(Configuration, user_id, uniqueIds.Select(id => id.ToString()));
                 return Ok(uniqueIds.Select(id => id.ToString()));
@@ -410,6 +395,24 @@ namespace SixDegrees.Controllers
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        private async Task<UserIdsResults> GetFriendIDs(string userID)
+        {
+            return await GetResults<UserIdsResults>(
+                userID,
+                AuthenticationType.User,
+                TwitterAPIUtils.FollowersFriendsIDsQueryByID,
+                TwitterAPIEndpoint.FriendsIDs);
+        }
+
+        private async Task<UserIdsResults> GetFollowerIDs(string userID)
+        {
+            return await GetResults<UserIdsResults>(
+                userID,
+                AuthenticationType.User,
+                TwitterAPIUtils.FollowersFriendsIDsQueryByID,
+                TwitterAPIEndpoint.FollowersIDs);
         }
 
         /// <summary>
@@ -660,7 +663,7 @@ namespace SixDegrees.Controllers
                 if (TwitterCache.ShortestPaths(Configuration, start, end, maxNumberOfDegrees, label) is List<(List<ConnectionInfo<T>.Node>, List<Status>)> cachedUserPaths && cachedUserPaths.Count > 0)
                 {
                     // Guarantee end node has its direct connections cached.
-                    await connectionLookupFunc(cachedUserPaths[0].Item1.Last().Value, true);
+                    await connectionLookupFunc(end, true);
                     return await FormatCachedLinkData<T, T>(maxConnectionsPerNode, connectionLookupFunc, startTime, 0, cachedUserPaths, needToLookupPathUserIDs);
                 }
 
@@ -678,6 +681,7 @@ namespace SixDegrees.Controllers
                 int callsMade = 0;
                 bool foundLink = false;
                 bool currentSearchIsFromStart = true;
+
                 while (ContinueSearch(maxAPICalls, callsMade, remainingFromStart, remainingFromEnd, foundLink))
                 {
                     var remaining = currentSearchIsFromStart ? remainingFromStart : remainingFromEnd;
@@ -685,12 +689,14 @@ namespace SixDegrees.Controllers
                     {
                         ConnectionInfo<T>.Node nodeToQuery = remaining.First();
                         remaining.Remove(nodeToQuery);
+
                         int previousLimit = RateLimitController.GetCurrentUserInfo(rateLimitDb, rateLimitEndpoint, userManager, User).Limit;
                         if ((await connectionLookupFunc(nodeToQuery.Value, true) as OkObjectResult)?.Value is object lookupResult)
                         {
                             int newLimit = RateLimitController.GetCurrentUserInfo(rateLimitDb, rateLimitEndpoint, userManager, User).Limit;
                             if (newLimit < previousLimit)
                                 ++callsMade;
+
                             IEnumerable<T> lookupValues = ExtractValuesFromSearchResults(lookupResult, tweetLinksFound);
                             lookupValues = lookupValues.Where(result => !result.Equals(nodeToQuery.Value)).Distinct();
 
@@ -699,17 +705,8 @@ namespace SixDegrees.Controllers
 
                             foreach (var value in lookupValues)
                             {
-                                if (connections[nodeToQuery].Connections.Count < maxConnectionsPerNode)
-                                    connections[nodeToQuery].Connections.Add(new ConnectionInfo<T>.Node(value, nextDistance), 1);
-
-                                if (!seenValues.Contains(value))
-                                {
-                                    var node = new ConnectionInfo<T>.Node(value, nextDistance);
-                                    if (nextDistance < maxNumberOfDegrees - 1)
-                                        remaining.Add(node);
-                                    connections[node] = new ConnectionInfo<T>();
-                                    seenValues.Add(value);
-                                }
+                                AddConnections(maxConnectionsPerNode, connections, nodeToQuery, nextDistance, value);
+                                MarkNewNodes(maxNumberOfDegrees, seenValues, connections, remaining, nextDistance, value);
                             }
                             remaining.Sort((lhs, rhs) => lhs.Heuristic(nextDistance).CompareTo(rhs.Heuristic(nextDistance)));
 
@@ -723,23 +720,46 @@ namespace SixDegrees.Controllers
                     return await FormatCachedLinkData<T, T>(maxConnectionsPerNode, connectionLookupFunc, startTime, callsMade,
                         TwitterCache.ShortestPaths(Configuration, start, end, maxNumberOfDegrees, label), needToLookupPathUserIDs);
 
-                var formattedConnections = connections
-                            .Where(entry => entry.Value.Connections.Count > 0)
-                            .ToDictionary(entry => entry.Key.Value, entry => entry.Value.Connections.Select(node => node.Key.Value));
-                return Ok(new LinkData<T, T>()
-                {
-                    Connections = ((start is UserResult)
-                    ? formattedConnections.ToDictionary(entry => (entry.Key as UserResult).ScreenName, entry => entry.Value)
-                    : formattedConnections as Dictionary<string, IEnumerable<T>>)
-                    .ToDictionary(entry => entry.Key, entry => entry.Value.ToList() as ICollection<T>),
-                    Paths = Enumerable.Empty<LinkPath<T>>(),
-                    Metadata = new LinkMetaData() { Time = DateTime.Now - startTime, Calls = callsMade }
-                });
+                return FormatObtainedConnections(start, startTime, connections, callsMade);
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        private IActionResult FormatObtainedConnections<T>(T start, DateTime startTime, IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections, int callsMade) where T : class
+        {
+            var formattedConnections = connections
+                .Where(entry => entry.Value.Connections.Count > 0)
+                .ToDictionary(entry => entry.Key.Value, entry => entry.Value.Connections.Select(node => node.Key.Value));
+            return Ok(new LinkData<T, T>()
+            {
+                Connections = ((start is UserResult)
+                ? formattedConnections.ToDictionary(entry => (entry.Key as UserResult).ScreenName, entry => entry.Value)
+                : formattedConnections as Dictionary<string, IEnumerable<T>>)
+                .ToDictionary(entry => entry.Key, entry => entry.Value.ToList() as ICollection<T>),
+                Paths = Enumerable.Empty<LinkPath<T>>(),
+                Metadata = new LinkMetaData() { Time = DateTime.Now - startTime, Calls = callsMade }
+            });
+        }
+
+        private static void MarkNewNodes<T>(int maxNumberOfDegrees, ISet<T> seenValues, IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections, List<ConnectionInfo<T>.Node> remaining, int nextDistance, T value) where T : class
+        {
+            if (!seenValues.Contains(value))
+            {
+                var node = new ConnectionInfo<T>.Node(value, nextDistance);
+                if (nextDistance < maxNumberOfDegrees - 1)
+                    remaining.Add(node);
+                connections[node] = new ConnectionInfo<T>();
+                seenValues.Add(value);
+            }
+        }
+
+        private static void AddConnections<T>(int maxConnectionsPerNode, IDictionary<ConnectionInfo<T>.Node, ConnectionInfo<T>> connections, ConnectionInfo<T>.Node nodeToQuery, int nextDistance, T value) where T : class
+        {
+            if (connections[nodeToQuery].Connections.Count < maxConnectionsPerNode)
+                connections[nodeToQuery].Connections.Add(new ConnectionInfo<T>.Node(value, nextDistance), 1);
         }
 
         private async Task<IActionResult> FormatCachedLinkData<TPath, TConnection>(int maxConnectionsPerNode, Func<TPath, bool, Task<IActionResult>> connectionLookupFunc,
@@ -751,27 +771,33 @@ namespace SixDegrees.Controllers
             {
                 if (typeof(TPath) != typeof(string) || typeof(TConnection) != typeof(string))
                     throw new ArgumentException("Invalid path lookup scenario.");
-                var replacedPaths = new List<(List<ConnectionInfo<UserResult>.Node>, List<Status>)>();
-                foreach (var (Path, Links) in cachedPaths)
-                {
-                    var users = await LookupIDs(MaxSingleQueryUserLookupCount, Path.Select(node => node.Value as string).ToList());
-                    replacedPaths.Add((users.Select((user, index) => new ConnectionInfo<UserResult>.Node(user, index)).ToList(), Links));
-                }
-                return await FormatCachedLinkData<UserResult, string>(maxConnectionsPerNode, (UserResult user, bool allowAPICalls) => connectionLookupFunc(user.ID as TPath, allowAPICalls),
-                    startTime, calls, replacedPaths, false);
+                return await ReplacePathIDsWithUsersAndFormatData(maxConnectionsPerNode, connectionLookupFunc, startTime, calls, cachedPaths);
             }
+
+            return Ok(new LinkData<TPath, TConnection>()
+            {
+                Connections = await GetCachedConnections<TPath, TConnection>(maxConnectionsPerNode, connectionLookupFunc, cachedPaths),
+                Paths = cachedPaths?.Select(tuple => new LinkPath<TPath>()
+                {
+                    Path = tuple.Path.ToDictionary(node => node.Distance, node => node.Value),
+                    Links = tuple.Links.Select(link => link.URL)
+                }) ?? Enumerable.Empty<LinkPath<TPath>>(),
+                Metadata = new LinkMetaData() { Time = DateTime.Now - startTime, Calls = calls }
+            });
+        }
+
+        private static async Task<Dictionary<string, ICollection<TConnection>>> GetCachedConnections<TPath, TConnection>(int maxConnectionsPerNode, Func<TPath, bool, Task<IActionResult>> connectionLookupFunc, List<(List<ConnectionInfo<TPath>.Node> Path, List<Status> Links)> cachedPaths)
+            where TPath : class
+            where TConnection : class
+        {
             var cachedConnections = new Dictionary<string, ICollection<TConnection>>();
-            var cachedLinks = new Dictionary<Status, ICollection<TPath>>();
             int count = 0;
             foreach (var (Path, Links) in cachedPaths)
             {
                 for (int i = 0; i < Path.Count; ++i)
                 {
                     var node = Path[i];
-                    // Only use screen name if all connections are referencing fully-populated users
-                    string key = (node.Value is UserResult user)
-                        ? (typeof(TConnection) == typeof(UserResult)) ? user.ScreenName ?? user.ID : user.ID
-                        : node.Value as string;
+                    string key = GetAppropiateKey<TPath, TConnection>(node);
                     if (cachedConnections.ContainsKey(key))
                         continue;
                     // Passing in false prevents new connections from being queried
@@ -786,16 +812,29 @@ namespace SixDegrees.Controllers
                     break;
             }
 
-            return Ok(new LinkData<TPath, TConnection>()
+            return cachedConnections;
+        }
+
+        private static string GetAppropiateKey<TPath, TConnection>(ConnectionInfo<TPath>.Node node)
+            where TPath : class
+            where TConnection : class
+        {
+            // Only use screen name if all connections are referencing fully-populated users
+            return (node.Value is UserResult user)
+                ? (typeof(TConnection) == typeof(UserResult)) ? user.ScreenName ?? user.ID : user.ID
+                : node.Value as string;
+        }
+
+        private async Task<IActionResult> ReplacePathIDsWithUsersAndFormatData<TPath>(int maxConnectionsPerNode, Func<TPath, bool, Task<IActionResult>> connectionLookupFunc, DateTime startTime, int calls, List<(List<ConnectionInfo<TPath>.Node> Path, List<Status> Links)> cachedPaths) where TPath : class
+        {
+            var replacedPaths = new List<(List<ConnectionInfo<UserResult>.Node>, List<Status>)>();
+            foreach (var (Path, Links) in cachedPaths)
             {
-                Connections = cachedConnections,
-                Paths = cachedPaths?.Select(tuple => new LinkPath<TPath>()
-                {
-                    Path = tuple.Path.ToDictionary(node => node.Distance, node => node.Value),
-                    Links = tuple.Links.Select(link => link.URL)
-                }) ?? Enumerable.Empty<LinkPath<TPath>>(),
-                Metadata = new LinkMetaData() { Time = DateTime.Now - startTime, Calls = calls }
-            });
+                var users = await LookupIDs(MaxSingleQueryUserLookupCount, Path.Select(node => node.Value as string).ToList());
+                replacedPaths.Add((users.Select((user, index) => new ConnectionInfo<UserResult>.Node(user, index)).ToList(), Links));
+            }
+            return await FormatCachedLinkData<UserResult, string>(maxConnectionsPerNode, (UserResult user, bool allowAPICalls) => connectionLookupFunc(user.ID as TPath, allowAPICalls),
+                startTime, calls, replacedPaths, false);
         }
 
         private static ICollection<T> ExtractConnections<T>(int maxConnectionsPerNode, object lookup) where T : class
