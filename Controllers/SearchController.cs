@@ -609,13 +609,13 @@ namespace SixDegrees.Controllers
             int maxAPICalls = Math.Min(maxCalls, RateLimitCache.Get.MinimumRateLimits(QueryType.UserConnectionsByID, rateLimitDb, userManager, User)[AuthenticationType.User]);
             UserResult user1obj = (await GetUser(user1) as OkObjectResult)?.Value as UserResult;
             UserResult user2obj = (await GetUser(user2) as OkObjectResult)?.Value as UserResult;
-            if (user1 == null || user2 == null)
+            if (user1obj == null || user2obj == null)
                 return BadRequest("Unable to find given users.");
 
             if (lookupIDs)
             {
-                var pathResults = await new UserLinkFinder(Configuration, this, rateLimitDb, userManager, maxNodeConnections)
-                    .Execute(user1obj, user2obj, numberOfDegrees, maxAPICalls);
+                var pathResults = (await new UserLinkFinder(Configuration, this, rateLimitDb, userManager, maxNodeConnections)
+                    .Execute(user1obj, user2obj, numberOfDegrees, maxAPICalls) as OkObjectResult)?.Value;
                 
                 if (pathResults is LinkData<UserResult, UserResult> originalLinkData)
                 {
@@ -631,14 +631,16 @@ namespace SixDegrees.Controllers
                         int maxIDsToLookup = RateLimitCache.Get.MinimumRateLimits(
                             QueryType.UserConnectionsByScreenName, rateLimitDb, userManager, User).Values.Min() * MaxSingleQueryUserLookupCount;
                         TwitterCache.UpdateUsers(Configuration, (await LookupIDs(maxIDsToLookup, idsToLookup.ToList())).AsEnumerable());
-                        var updatedResults = await new UserLinkFinder(Configuration, this, rateLimitDb, userManager, maxNodeConnections)
-                            .Execute(user1obj, user2obj, numberOfDegrees, maxAPICalls) as LinkData<UserResult, UserResult>;
+                        var updatedResults = (await new UserLinkFinder(Configuration, this, rateLimitDb, userManager, maxNodeConnections)
+                            .Execute(user1obj, user2obj, numberOfDegrees, maxAPICalls) as OkObjectResult)?.Value as LinkData<UserResult, UserResult>;
+                        if (updatedResults == null)
+                            return BadRequest("Error during user search.");
                         updatedResults.Metadata.Time = updatedResults.Metadata.Time + originalLinkData.Metadata.Time;
                         updatedResults.Metadata.Calls = originalLinkData.Metadata.Calls;
                         return Ok(updatedResults);
                     }
                 }
-                return Ok(pathResults);
+                return BadRequest("Error during user search.");
             }
             else
                 return await new UserIDLinkFinder(Configuration, this, rateLimitDb, userManager, maxNodeConnections)
