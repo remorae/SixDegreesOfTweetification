@@ -27,9 +27,9 @@ namespace SixDegrees.Controllers
 
         private protected override IEnumerable<string> ExtractValuesFromSearchResults(object results, IDictionary<Status, ICollection<string>> links)
         {
-            var newLinks = (IDictionary<Status, ICollection<string>>)results;
+            var newLinks = (IDictionary<Status, IEnumerable<string>>)results;
             foreach (var entry in newLinks.Where(entry => !links.ContainsKey(entry.Key)))
-                links.Add(entry.Key, entry.Value);
+                links.Add(entry.Key, entry.Value.ToList());
             return newLinks.Aggregate(new List<string>(), (collection, entry) => { collection.AddRange(entry.Value); return collection; });
         }
 
