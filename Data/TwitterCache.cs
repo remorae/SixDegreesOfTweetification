@@ -160,6 +160,35 @@ namespace SixDegrees.Data
                 });
         }
 
+        internal static bool PathExists<T>(IConfiguration configuration, T start, T end, int maxLength, string label) where T : class
+        {
+            using (IDriver driver = GetDriver(configuration))
+            {
+                using (ISession session = driver.Session(AccessMode.Read))
+                {
+                    if (label == "User")
+                        if (start is UserResult)
+                            return session.ReadTransaction(tx => UserPathExists(tx, (start as UserResult).ID, (end as UserResult).ID, maxLength)).As<bool>();
+                        else
+                            return session.ReadTransaction(tx => UserPathExists(tx, start as string, end as string, maxLength)).As<bool>();
+                    else
+                        return session.ReadTransaction(tx => HashtagPathExists(tx, start as string, end as string, maxLength)).As<bool>();
+                }
+            }
+        }
+
+        private static bool UserPathExists(ITransaction tx, string start, string end, int maxLength)
+        {
+            return tx.Run("MATCH path=shortestPath((start:User {id: $start})-[*.." + maxLength + "]->(end:User {id: $end})) "
+                + "RETURN path", new { start, end }).Count() > 0;
+        }
+
+        private static bool HashtagPathExists(ITransaction tx, string start, string end, int maxLength)
+        {
+            return tx.Run("MATCH path=shortestPath((start:Hashtag {text: $start})-[*.." + maxLength * 2 + "]-(end:Hashtag {text: $end})) " +
+                   "RETURN path ", new { start, end }).Count() > 0;
+        }
+
         private static UserResult ToUserResult(IReadOnlyDictionary<string, object> other)
         {
             if (other == null)
