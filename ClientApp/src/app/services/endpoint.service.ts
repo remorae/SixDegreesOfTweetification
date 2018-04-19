@@ -4,8 +4,9 @@ import { Observable } from 'rxjs/Observable';
 import { Country } from '../models';
 import { Subject } from 'rxjs/Subject';
 import 'rxjs/add/operator/finally';
-import { UserConnectionInfo, UserConnectionMap } from '../models/UserResult';
+import { UserConnectionInfo, UserConnectionMap, UserResult } from '../models/UserResult';
 import { HashConnectionMap } from '../models/HashConnectionInfo';
+import { SixDegreesConnection } from './graph-data.service';
 
 export enum QueryType {
     TweetsByHashtag = 'TweetsByHashtag',
@@ -98,8 +99,8 @@ export class EndpointService {
     }
 
     public getUserSixDegrees(user1: string, user2: string) {
-        return this.http.get<any>(this.baseUrl + 'api/search/degrees/users?user1='
-            + user1 + '&user2=' + user2 + '&lookupIDs=true').finally(this.pushLatest);
+        return this.http.get<SixDegreesConnection<UserResult>>(this.baseUrl + 'api/search/degrees/users?user1='
+            + user1 + '&user2=' + user2).finally(this.pushLatest);
     }
 
     public getHashSixDegrees(hashtag1: string, hashtag2: string) {
