@@ -34,6 +34,7 @@ import { GraphDataService} from './services/graph-data.service';
 import { GraphVisualizerComponent } from './graph-visualizer/graph-visualizer.component';
 import { HashVisualizerComponent } from './hash-visualizer/hash-visualizer.component';
 import { InputCacheService} from './services/input-cache.service';
+import { AlertComponent } from './alert/alert.component';
 
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
@@ -69,6 +70,7 @@ const appRoutes: Routes = [
         CloudBottleComponent,
         GraphVisualizerComponent,
         HashVisualizerComponent,
+        AlertComponent,
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
