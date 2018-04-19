@@ -139,7 +139,33 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .attr('text-anchor', 'middle')
             .attr('dx', 0)
             .attr('dy', '5px')
-            .text((d) => (d.onPath) ? d.group : '');
+            .text((d) => (d.onPath) ? this.ToRomanNumeral(d.group) : '');
+    }
+
+    ToRomanNumeral(num: number) {
+        num++;
+        switch (num) {
+            case 1:
+                return 'I';
+            case 2:
+                return 'II';
+            case 3:
+                return 'III';
+            case 4:
+                return 'IV';
+            case 5:
+                return 'V';
+            case 6:
+                return 'VI';
+            case 7:
+                return 'VII';
+            case 8:
+                return 'VIII';
+            case 9:
+                return 'IX';
+            case 10:
+                return 'X';
+        }
     }
 
 
@@ -153,8 +179,8 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .enter().append('circle')
             .attr('r', (d: Node) => d.onPath ? 10 : 5)
             .attr('fill', (d: Node) => color(d.group.toString()))
-            .attr('stroke', (d: Node) => d.onPath ? 'black' : '')
-            .attr('stroke-width', (d: Node) => d.onPath ? 1 : 0)
+            // .attr('stroke', (d: Node) => d.onPath ? 'black' : '')
+            // .attr('stroke-width', (d: Node) => d.onPath ? 1 : 0)
             .on('click', (d, i, selection) => {
                 this.highlightNode(d, i, selection, color);
             })
