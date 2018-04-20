@@ -10,6 +10,7 @@ import { UserConnectionInfo, UserConnectionMap, UserResult } from '../models/Use
 import { HashConnectionMap } from '../models/HashConnectionInfo';
 import { SixDegreesConnection } from './graph-data.service';
 import { AlertService } from './alert.service';
+import { LoaderService } from './loader.service';
 
 export enum QueryType {
     TweetsByHashtag = 'TweetsByHashtag',
@@ -57,7 +58,8 @@ export class EndpointService {
 
     constructor(private http: HttpClient,
         @Inject('BASE_URL') baseUrl: string,
-        private alerts: AlertService) {
+        private alerts: AlertService,
+        private loader: LoaderService) {
         this.baseUrl = baseUrl;
     }
 
@@ -66,11 +68,11 @@ export class EndpointService {
     }
 
     public showLoader() {
-        this.alerts.addError('Loading!');
+        this.loader.startLoading();
     }
 
-    public hideLoader() {
-
+    public hideLoader = () => {
+        this.loader.endLoading();
     }
 
     callAPI<T>(urlChunks: string[]) {
