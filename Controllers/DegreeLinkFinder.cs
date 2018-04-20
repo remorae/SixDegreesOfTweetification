@@ -206,6 +206,8 @@ namespace SixDegrees.Controllers
                     if (lookupResults != null)
                     {
                         cachedConnections[key] = ExtractConnections(lookupResults);
+                        if (i < Path.Count - 1)
+                            EnsureLinksToNext(cachedConnections, key, Path[i + 1]);
                         count += cachedConnections[key].Count;
                     }
                 }
@@ -215,6 +217,10 @@ namespace SixDegrees.Controllers
 
             return cachedConnections;
         }
+
+        private protected abstract void EnsureLinksToNext<TPath>(Dictionary<string, ICollection<TConnection>> cachedConnections,
+            string key, ConnectionInfo<TPath>.Node node)
+            where TPath : class;
 
         private static string GetAppropriateKey<TPath>(ConnectionInfo<TPath>.Node node)
             where TPath : class
