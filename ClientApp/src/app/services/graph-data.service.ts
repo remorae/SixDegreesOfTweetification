@@ -48,14 +48,6 @@ export interface ConnectionMetaData {
     calls: number;
 }
 
-
-export class TestPath {
-    getPath() {
-        return { path: { 'BarackObama': 0, 'Francis08563494': 1 }, "daddy_yankee": 2, "eliazaroxlaj": 3, "A24": 4, "MUKASAJAMES18": 5 };
-    }
-}
-
-
 @Injectable()
 export class GraphDataService {
     testData: TestData = new TestData();
@@ -99,9 +91,16 @@ export class GraphDataService {
         return this.hashGraphSub;
     }
 
-    createHashNodes(data: SixDegreesConnection<string>) {
-        return Array.from(new Set([].concat(...Object.values(data.connections))))
-            .map((e): Node => ({ id: e, group: 1, isShown: true, onPath: false, isUser: false }));
+
+    hashDegreesToGraph = (data: SixDegreesConnection<string>) => {
+        const nodeMap = new Map<string, Node>();
+        const linkMap = new Map<string, Link>();
+
+        const nodes = this.createNodes(data, nodeMap);
+        const links: Link[] = this.createLinks(data, linkMap);
+        const [start, end] = this.markPath(data, nodeMap, linkMap);
+        this.colorizeGraph(nodeMap, links, start);
+        return { nodes, links, metadata: data.metadata, nodeMap, linkMap };
     }
 
     createNodes(data: SixDegreesConnection<UserResult | string>, nodeMap: Map<string, Node>) {
@@ -110,7 +109,7 @@ export class GraphDataService {
             if (!e.screenName) {
                 return { id: e, group: 1, isShown: true, onPath: false, isUser: false };
             } else {
-                return { id: e.screenName, group: 1, isShown: true, onPath: false, user: e, isUser: true };
+                return { id: e.id, group: 1, isShown: true, onPath: false, user: e, isUser: true };
             }
         });
         nodes.forEach((e: Node, i: number) => {
@@ -130,22 +129,21 @@ export class GraphDataService {
                 if (!c.screenName) {
                     end = c;
                 } else {
-                    end = c.screenName;
+                    end = c.id;
                 }
 
                 const link = { source: element, target: end, value: 1, onPath: false };
-                const reverseLink = { source: end, target: element, value: 1, onPath: false };
                 const linkKey = `${link.source} ${link.target}`;
                 const reverse = `${link.target} ${link.source}`;
 
                 if (!linkMap.has(linkKey)) {
                     linkMap.set(linkKey, link);
                     links.push(link);
+
                 }
 
                 if (!linkMap.has(reverse)) {
-                    linkMap.set(reverse, reverseLink);
-                    links.push(reverseLink);
+                    linkMap.set(reverse, link);
                 }
             });
         }
@@ -155,8 +153,8 @@ export class GraphDataService {
     pointToNodeID(nodeMap: Map<string, Node>, pathPoint: any) {
 
 
-            const node = nodeMap.get(pathPoint);
-            return node.id;
+        const node = nodeMap.get(pathPoint);
+        return node.id;
 
     }
 
@@ -169,7 +167,7 @@ export class GraphDataService {
             const pathPoints: string[] = Object.values(linkPath.path)
                 .map((e: any) => {
                     if (e.screenName) {
-                        return e.screenName;
+                        return e.id;
                     } else {
                         return e;
                     }
@@ -215,27 +213,24 @@ export class GraphDataService {
 
             const curr = queue.shift();
             const currNode = nodeMap.get(curr);
-            const neighbors = links.filter((e) => e.source === curr);
+            const neighbors = links.filter((e) => e.source === curr || e.target === curr);
             neighbors.forEach(n => {
-                const node = nodeMap.get(n.target);
+                const target = nodeMap.get(n.target);
                 if (!visited.has(n.target)) {
                     visited.add(n.target);
                     queue.push(n.target);
-                    node.group = currNode.group + 1;
-                 }
+                    target.group = currNode.group + 1;
+                }
+                const source = nodeMap.get(n.source);
+                if (!visited.has(n.source)) {
+                    visited.add(n.source);
+                    queue.push(n.source);
+                    source.group = currNode.group + 1;
+                }
             });
         }
     }
-    hashDegreesToGraph = (data: SixDegreesConnection<string>) => {
-        const nodeMap = new Map<string, Node>();
-        const linkMap = new Map<string, Link>();
 
-        const nodes = this.createNodes(data, nodeMap);
-        const links: Link[] = this.createLinks(data, linkMap);
-        const [start, end] = this.markPath(data, nodeMap, linkMap);
-        this.colorizeGraph(nodeMap, links, start);
-        return { nodes,  links, metadata: data.metadata, nodeMap, linkMap };
-    }
 
 
     trimMatchingEntries<T>(array: T[], filter: (e, i) => boolean): T[] {
