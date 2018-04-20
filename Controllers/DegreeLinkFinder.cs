@@ -70,8 +70,6 @@ namespace SixDegrees.Controllers
                     is List<(List<ConnectionInfo<TConnection>.Node>, List<Status>)> cachedUserPaths
                     && cachedUserPaths.Count > 0)
                 {
-                    // Guarantee end node has its direct connections cached.
-                    await FindConnections(end, true);
                     return await HandleCachedLinkData(cachedUserPaths);
                 }
 
@@ -204,8 +202,7 @@ namespace SixDegrees.Controllers
                     string key = GetAppropriateKey(node);
                     if (cachedConnections.ContainsKey(key))
                         continue;
-                    // Passing in false prevents new connections from being queried
-                    var lookupResults = (await findConnections(node.Value, false) as OkObjectResult)?.Value;
+                    var lookupResults = (await findConnections(node.Value, true) as OkObjectResult)?.Value;
                     if (lookupResults != null)
                     {
                         cachedConnections[key] = ExtractConnections(lookupResults);
