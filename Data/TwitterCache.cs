@@ -95,8 +95,62 @@ namespace SixDegrees.Data
 
         internal static void UpdateUserConnections(IConfiguration configuration, UserResult queried, ICollection<UserResult> users)
         {
-            UpdateUsers(configuration, users);
-            UpdateUserConnections(configuration, queried.ID, users.Select(user => user.ID));
+            using (IDriver driver = GetDriver(configuration))
+            {
+                using (ISession session = driver.Session(AccessMode.Write))
+                {
+                    foreach (var user in users)
+                        session.WriteTransaction(tx => UpdateUserConnection(tx, queried, user));
+                    session.WriteTransaction(tx => MarkQueried(tx, queried.ID));
+                }
+            }
+        }
+
+        private static void UpdateUserConnection(ITransaction tx, UserResult queried, UserResult user)
+        {
+            tx.Run("MERGE (a:User {id: $ID}) " +
+                "MERGE (b:User {id: $Other}) " +
+                "MERGE (a)-[:FRIEND_FOLLOWER_OF]->(b) " +
+                "MERGE (a)<-[:FRIEND_FOLLOWER_OF]-(b) " +
+                "SET a.name = $aName, a.screenName = $aScreenName, a.location = $aLocation, " +
+                "a.description = $aDescription, a.followerCount = $aFollowerCount, a.friendCount = $aFriendCount, " +
+                "a.createdAt = $aCreatedAt, a.timeZone = $aTimeZone, a.geoEnabled = $aGeoEnabled, " +
+                "a.verified = $aVerified, a.statusCount = $aStatusCount, a.lang = $aLang, a.profileImage = $aProfileImage " +
+                "SET b.name = $bName, b.screenName = $bScreenName, b.location = $bLocation, " +
+                "b.description = $bDescription, b.followerCount = $bFollowerCount, b.friendCount = $bFriendCount, " +
+                "b.createdAt = $bCreatedAt, b.timeZone = $bTimeZone, b.geoEnabled = $bGeoEnabled, " +
+                "b.verified = $bVerified, b.statusCount = $bStatusCount, b.lang = $bLang, b.profileImage = $bProfileImage ",
+                new
+                {
+                    queried.ID,
+                    Other = user.ID,
+                    aName = queried.Name,
+                    aScreenName = queried.ScreenName,
+                    aLocation = queried.Location,
+                    aDescription = queried.Description,
+                    aFollowerCount = queried.FollowerCount,
+                    aFriendCount = queried.FriendCount,
+                    aCreatedAt = queried.CreatedAt,
+                    aTimeZone = queried.TimeZone,
+                    aGeoEnabled = queried.GeoEnabled,
+                    aVerified = queried.Verified,
+                    aStatusCount = queried.StatusCount,
+                    aLang = queried.Lang,
+                    aProfileImage = queried.ProfileImage,
+                    bName = user.Name,
+                    bScreenName = user.ScreenName,
+                    bLocation = user.Location,
+                    bDescription = user.Description,
+                    bFollowerCount = user.FollowerCount,
+                    bFriendCount = user.FriendCount,
+                    bCreatedAt = user.CreatedAt,
+                    bTimeZone = user.TimeZone,
+                    bGeoEnabled = user.GeoEnabled,
+                    bVerified = user.Verified,
+                    bStatusCount = user.StatusCount,
+                    bLang = user.Lang,
+                    bProfileImage = user.ProfileImage
+                });
         }
 
         internal static void UpdateUserConnections(IConfiguration configuration, string queried, IEnumerable<string> userIDs)
@@ -123,7 +177,7 @@ namespace SixDegrees.Data
             tx.Run("MERGE (a:User {id: $ID}) " +
                 "MERGE (b:User {id: $Other}) " +
                 "MERGE (a)-[:FRIEND_FOLLOWER_OF]->(b) " +
-                "MERGE (b)-[:FRIEND_FOLLOWER_OF]->(a)",
+                "MERGE (a)<-[:FRIEND_FOLLOWER_OF]-(b)",
                 new { ID = queried, Other = id });
         }
 
@@ -385,10 +439,24 @@ namespace SixDegrees.Data
                 "status.retweeted = $Retweeted, status.source = $Source, status.text = $StatusText, " +
                 "status.truncated = $Truncated, status.userScreenName = $UserScreenName, " +
                 "status.userIdStr = $UserIdStr",
-                new { Text = start, Other = other, StatusIdStr = status.IdStr, status.FavoriteCount,
-                    status.InReplyToScreenName, status.InReplyToStatusIdStr, status.InReplyToUserIdStr, status.PossiblySensitive,
-                    status.RetweetCount, status.Retweeted, status.Source, StatusText = status.Text, status.Truncated,
-                    UserScreenName = status.User.ScreenName, UserIdStr = status.User.IdStr});
+                new
+                {
+                    Text = start,
+                    Other = other,
+                    StatusIdStr = status.IdStr,
+                    status.FavoriteCount,
+                    status.InReplyToScreenName,
+                    status.InReplyToStatusIdStr,
+                    status.InReplyToUserIdStr,
+                    status.PossiblySensitive,
+                    status.RetweetCount,
+                    status.Retweeted,
+                    status.Source,
+                    StatusText = status.Text,
+                    status.Truncated,
+                    UserScreenName = status.User.ScreenName,
+                    UserIdStr = status.User.IdStr
+                });
         }
 
         private static void MarkHashtagQueried(ITransaction tx, string hashtag)
