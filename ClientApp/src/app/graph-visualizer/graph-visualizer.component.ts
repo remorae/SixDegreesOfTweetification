@@ -209,8 +209,9 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
     updateCardContent(data) {
         this.cardBody = [];
-        this.cardTitle = data.id;
-        if (data.isUser && data.user) {
+
+        if (data.user) {
+            this.cardTitle = data.user.screenName;
             for (const [key, value] of Object.entries(data.user)) {
                 if (key === 'profileImage') {
                     continue;
@@ -218,7 +219,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
                 this.cardBody.push([key, value]);
             }
         } else {
-
+            this.cardTitle = data.id;
             const { calls, time } = this.graph.metadata;
             const [hours, minutes, seconds] = time.toLocaleString().split(':');
             this.cardBody.push(['Calls:', `${this.graph.metadata.calls}`]);

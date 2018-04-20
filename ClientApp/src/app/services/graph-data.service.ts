@@ -106,11 +106,8 @@ export class GraphDataService {
     createNodes(data: SixDegreesConnection<UserResult | string>, nodeMap: Map<string, Node>) {
         const values = [].concat(...(Object.values(data.connections).concat(Object.keys(data.connections))));
         const nodes: Node[] = values.map((e) => {
-            if (!e.screenName) {
                 return { id: e, group: 1, isShown: true, onPath: false, isUser: false };
-            } else {
-                return { id: e.id, group: 1, isShown: true, onPath: false, user: e, isUser: true };
-            }
+
         });
         nodes.forEach((e: Node, i: number) => {
             if (!nodeMap.has(e.id)) {
@@ -185,8 +182,12 @@ export class GraphDataService {
                 const url = (linkPath.links[i - 1]) ? (linkPath.links[i - 1]) : null;
 
                 if (nodeMap.has(sourceNode) && nodeMap.has(targetNode)) {
-                    nodeMap.get(sourceNode).onPath = true;
-                    nodeMap.get(targetNode).onPath = true;
+                    const source = nodeMap.get(sourceNode);
+                    const target = nodeMap.get(targetNode);
+                    source.onPath = true;
+                    source.user = linkPath.path[i - 1] as UserResult;
+                    target.onPath = true;
+                    target.user = linkPath.path[i] as UserResult;
                 }
                 if (link) {
                     link.onPath = true;
