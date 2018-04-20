@@ -139,33 +139,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .attr('text-anchor', 'middle')
             .attr('dx', 0)
             .attr('dy', '5px')
-            .text((d) => (d.onPath) ? this.ToRomanNumeral(d.group) : '');
-    }
-
-    ToRomanNumeral(num: number) {
-        num++;
-        switch (num) {
-            case 1:
-                return 'I';
-            case 2:
-                return 'II';
-            case 3:
-                return 'III';
-            case 4:
-                return 'IV';
-            case 5:
-                return 'V';
-            case 6:
-                return 'VI';
-            case 7:
-                return 'VII';
-            case 8:
-                return 'VIII';
-            case 9:
-                return 'IX';
-            case 10:
-                return 'X';
-        }
+            .text((d) => (d.onPath) ? d.group : '');
     }
 
 
