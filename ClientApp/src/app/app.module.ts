@@ -36,7 +36,8 @@ import { HashVisualizerComponent } from './hash-visualizer/hash-visualizer.compo
 import { InputCacheService} from './services/input-cache.service';
 import { AlertComponent } from './alert/alert.component';
 import { AlertService} from './services/alert.service';
-
+import { LoaderComponent } from './loader/loader.component';
+import { LoaderService} from './services/loader.service';
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
     { path: 'login', component: LoginComponent, pathMatch: 'full', canActivate: [AuthGuard] },
@@ -72,6 +73,7 @@ const appRoutes: Routes = [
         GraphVisualizerComponent,
         HashVisualizerComponent,
         AlertComponent,
+        LoaderComponent,
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
@@ -95,7 +97,8 @@ const appRoutes: Routes = [
         CloudDataService,
         GraphDataService,
         InputCacheService,
-        AlertService
+        AlertService,
+        LoaderService
     ],
     bootstrap: [AppComponent]
 })
