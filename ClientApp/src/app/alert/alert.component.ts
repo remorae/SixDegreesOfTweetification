@@ -1,18 +1,8 @@
 import { Component, OnInit } from '@angular/core';
+import { AlertService, Message } from '../services/alert.service';
+import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 
-export class Message {
-    header: string;
-    content: string;
-    style: string;
-    dismissed: boolean = false;
 
-    constructor(header,content, style?) {
-        this.header = header;
-        this.content = content;
-        this.style = style || 'info';
-    }
-
-}
 
 @Component({
     selector: 'app-alert',
@@ -21,15 +11,16 @@ export class Message {
 })
 export class AlertComponent implements OnInit {
 
-    messages: Message[] = [];
-    constructor() { }
 
+    constructor(private alertService: AlertService) { }
+
+    messages$: BehaviorSubject<Message[]> = this.alertService.getAlerts();
     ngOnInit() {
-        this.messages.push(new Message('Error', 'The server responded with: 404 The given user does not exist','danger'));
     }
 
-    dismiss(itemKey) {
-        //this.toast.dismissMessage(itemKey)
+    dismiss(event, i) {
+
+        this.messages$.value.splice(i, 1);
     }
     // https://angularfirebase.com/lessons/angular-toast-message-notifications-from-scratch/
 }
