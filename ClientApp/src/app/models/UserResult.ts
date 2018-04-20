@@ -1,7 +1,7 @@
 export interface UserResult {
     ID: string;
     Name: string;
-    ScreenName: string;
+    screenName: string;
     Location: string;
     Description: string;
     FollowerCount: number; // long

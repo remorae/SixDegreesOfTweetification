@@ -185,9 +185,9 @@ export class GraphDataService {
                     const source = nodeMap.get(sourceNode);
                     const target = nodeMap.get(targetNode);
                     source.onPath = true;
-                    source.user = linkPath.path[i - 1] as UserResult;
+                    source.user = (linkPath.path[i - 1] as UserResult).screenName ? linkPath.path[i-1] as UserResult : null;
                     target.onPath = true;
-                    target.user = linkPath.path[i] as UserResult;
+                    target.user = (linkPath.path[i] as UserResult).screenName ? linkPath.path[i] as UserResult : null;
                 }
                 if (link) {
                     link.onPath = true;

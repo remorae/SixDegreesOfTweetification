@@ -76,7 +76,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         const nodeSelection = this.createNodesGroup(svg, simulation, filteredNodes);
         const textSelection = this.createTextGroup(svg, filteredNodes);
         nodeSelection.append('title')
-            .text((d: Node) => d.id);
+            .text((d: Node) => { return (d.user) ? d.user.screenName : d.id});
 
         function ticked() {
             linkSelection
