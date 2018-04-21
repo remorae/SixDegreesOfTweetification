@@ -21,14 +21,15 @@ export class CloudBottleComponent implements OnInit, OnChanges {
 
     @Input() words: WeightedWord[];
     cloudWords: WeightedWord[];
-    cloudWidth: string;
-    cloudHeight: string;
+    cloudWidth: number;
+    cloudHeight: number;
     @Output() cloudDrawn: EventEmitter<string> = new EventEmitter<string>(true);
     constructor() { }
 
     ngOnInit() {
-        this.cloudHeight = '600';
-        this.cloudWidth = '940';
+        const temp = document.querySelector('svg.bottle') as SVGElement;
+        this.cloudHeight = temp.getBoundingClientRect().height;
+        this.cloudWidth = temp.getBoundingClientRect().width;
     }
     ngOnChanges(changes: SimpleChanges) {
         const wordChange = changes['words'];
@@ -67,18 +68,16 @@ export class CloudBottleComponent implements OnInit, OnChanges {
     }
 
     dropCloud() {
-        D3.select('svg.removable').remove();
+        D3.select('svg.bottle').selectAll('*').remove();
         this.cloudDrawn.emit('empty');
     }
     createCloud(input) {
         const fill: D3.ScaleOrdinal<string, string> = D3.scaleOrdinal(D3.schemeCategory10);
-        D3.select('.bottle')
-            .append('svg')
-            .attr('class', 'removable')
-            .attr('width', this.cloudWidth)
-            .attr('height', this.cloudHeight)
+
+
+        D3.select('svg.bottle')
             .append('g')
-            .attr('transform', 'translate(' + parseInt(this.cloudWidth, 10) / 2 + ',' + parseInt(this.cloudHeight, 10) / 2 + ')')
+            .attr('transform', 'translate(' + (this.cloudWidth / 2) + ',' + (this.cloudHeight / 2) + ')')
             .selectAll('text')
             .data(this.cloudWords)
             .enter().append('text')
@@ -91,7 +90,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
             )
             .text((d: WeightedWord) => d.text);
 
-        const cloudy = document.querySelector('.removable') as SVGElement;
+        const cloudy = document.querySelector('.bottle') as SVGElement;
         cloudy.setAttribute('style', 'animation: grow-fade-in 0.75s cubic-bezier(0.17, 0.67, 0, 1)'); // cubic-bezier(0.17, 0.67, 0.2, 1)
 
     }
