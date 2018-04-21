@@ -11,6 +11,7 @@ import { HashConnectionMap } from '../models/HashConnectionInfo';
 import { SixDegreesConnection } from './graph-data.service';
 import { AlertService } from './alert.service';
 import { LoaderService } from './loader.service';
+import { Router, NavigationEnd } from '@angular/router';
 
 export enum QueryType {
     TweetsByHashtag = 'TweetsByHashtag',
@@ -51,6 +52,7 @@ export class GeoCoordinates {
 @Injectable()
 export class EndpointService {
     baseUrl: string;
+    route: string;
     private hitBackend: Subject<any> = new Subject<any>();
     pushLatest = () => {
         this.hitBackend.next();
@@ -59,8 +61,17 @@ export class EndpointService {
     constructor(private http: HttpClient,
         @Inject('BASE_URL') baseUrl: string,
         private alerts: AlertService,
-        private loader: LoaderService) {
+        private loader: LoaderService,
+        private router: Router) {
         this.baseUrl = baseUrl;
+        this.router.events
+            .filter(event => event instanceof NavigationEnd)
+            .map((event: NavigationEnd) =>
+                event.urlAfterRedirects.split('/').join('')
+            )
+            .subscribe((r) => {
+                this.route = r;
+            });
     }
 
     public watchEndPoints() {
@@ -71,14 +82,24 @@ export class EndpointService {
         this.loader.startLoading();
     }
 
-    public hideLoader = () => {
-        this.loader.endLoading();
-    }
+    // Purpose
+
+    // Abstract
+
+    // Why it interests you
+
+    //How it would benefit people
+
+    //Algorithm
+
 
     callAPI<T>(urlChunks: string[]) {
+        const currentRoute: string = this.route;
         this.showLoader();
         return this.http.get<T>(`${this.baseUrl}${urlChunks.join('')}`)
-            .finally(this.hideLoader)
+            .finally(() => {
+                this.loader.endLoading(currentRoute);
+            })
             .finally(this.pushLatest)
             .catch((err: HttpErrorResponse, caught: Observable<T>) => {
                 this.alerts.addError(err.error);
@@ -86,7 +107,7 @@ export class EndpointService {
             });
     }
     public getAllRateLimits() {
-        return this.http.get<RateInfo>(this.baseUrl + 'api/ratelimit/all'); // infinite loop w/ pushLatest
+        return this.http.get<RateInfo>(this.baseUrl + 'api/ratelimit/all'); // can't use pushLatest
     }
 
     public searchLocations(hashtag: string): Observable<Country[]> {
