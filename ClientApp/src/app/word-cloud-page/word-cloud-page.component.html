@@ -9,12 +9,5 @@
 
     </div>
 </div>
-<div class="card mb-3">
-    <div class="card-body">
-        <h3 *ngIf="cloudState === 'loading'">
-            <i class="fa fa-spinner fa-spin mr-2"></i>Drawing Cloud...
-        </h3>
-        <!-- Can't be an NgIf due to timing issues with adding the element back to the DOM-->
-        <app-cloud-bottle [words]="cloudWords" (cloudDrawn)="checkCloudDrawn($event)"></app-cloud-bottle>
-    </div>
-</div>
+<!-- Can't be an NgIf due to timing issues with adding the element back to the DOM-->
+<app-cloud-bottle [words]="cloudWords" (cloudDrawn)="checkCloudDrawn($event)"></app-cloud-bottle>
