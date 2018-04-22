@@ -171,7 +171,6 @@ export class GraphDataService {
                         return e;
                     }
                 });
-
             start = this.pointToNodeID(nodeMap, pathPoints[0]);
             end = this.pointToNodeID(nodeMap, pathPoints[pathPoints.length - 1]);
 
@@ -197,12 +196,11 @@ export class GraphDataService {
                     link.onPath = true;
                     link.value = 4;
                     link.linkUrl = url;
+                } else {
+                    const newLink: Link = { source: sourceNode, target: targetNode, value: 4, onPath: true };
+                    links.push(newLink);
+                    linkMap.set(linkKey, newLink);
                 }
-                //  else {
-                //     const newLink: Link = { source: sourceNode, target: targetNode, value: 4, onPath: true };
-                //     links.push(newLink);
-                //     linkMap.set(linkKey, newLink);
-                // }
 
             }
         });
