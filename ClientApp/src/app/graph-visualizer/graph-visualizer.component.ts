@@ -187,8 +187,8 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             const reference = selection[this.highlightedIndex];
             const data = reference.__data__;
             D3.select(reference)
-                .attr('stroke', data.onPath ? 'black' : '')
-                .attr('stroke-width', data.onPath ? 1 : 0)
+                .attr('stroke', '')
+                .attr('stroke-width', 0)
                 .attr('fill', color(data.group.toString()));
         }
 
