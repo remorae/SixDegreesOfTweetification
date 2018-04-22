@@ -10,7 +10,7 @@
             </button>
         </div>
         <div class="row">
-            <app-graph-card [whatToWhat]="whatToWhat" [nodeData]="clickedDatum"></app-graph-card>
+            <app-graph-card [whatToWhat]="whatToWhat" [nodeData]="clickedDatum" [links]="this.graph.links"></app-graph-card>
             <svg class="graph-container col-xl" (mousemove)="onDragEvent($event)"></svg>
         </div>
     </div>
