@@ -91,22 +91,26 @@ export class GraphDataService {
         return this.hashGraphSub;
     }
 
-
     hashDegreesToGraph = (data: SixDegreesConnection<string>) => {
+        return this.mapToGraph(data, false);
+    }
+
+
+    mapToGraph = (data: SixDegreesConnection<string>, isUserGraph: boolean) => {
         const nodeMap = new Map<string, Node>();
         const linkMap = new Map<string, Link>();
 
-        const nodes = this.createNodes(data, nodeMap);
+        const nodes = this.createNodes(data, nodeMap, isUserGraph);
         const links: Link[] = this.createLinks(data, linkMap);
         const [start, end] = this.markPath(data, nodeMap, linkMap, links);
         this.colorizeGraph(nodeMap, links, start);
         return { nodes, links, metadata: data.metadata, nodeMap, linkMap };
     }
 
-    createNodes(data: SixDegreesConnection<UserResult | string>, nodeMap: Map<string, Node>) {
+    createNodes(data: SixDegreesConnection<UserResult | string>, nodeMap: Map<string, Node>, isUserGraph) {
         const values = [].concat(...(Object.values(data.connections).concat(Object.keys(data.connections))));
         const nodes: Node[] = values.map((e) => {
-            return { id: e, group: 1, isShown: true, onPath: false, isUser: false };
+            return { id: e, group: 1, isShown: true, onPath: false, isUser: isUserGraph };
 
         });
         nodes.forEach((e: Node, i: number) => {
@@ -256,6 +260,6 @@ export class GraphDataService {
 
 
     sixDegreesToGraph = (data): Graph => {
-        return this.hashDegreesToGraph(data);
+        return this.mapToGraph(data, true);
     }
 }
