@@ -10,17 +10,7 @@
             </button>
         </div>
         <div class="row">
-            <div class="card text-white bg-primary col-sm px-0" style="max-width: 18rem;">
-                <div class="card-header text-center" style="font-size: 1.25rem">{{whatToWhat}}</div>
-                <div *ngIf="cardTitle" class="card-header text-center">{{cardTitle}}</div>
-                <div class="card-body">
-                    <table style="table-layout: fixed; width: 100%">
-                        <ng-container *ngFor="let entry of cardBody">
-                            <tr><td class="font-weight-bold">{{entry[0]}}</td><td>{{entry[1]}}</td></tr>
-                        </ng-container>
-                    </table>
-                </div>
-            </div>
+            <app-graph-card [whatToWhat]="whatToWhat" [nodeData]="clickedDatum"></app-graph-card>
             <svg class="graph-container col-xl" (mousemove)="onDragEvent($event)"></svg>
         </div>
     </div>
