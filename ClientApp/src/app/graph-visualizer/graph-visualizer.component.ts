@@ -11,7 +11,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
     @Input() graph: { links, nodes, metadata: ConnectionMetaData, nodeMap: Map<string, Node>, linkMap: Map<string, Link> };
     @Input() whatToWhat: string;
-    headerContent = 'Left-click a node to view more information. Click and drag to move it around!'
+    headerContent = 'Left-click a node to view more information. Click and drag to move it around!';
     svgHeight = 900;
     svgWidth = 900;
     highlightedIndex = -1;
