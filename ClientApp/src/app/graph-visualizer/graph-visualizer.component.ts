@@ -11,14 +11,13 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
     @Input() graph: { links, nodes, metadata: ConnectionMetaData, nodeMap: Map<string, Node>, linkMap: Map<string, Link> };
     @Input() whatToWhat: string;
-    headerContent: string;
+    headerContent = 'Left-click a node to view more information. Click and drag to move it around!'
     svgHeight = 900;
     svgWidth = 900;
     highlightedIndex = -1;
-    cardTitle = '';
-    cardBody = [];
     @Output() modalOpen: EventEmitter<boolean> = new EventEmitter<boolean>(true);
     readonly maxForceDistance = 250;
+    clickedDatum;
     constructor() {
 
     }
@@ -27,7 +26,6 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         e.preventDefault();
     }
     ngOnInit() {
-        this.headerContent = 'Left-click a node to view more information. Click and drag to move it around!';
     }
 
     ngOnDestroy() {
@@ -76,7 +74,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         const nodeSelection = this.createNodesGroup(svg, simulation, filteredNodes);
         const textSelection = this.createTextGroup(svg, filteredNodes);
         nodeSelection.append('title')
-            .text((d: Node) => { return (d.user) ? d.user.screenName : d.id});
+            .text((d: Node) => (d.user) ? d.user.screenName : d.id);
 
         function ticked() {
             linkSelection
@@ -153,8 +151,6 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
             .enter().append('circle')
             .attr('r', (d: Node) => d.onPath ? 10 : 5)
             .attr('fill', (d: Node) => color(d.group.toString()))
-            // .attr('stroke', (d: Node) => d.onPath ? 'black' : '')
-            // .attr('stroke-width', (d: Node) => d.onPath ? 1 : 0)
             .on('click', (d, i, selection) => {
                 this.highlightNode(d, i, selection, color);
             })
@@ -208,27 +204,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     updateCardContent(data) {
-        this.cardBody = [];
-
-        if (data.user) {
-            this.cardTitle = data.user.screenName;
-            for (const [key, value] of Object.entries(data.user)) {
-                if (key === 'profileImage') {
-                    continue;
-                }
-                this.cardBody.push([key, value]);
-            }
-        } else {
-            this.cardTitle = data.id;
-            const { calls, time } = this.graph.metadata;
-            const [hours, minutes, seconds] = time.toLocaleString().split(':');
-            this.cardBody.push(['Calls:', `${this.graph.metadata.calls}`]);
-            this.cardBody.push(['Time Taken:', '']);
-            this.cardBody.push(['Hours', hours]);
-            this.cardBody.push(['Minutes', minutes]);
-            this.cardBody.push(['Seconds', seconds]);
-        }
-
+        this.clickedDatum = data;
     }
 
 }
