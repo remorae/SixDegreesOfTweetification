@@ -22,6 +22,13 @@ namespace SixDegrees.Controllers
 
         private protected override TwitterAPIEndpoint RateLimitEndpoint => TwitterAPIEndpoint.SearchTweets;
 
+        private protected override void EnsureLinksToNext<TPath>(Dictionary<string, ICollection<string>> cachedConnections,
+            string key, ConnectionInfo<TPath>.Node node)
+        {
+            if (!cachedConnections[key].Contains(node.Value as string))
+                cachedConnections[key].Add(node.Value as string);
+        }
+
         private protected override ICollection<string> ExtractConnections(object lookup) =>
             ((IDictionary<Status, IEnumerable<string>>)lookup).Aggregate(new HashSet<string>(), SearchController.AppendValuesInStatus);
 
