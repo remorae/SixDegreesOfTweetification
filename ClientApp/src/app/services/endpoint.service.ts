@@ -129,4 +129,8 @@ export class EndpointService {
     public getHashSixDegrees(hashtag1: string, hashtag2: string) {
         return this.callAPI<SixDegreesConnection<string>>(['api/search/degrees/hashtags?hashtag1=', hashtag1, '&hashtag2=', hashtag2]);
     }
+
+    public getUserInfo(id: string) {
+        return this.callAPI<UserResult>(['api/search/userID?user_id=', id]);
+    }
 }
