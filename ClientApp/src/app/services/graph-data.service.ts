@@ -98,7 +98,7 @@ export class GraphDataService {
 
         const nodes = this.createNodes(data, nodeMap);
         const links: Link[] = this.createLinks(data, linkMap);
-        const [start, end] = this.markPath(data, nodeMap, linkMap);
+        const [start, end] = this.markPath(data, nodeMap, linkMap, links);
         this.colorizeGraph(nodeMap, links, start);
         return { nodes, links, metadata: data.metadata, nodeMap, linkMap };
     }
@@ -106,7 +106,7 @@ export class GraphDataService {
     createNodes(data: SixDegreesConnection<UserResult | string>, nodeMap: Map<string, Node>) {
         const values = [].concat(...(Object.values(data.connections).concat(Object.keys(data.connections))));
         const nodes: Node[] = values.map((e) => {
-                return { id: e, group: 1, isShown: true, onPath: false, isUser: false };
+            return { id: e, group: 1, isShown: true, onPath: false, isUser: false };
 
         });
         nodes.forEach((e: Node, i: number) => {
@@ -140,7 +140,9 @@ export class GraphDataService {
                 }
 
                 if (!linkMap.has(reverse)) {
-                    linkMap.set(reverse, link);
+                    const reverseLink = { source: end, target: element, value: 1, onPath: false };
+                    linkMap.set(reverse, reverseLink);
+                    links.push(reverseLink);
                 }
             });
         }
@@ -156,7 +158,7 @@ export class GraphDataService {
     }
 
 
-    markPath(data: SixDegreesConnection<string | UserResult>, nodeMap: Map<string, Node>, linkMap: Map<string, Link>) {
+    markPath(data: SixDegreesConnection<string | UserResult>, nodeMap: Map<string, Node>, linkMap: Map<string, Link>, links: Link[]) {
         const paths = data.paths;
         let start: string = null;
         let end: string = null;
@@ -185,15 +187,23 @@ export class GraphDataService {
                     const source = nodeMap.get(sourceNode);
                     const target = nodeMap.get(targetNode);
                     source.onPath = true;
-                    source.user = (linkPath.path[i - 1] as UserResult).screenName ? linkPath.path[i-1] as UserResult : null;
+                    source.user = (linkPath.path[i - 1] as UserResult).screenName ? linkPath.path[i - 1] as UserResult : null;
                     target.onPath = true;
                     target.user = (linkPath.path[i] as UserResult).screenName ? linkPath.path[i] as UserResult : null;
+
+
                 }
                 if (link) {
                     link.onPath = true;
                     link.value = 4;
                     link.linkUrl = url;
                 }
+                //  else {
+                //     const newLink: Link = { source: sourceNode, target: targetNode, value: 4, onPath: true };
+                //     links.push(newLink);
+                //     linkMap.set(linkKey, newLink);
+                // }
+
             }
         });
         return [start, end];
