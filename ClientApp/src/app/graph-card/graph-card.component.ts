@@ -2,7 +2,9 @@ import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/cor
 import { EndpointService } from '../services/endpoint.service';
 import { Subject } from 'rxjs/Subject';
 import { UserResult } from '../models/UserResult';
-import 'rxjs/add/operator/switchMap';
+import { switchMap, catchError } from 'rxjs/operators';
+import { Observable } from 'rxjs/Observable';
+import { Link } from '../services/graph-data.service';
 
 @Component({
     selector: 'app-graph-card',
@@ -13,20 +15,22 @@ export class GraphCardComponent implements OnInit, OnChanges {
 
     @Input() nodeData;
     @Input() whatToWhat;
+    @Input() links;
     cardTitle: string;
-    cardBody: string[][] = [];
+    cardBody = [];
     userData: Subject<any> = new Subject<any>();
-    newestUser: UserResult;
     constructor(private endpoint: EndpointService) { }
 
     ngOnInit() {
-        this.userData.switchMap((data) => this.endpoint.getUserInfo(data.id)).subscribe(
-            (result) => {
-                this.newestUser = result;
+        this.userData.pipe(
+            switchMap((data: { id }) => this.endpoint.getUserInfo(data.id)
+                .pipe(
+                    catchError(err => Observable.empty<UserResult>())
+                )
+            )).subscribe((result: UserResult) => {
                 this.nodeData.user = result;
                 this.updateCardContent(this.nodeData);
-            } // TODO: kills entire stream on Error, need to isolate with pipe calls
-        );
+            });
     }
 
     ngOnChanges(changes: SimpleChanges) {
@@ -40,7 +44,7 @@ export class GraphCardComponent implements OnInit, OnChanges {
         this.cardBody = [];
 
         if (data.user) {
-            this.cardTitle = data.user.screenName;
+            this.cardTitle = '@' + data.user.screenName;
             for (const [key, value] of Object.entries(data.user)) {
                 if (key === 'profileImage') {
                     continue;
@@ -62,8 +66,25 @@ export class GraphCardComponent implements OnInit, OnChanges {
             // this.cardBody.push(['Minutes', minutes]);
             // this.cardBody.push(['Seconds', seconds]);
         } else {
-            console.log('Didn\'t hit guard');
-            this.endpoint.getUserInfo(data.id).subscribe(e => console.log(e));
+            const connectedWords: string[] = this.links
+                .filter((link) => link.source.id === data.id || link.target.id === data.id)
+                .map((link) => (link.source.id === data.id) ? link.target.id : link.source.id);
+            this.cardTitle = '#' + data.id;
+            this.cardBody.push('Connected To:');
+            connectedWords.forEach((hash) => {
+                this.cardBody.push('#' + hash);
+            });
+            // for (let i = 0; i < connectedWords.length - 1; i += 2) {
+            //     const first = '#' + connectedWords[i];
+            //     const second = '#' + connectedWords[i + 1];
+            //     this.cardBody.push([first, second]);
+
+            // }
+
+            // if (this.cardBody.length === 1) {
+            //     this.cardBody.push(['', connectedWords[0]]);
+            // }
+
         }
     }
 
