@@ -144,9 +144,7 @@ export class GraphDataService {
                 }
 
                 if (!linkMap.has(reverse)) {
-                    const reverseLink = { source: end, target: element, value: 1, onPath: false };
-                    linkMap.set(reverse, reverseLink);
-                    links.push(reverseLink);
+                    linkMap.set(reverse, link);
                 }
             });
         }
