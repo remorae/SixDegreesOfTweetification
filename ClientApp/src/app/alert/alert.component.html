@@ -1,9 +1,8 @@
 <div class="wrapper">
     <aside *ngFor="let message of messages$ | async; index as i">
-        <div class="notification alert"
-            [ngClass]="{'alert-info':     message.style=='info',
-                       'alert-danger':   message.style=='danger',
-                       'alert-primary':  message.style=='primary'}">
+        <div class="alert" [ngClass]="{'alert-info': message.style=='info',
+            'alert-danger': message.style=='danger',
+            'alert-primary':  message.style=='primary'}">
 
             <button class="close" (click)="dismiss($event, i)">
                 <span>&times;</span>

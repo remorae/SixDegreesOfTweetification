@@ -292,12 +292,12 @@ namespace SixDegrees.Controllers
             }
             try
             {
-                var results = await GetResults<UserSearchResults>(
+                var result = await GetResults<UserSearchResults>(
                     user_id,
                     AuthenticationType.Both,
                     TwitterAPIUtils.UserIDSearchQuery,
                     TwitterAPIEndpoint.UsersShow);
-                return Ok(ToUserResult(results));
+                return Ok(ToUserResult(result));
             }
             catch (Exception ex)
             {

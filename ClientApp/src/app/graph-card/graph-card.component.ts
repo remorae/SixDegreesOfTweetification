@@ -57,14 +57,7 @@ export class GraphCardComponent implements OnInit, OnChanges {
         } else if (data.isUser) {
 
             this.userData.next(data);
-            // this.cardTitle = data.id;
-            // //const { calls, time } = this.graph.metadata;
-            // // const [hours, minutes, seconds] = time.toLocaleString().split(':');
-            // //this.cardBody.push(['Calls:', `${this.graph.metadata.calls}`]);
-            // this.cardBody.push(['Time Taken:', '']);
-            // this.cardBody.push(['Hours', hours]);
-            // this.cardBody.push(['Minutes', minutes]);
-            // this.cardBody.push(['Seconds', seconds]);
+
         } else {
             const connectedWords: string[] = this.links
                 .filter((link) => link.source.id === data.id || link.target.id === data.id)
@@ -74,18 +67,20 @@ export class GraphCardComponent implements OnInit, OnChanges {
             connectedWords.forEach((hash) => {
                 this.cardBody.push('#' + hash);
             });
-            // for (let i = 0; i < connectedWords.length - 1; i += 2) {
-            //     const first = '#' + connectedWords[i];
-            //     const second = '#' + connectedWords[i + 1];
-            //     this.cardBody.push([first, second]);
-
-            // }
-
-            // if (this.cardBody.length === 1) {
-            //     this.cardBody.push(['', connectedWords[0]]);
-            // }
-
         }
+
+
+    }
+
+    showTimeData(data, metadata) { // TODO: find a place to show this
+        this.cardTitle = data.id;
+        const { calls, time } = metadata;
+        const [hours, minutes, seconds] = time.toLocaleString().split(':');
+        this.cardBody.push(['Calls:', `${calls}`]);
+        this.cardBody.push(['Time Taken:', '']);
+        this.cardBody.push(['Hours', hours]);
+        this.cardBody.push(['Minutes', minutes]);
+        this.cardBody.push(['Seconds', seconds]);
     }
 
 }
