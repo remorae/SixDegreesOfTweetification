@@ -32,7 +32,6 @@ export class LoaderService {
         if (this.currentRoute === route) {
             this.loadingStatus.next(false);
         }
-        //TODO: Fix this killing an active loader when another returns;
     }
 
     getLoadingStatus(): Subject<boolean> {

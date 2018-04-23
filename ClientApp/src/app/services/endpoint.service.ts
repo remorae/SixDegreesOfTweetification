@@ -82,17 +82,6 @@ export class EndpointService {
         this.loader.startLoading();
     }
 
-    // Purpose
-
-    // Abstract
-
-    // Why it interests you
-
-    //How it would benefit people
-
-    //Algorithm
-
-
     callAPI<T>(urlChunks: string[]) {
         const currentRoute: string = this.route;
         this.showLoader();
