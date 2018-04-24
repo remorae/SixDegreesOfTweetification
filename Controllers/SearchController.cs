@@ -304,9 +304,6 @@ namespace SixDegrees.Controllers
                 return BadRequest(ex.Message);
             }
         }
-
-
-
         private static UserResult ToUserResult(UserSearchResults results)
         {
             if (results == null)
