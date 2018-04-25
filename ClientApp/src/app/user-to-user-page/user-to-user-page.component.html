@@ -2,9 +2,6 @@
     <h1 class="mb-3 d-inline-block align-top">User to User</h1>
     <app-dual-input (userSubmit)="onUserSubmit($event)" inputType="handle"></app-dual-input>
 </div>
-<h3 *ngIf="latestSearchStart && !userRelationshipGraph">
-    <i class="fa fa-spinner fa-spin mr-2"></i>Loading...
-</h3>
 <div *ngIf="userRelationshipGraph" class="card mb-3">
     <div class="card-body">
 
