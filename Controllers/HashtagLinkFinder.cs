@@ -18,21 +18,21 @@ namespace SixDegrees.Controllers
         {
         }
 
-        private protected override string Label => "Hashtag";
+        protected override string Label => "Hashtag";
 
-        private protected override TwitterAPIEndpoint RateLimitEndpoint => TwitterAPIEndpoint.SearchTweets;
+        protected override TwitterAPIEndpoint RateLimitEndpoint => TwitterAPIEndpoint.SearchTweets;
 
-        private protected override void EnsureLinksToNext<TPath>(Dictionary<string, ICollection<string>> cachedConnections,
+        protected override void EnsureLinksToNext<TPath>(Dictionary<string, ICollection<string>> cachedConnections,
             string key, ConnectionInfo<TPath>.Node node)
         {
             if (!cachedConnections[key].Contains(node.Value as string))
                 cachedConnections[key].Add(node.Value as string);
         }
 
-        private protected override ICollection<string> ExtractConnections(object lookup) =>
+        protected override ICollection<string> ExtractConnections(object lookup) =>
             ((IDictionary<Status, IEnumerable<string>>)lookup).Aggregate(new HashSet<string>(), SearchController.AppendValuesInStatus);
 
-        private protected override IEnumerable<string> ExtractValuesFromSearchResults(object results, IDictionary<Status, ICollection<string>> links)
+        protected override IEnumerable<string> ExtractValuesFromSearchResults(object results, IDictionary<Status, ICollection<string>> links)
         {
             var newLinks = (IDictionary<Status, IEnumerable<string>>)results;
             foreach (var entry in newLinks.Where(entry => !links.ContainsKey(entry.Key)))
@@ -40,7 +40,7 @@ namespace SixDegrees.Controllers
             return newLinks.Aggregate(new List<string>(), (collection, entry) => { collection.AddRange(entry.Value); return collection; });
         }
 
-        private protected override async Task<IActionResult> FindConnections(string query, bool allowAPICalls) =>
+        protected override async Task<IActionResult> FindConnections(string query, bool allowAPICalls) =>
             Ok(await Controller.GetUniqueHashtags(query, maximumConnectionsPerNode, allowAPICalls));
     }
 }
