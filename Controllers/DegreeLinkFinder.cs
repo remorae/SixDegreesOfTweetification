@@ -15,13 +15,13 @@ namespace SixDegrees.Controllers
     abstract class DegreeLinkFinder<TConnection>
         where TConnection : class
     {
-        private protected const int MaxNodesPerDegreeSearch = 1000;
+        protected const int MaxNodesPerDegreeSearch = 1000;
 
-        private protected readonly int maximumConnectionsPerNode;
+        protected readonly int maximumConnectionsPerNode;
         private DateTime startTime = DateTime.Now;
         private int callsMade = 0;
 
-        private protected DegreeLinkFinder(IConfiguration configuration, SearchController controller,
+        protected DegreeLinkFinder(IConfiguration configuration, SearchController controller,
             RateLimitDbContext rateLimitDb, UserManager<ApplicationUser> userManager, int maxConnectionsPerNode)
         {
             Configuration = configuration;
@@ -31,27 +31,27 @@ namespace SixDegrees.Controllers
             maximumConnectionsPerNode = maxConnectionsPerNode;
         }
 
-        private protected IConfiguration Configuration { get; }
-        private protected SearchController Controller { get; }
-        private protected RateLimitDbContext RateLimitDb { get; }
-        private protected UserManager<ApplicationUser> UserManager { get; }
-        private protected ClaimsPrincipal User => Controller.User;
+        protected IConfiguration Configuration { get; }
+        protected SearchController Controller { get; }
+        protected RateLimitDbContext RateLimitDb { get; }
+        protected UserManager<ApplicationUser> UserManager { get; }
+        protected ClaimsPrincipal User => Controller.User;
 
-        private protected abstract string Label { get; }
-        private protected abstract TwitterAPIEndpoint RateLimitEndpoint { get; }
+        protected abstract string Label { get; }
+        protected abstract TwitterAPIEndpoint RateLimitEndpoint { get; }
 
-        private protected IActionResult BadRequest(object error) => Controller.BadRequest(error);
-        private protected IActionResult Ok(object value) => Controller.Ok(value);
+        protected IActionResult BadRequest(object error) => Controller.BadRequest(error);
+        protected IActionResult Ok(object value) => Controller.Ok(value);
 
-        private protected abstract Task<IActionResult> FindConnections(TConnection query, bool allowAPICalls);
+        protected abstract Task<IActionResult> FindConnections(TConnection query, bool allowAPICalls);
 
-        private protected virtual async Task<IActionResult> HandleCachedLinkData(List<(List<ConnectionInfo<TConnection>.Node> Path, List<Status> Links)> cachedPaths) =>
+        protected virtual async Task<IActionResult> HandleCachedLinkData(List<(List<ConnectionInfo<TConnection>.Node> Path, List<Status> Links)> cachedPaths) =>
             await FormatCachedLinkData((query, allowAPICalls) => FindConnections(query as TConnection, allowAPICalls), cachedPaths);
 
-        private protected virtual ICollection<TConnection> ExtractConnections(object lookup) =>
+        protected virtual ICollection<TConnection> ExtractConnections(object lookup) =>
             ((IEnumerable<TConnection>)lookup).Take(maximumConnectionsPerNode).ToList();
 
-        private protected virtual IEnumerable<TConnection> ExtractValuesFromSearchResults(object results,
+        protected virtual IEnumerable<TConnection> ExtractValuesFromSearchResults(object results,
             IDictionary<Status, ICollection<TConnection>> links) => (IEnumerable<TConnection>)results;
 
         public async Task<IActionResult> Execute(TConnection start, TConnection end, int maxNumberOfDegrees, int maxAPICalls)
@@ -172,7 +172,7 @@ namespace SixDegrees.Controllers
                 connections[nodeToQuery].Connections.Add(new ConnectionInfo<TConnection>.Node(value, nextDistance), 1);
         }
 
-        private protected async Task<IActionResult> FormatCachedLinkData<TPath>(Func<TPath, bool, Task<IActionResult>> findConnections,
+        protected async Task<IActionResult> FormatCachedLinkData<TPath>(Func<TPath, bool, Task<IActionResult>> findConnections,
             List<(List<ConnectionInfo<TPath>.Node> Path, List<Status> Links)> cachedPaths)
             where TPath : class
         {
@@ -218,7 +218,7 @@ namespace SixDegrees.Controllers
             return cachedConnections;
         }
 
-        private protected abstract void EnsureLinksToNext<TPath>(Dictionary<string, ICollection<TConnection>> cachedConnections,
+        protected abstract void EnsureLinksToNext<TPath>(Dictionary<string, ICollection<TConnection>> cachedConnections,
             string key, ConnectionInfo<TPath>.Node node)
             where TPath : class;
 
