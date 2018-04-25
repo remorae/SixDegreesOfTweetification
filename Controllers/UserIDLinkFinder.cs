@@ -18,21 +18,21 @@ namespace SixDegrees.Controllers
         {
         }
 
-        private protected override string Label => "User";
+        protected override string Label => "User";
 
-        private protected override TwitterAPIEndpoint RateLimitEndpoint => TwitterAPIEndpoint.FollowersIDs;
+        protected override TwitterAPIEndpoint RateLimitEndpoint => TwitterAPIEndpoint.FollowersIDs;
 
-        private protected override async Task<IActionResult> FindConnections(string query, bool allowAPICalls) =>
+        protected override async Task<IActionResult> FindConnections(string query, bool allowAPICalls) =>
             Ok(((await Controller.GetUserConnectionIDs(query, allowAPICalls) as OkObjectResult)?.Value as IEnumerable<string>));
 
-        private protected override void EnsureLinksToNext<TPath>(Dictionary<string, ICollection<string>> cachedConnections,
+        protected override void EnsureLinksToNext<TPath>(Dictionary<string, ICollection<string>> cachedConnections,
             string key, ConnectionInfo<TPath>.Node node)
         {
             if (!cachedConnections[key].Contains((node.Value as UserResult).ID))
                 cachedConnections[key].Add((node.Value as UserResult).ID);
         }
 
-        private protected override async Task<IActionResult> HandleCachedLinkData(
+        protected override async Task<IActionResult> HandleCachedLinkData(
             List<(List<ConnectionInfo<string>.Node> Path, List<Status> Links)> cachedPaths)
         {
             var replacedPaths = new List<(List<ConnectionInfo<UserResult>.Node>, List<Status>)>();
