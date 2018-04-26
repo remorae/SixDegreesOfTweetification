@@ -34,7 +34,11 @@ import { GraphDataService} from './services/graph-data.service';
 import { GraphVisualizerComponent } from './graph-visualizer/graph-visualizer.component';
 import { HashVisualizerComponent } from './hash-visualizer/hash-visualizer.component';
 import { InputCacheService} from './services/input-cache.service';
-
+import { AlertComponent } from './alert/alert.component';
+import { AlertService} from './services/alert.service';
+import { LoaderComponent } from './loader/loader.component';
+import { LoaderService} from './services/loader.service';
+import { GraphCardComponent } from './graph-card/graph-card.component';
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
     { path: 'login', component: LoginComponent, pathMatch: 'full', canActivate: [AuthGuard] },
@@ -69,6 +73,9 @@ const appRoutes: Routes = [
         CloudBottleComponent,
         GraphVisualizerComponent,
         HashVisualizerComponent,
+        AlertComponent,
+        LoaderComponent,
+        GraphCardComponent,
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
@@ -91,7 +98,9 @@ const appRoutes: Routes = [
         { provide: HTTP_INTERCEPTORS, useClass: HttpXsrfInterceptorService, multi: true },
         CloudDataService,
         GraphDataService,
-        InputCacheService
+        InputCacheService,
+        AlertService,
+        LoaderService
     ],
     bootstrap: [AppComponent]
 })

@@ -8,9 +8,8 @@
     animation: drop-fade-in 0.5s ease-out;
 }
 
-.card-header {
-    font-size: 1.75rem;
-}
+
+
 
 svg text {
     cursor: default;
@@ -28,10 +27,10 @@ svg text::selection {
 }
 
 .modal {
-    top: 4rem;
-    right: 6rem;
-    bottom: 4rem;
-    left: 6rem;
+    top: 2rem;
+    right: 2rem;
+    bottom: 2rem;
+    left: 2rem;
 }
 
 .modal-fullscreen {

@@ -282,6 +282,28 @@ namespace SixDegrees.Controllers
             }
         }
 
+        [HttpGet("userID")]
+
+        public async Task<IActionResult> GetUserByID(string user_id)
+        {
+            if (user_id == null)
+            {
+                return BadRequest("Invalid parameters");
+            }
+            try
+            {
+                var result = await GetResults<UserSearchResults>(
+                    user_id,
+                    AuthenticationType.Both,
+                    TwitterAPIUtils.UserIDSearchQuery,
+                    TwitterAPIEndpoint.UsersShow);
+                return Ok(ToUserResult(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
         private static UserResult ToUserResult(UserSearchResults results)
         {
             if (results == null)
@@ -616,7 +638,7 @@ namespace SixDegrees.Controllers
             {
                 var pathResults = (await new UserLinkFinder(Configuration, this, rateLimitDb, userManager, maxNodeConnections)
                     .Execute(user1obj, user2obj, numberOfDegrees, maxAPICalls) as OkObjectResult)?.Value;
-                
+
                 if (pathResults is LinkData<UserResult, UserResult> originalLinkData)
                 {
                     var idsToLookup = originalLinkData.Paths.Aggregate(new List<string>(), (set, path) =>

@@ -1,12 +1,17 @@
 import { Injectable, Inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs/Observable';
+import 'rxjs/add/observable/empty';
 import { Country } from '../models';
 import { Subject } from 'rxjs/Subject';
 import 'rxjs/add/operator/finally';
+import 'rxjs/add/operator/catch';
 import { UserConnectionInfo, UserConnectionMap, UserResult } from '../models/UserResult';
 import { HashConnectionMap } from '../models/HashConnectionInfo';
 import { SixDegreesConnection } from './graph-data.service';
+import { AlertService } from './alert.service';
+import { LoaderService } from './loader.service';
+import { Router, NavigationEnd } from '@angular/router';
 
 export enum QueryType {
     TweetsByHashtag = 'TweetsByHashtag',
@@ -47,64 +52,74 @@ export class GeoCoordinates {
 @Injectable()
 export class EndpointService {
     baseUrl: string;
+    route: string;
     private hitBackend: Subject<any> = new Subject<any>();
     pushLatest = () => {
         this.hitBackend.next();
     }
 
-    constructor(private http: HttpClient, @Inject('BASE_URL') baseUrl: string) {
+    constructor(private http: HttpClient,
+        @Inject('BASE_URL') baseUrl: string,
+        private alerts: AlertService,
+        private loader: LoaderService,
+        private router: Router) {
         this.baseUrl = baseUrl;
+        this.router.events
+            .filter(event => event instanceof NavigationEnd)
+            .map((event: NavigationEnd) =>
+                event.urlAfterRedirects.split('/').join('')
+            )
+            .subscribe((r) => {
+                this.route = r;
+            });
     }
 
     public watchEndPoints() {
         return this.hitBackend;
     }
-    public getAllRateLimits() {
-        return this.http.get<RateInfo>(this.baseUrl + 'api/ratelimit/all');
+
+    public showLoader() {
+        this.loader.startLoading();
     }
-    public searchTweets(hashtag: string): Observable<any[]> {
-        // TODO: Change type to properly match final Endpoint Version
-        return this.http
-            .get<any[]>(this.baseUrl + 'api/search/tweets?query=' + hashtag)
-            .finally(this.pushLatest);
+
+    callAPI<T>(urlChunks: string[]) {
+        const currentRoute: string = this.route;
+        this.showLoader();
+        return this.http.get<T>(`${this.baseUrl}${urlChunks.join('')}`)
+            .finally(() => {
+                this.loader.endLoading(currentRoute);
+            })
+            .finally(this.pushLatest)
+            .catch((err: HttpErrorResponse, caught: Observable<T>) => {
+                this.alerts.addError(err.error);
+                return Observable.empty<T>();
+            });
+    }
+    public getAllRateLimits() {
+        return this.http.get<RateInfo>(this.baseUrl + 'api/ratelimit/all'); // can't use pushLatest
     }
 
     public searchLocations(hashtag: string): Observable<Country[]> {
-        return this.http
-            .get<LocationData>(
-            this.baseUrl + 'api/search/locations?query=' + hashtag
-        )
-            .map(val => val.countries)
-            .finally(this.pushLatest);
-    }
 
-    public getSelectedRateLimit(type: QueryType) {
-        return this.http.get<AuthPair>(
-            this.baseUrl + 'api/ratelimit/status?=' + type + '&forceupdate=true'
-        );
+        return this.callAPI<LocationData>(['api/search/locations?query=', hashtag]).map(val => val.countries);
     }
 
     public searchRelatedHashtags(hashtag: string): Observable<string[]> {
-        return this.http.get<string[]>(this.baseUrl + 'api/search/hashtags?query=' + hashtag).finally(this.pushLatest);
+
+        return this.callAPI<string[]>(['api/search/hashtags?query=', hashtag]);
     }
 
-    public searchHashDegrees(hashtag: string) {
-        return this.http.get<HashConnectionMap>(this.baseUrl + 'api/search/degrees/hashtags?query=' + hashtag).finally(this.pushLatest);
-    }
-
-    public searchUserDegrees(user: string, numDegrees: number) {
-        return this.http.get<UserConnectionMap>(this.baseUrl +
-            'api/search/degrees/users/single?query='
-            + user + '&numberOfDegrees=' + numDegrees).finally(this.pushLatest);
-    }
 
     public getUserSixDegrees(user1: string, user2: string) {
-        return this.http.get<SixDegreesConnection<UserResult>>(this.baseUrl + 'api/search/degrees/users?user1='
-            + user1 + '&user2=' + user2).finally(this.pushLatest);
+        return this.callAPI<SixDegreesConnection<UserResult>>(['api/search/degrees/users?user1=', user1, '&user2=', user2]);
+
     }
 
     public getHashSixDegrees(hashtag1: string, hashtag2: string) {
-        return this.http.get<any>(this.baseUrl + 'api/search/degrees/hashtags?hashtag1='
-            + hashtag1 + '&hashtag2=' + hashtag2).finally(this.pushLatest);
+        return this.callAPI<SixDegreesConnection<string>>(['api/search/degrees/hashtags?hashtag1=', hashtag1, '&hashtag2=', hashtag2]);
+    }
+
+    public getUserInfo(id: string) {
+        return this.callAPI<UserResult>(['api/search/userID?user_id=', id]);
     }
 }
