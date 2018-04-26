@@ -1,0 +1,28 @@
+New search begins...
+GetUniqueHashtags cacheTime: 00:00:00.9096454
+GetUniqueHashtags cacheTime: 00:00:02.4306073
+GetUniqueHashtags cacheTime: 00:00:01.6185221
+GetUniqueHashtags cacheTime: 00:00:02.3347308
+GetUniqueHashtags cacheTime: 00:00:01.9685085
+GetUniqueHashtags cacheTime: 00:00:02.5105563
+GetUniqueHashtags cacheTime: 00:00:00.6728778
+GetUniqueHashtags cacheTime: 00:00:02.3446125
+SUCCESS - Formatting results...
+GetUniqueHashtags cacheTime: 00:00:01.7055918
+GetUniqueHashtags cacheTime: 00:00:02.1604020
+GetUniqueHashtags cacheTime: 00:00:01.3187992
+GetUniqueHashtags cacheTime: 00:00:02.6710304
+All connections retrieved after 00:00:34.4398110 since start.
+Retrieving cached path...
+GetUniqueHashtags cacheTime: 00:00:02.5910119
+GetUniqueHashtags cacheTime: 00:00:02.8173667
+GetUniqueHashtags cacheTime: 00:00:02.4597368
+GetUniqueHashtags cacheTime: 00:00:02.7584121
+All connections retrieved after 00:00:14.2621435 since start.
+Retrieving cached path...
+GetUniqueHashtags cacheTime: 00:00:03.1851028
+All connections retrieved after 00:00:04.2327065 since start.
+Retrieving cached path...
+All connections retrieved after 00:00:00.3285523 since start.
+Retrieving cached path...
+All connections retrieved after 00:00:00.3598680 since start.

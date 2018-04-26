@@ -349,24 +349,35 @@ namespace SixDegrees.Controllers
                 string userID = queried?.ID;
                 if (userID == null)
                     return BadRequest("Invalid user screen name.");
+                DateTime cacheStartTime;
 
                 if (TwitterCache.UserConnectionsQueried(Configuration, queried) || !allowAPICalls)
                 {
                     IEnumerable<UserResult> cachedResults = TwitterCache.FindUserConnections(Configuration, queried).Take(limit);
-                    TwitterCache.UpdateUsers(Configuration, await LookupIDs(maxLookupCount * MaxSingleQueryUserLookupCount, cachedResults.Where(user => user.ScreenName == null).Select(user => user.ID).ToList()));
+                    cacheStartTime = DateTime.Now;
+                    TwitterCache.UpdateUsers(Configuration, await LookupIDs(maxLookupCount * MaxSingleQueryUserLookupCount,
+                        cachedResults.Where(user => user.ScreenName == null).Select(user => user.ID).ToList()));
+                    Log($"GetUserConnections cacheTime: {DateTime.Now - cacheStartTime}");
                     // Now that all cached users have been looked up, return the updated cached results.
                     return Ok(TwitterCache.FindUserConnections(Configuration, queried).Take(limit));
                 }
 
                 var remainingIDsToLookup = ((await GetUserConnectionIDs(userID) as OkObjectResult)?.Value as IEnumerable<string> ?? Enumerable.Empty<string>()).ToList();
                 ICollection<UserResult> results = await LookupIDs(lookupLimit, remainingIDsToLookup);
+                cacheStartTime = DateTime.Now;
                 TwitterCache.UpdateUserConnections(Configuration, queried, results);
+                Log($"GetUserConnections cacheTime: {DateTime.Now - cacheStartTime}");
                 return Ok(results);
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        internal static void Log(string message)
+        {
+            System.IO.File.AppendAllLines("log.txt", new string[] { message });
         }
 
         internal async Task<ICollection<UserResult>> LookupIDs(int limit, List<string> remainingIDsToLookup)
@@ -408,7 +419,9 @@ namespace SixDegrees.Controllers
                 uniqueIds.UnionWith((await GetFollowerIDs(user_id))?.Ids ?? Enumerable.Empty<long>());
                 uniqueIds.UnionWith((await GetFriendIDs(user_id))?.Ids ?? Enumerable.Empty<long>());
 
+                DateTime cacheStartTime = DateTime.Now;
                 TwitterCache.UpdateUserConnections(Configuration, user_id, uniqueIds.Select(id => id.ToString()));
+                Log($"GetUserConnectionIDs cacheTime: {DateTime.Now - cacheStartTime}");
                 return Ok(uniqueIds.Select(id => id.ToString()));
             }
             catch (Exception ex)
@@ -592,8 +605,10 @@ namespace SixDegrees.Controllers
                 .Statuses
                 .Where(status => status.Entities.Hashtags.Any(tag => tag.Text.ToLower() == query))
                 .Aggregate(new Dictionary<Status, IEnumerable<string>>(), StoreHashtagsInStatus);
+            DateTime cacheStartTime = DateTime.Now;
             foreach (var statusTags in results)
                 TwitterCache.UpdateHashtagConnections(Configuration, query.ToLower(), statusTags.Key, statusTags.Value);
+            Log($"GetUniqueHashtags cacheTime: {DateTime.Now - cacheStartTime}");
             return FilterHashtags(results);
         }
 

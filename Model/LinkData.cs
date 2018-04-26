@@ -14,6 +14,7 @@ namespace SixDegrees.Controllers
     {
         public TimeSpan Time { get; set; }
         public int Calls { get; set; }
+        public TimeSpan SearchTime { get; set; }
     }
 
     public class LinkPath<T>

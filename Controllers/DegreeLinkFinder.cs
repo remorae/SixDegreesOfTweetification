@@ -19,6 +19,7 @@ namespace SixDegrees.Controllers
 
         protected readonly int maximumConnectionsPerNode;
         private DateTime startTime = DateTime.Now;
+        private TimeSpan timeSpentSearching;
         private int callsMade = 0;
 
         protected DegreeLinkFinder(IConfiguration configuration, SearchController controller,
@@ -58,6 +59,7 @@ namespace SixDegrees.Controllers
         {
             callsMade = 0;
             startTime = DateTime.Now;
+            timeSpentSearching = new TimeSpan();
 
             if (maxAPICalls < 1)
                 return BadRequest("Rate limit exceeded.");
@@ -70,8 +72,10 @@ namespace SixDegrees.Controllers
                     is List<(List<ConnectionInfo<TConnection>.Node>, List<Status>)> cachedUserPaths
                     && cachedUserPaths.Count > 0)
                 {
+                    SearchController.Log("Retrieving cached path...");
                     return await HandleCachedLinkData(cachedUserPaths);
                 }
+                SearchController.Log("New search begins...");
 
                 IDictionary<Status, ICollection<TConnection>> tweetLinksFound = new Dictionary<Status, ICollection<TConnection>>();
                 var remainingFromStart = new List<ConnectionInfo<TConnection>.Node>() { new ConnectionInfo<TConnection>.Node(start, 0) };
@@ -122,8 +126,13 @@ namespace SixDegrees.Controllers
                 }
 
                 if (foundLink)
+                {
+                    SearchController.Log("SUCCESS - Formatting results...");
+                    timeSpentSearching = DateTime.Now - startTime;
                     return await HandleCachedLinkData(TwitterCache.ShortestPaths(Configuration, start, end, maxNumberOfDegrees, Label));
+                }
 
+                SearchController.Log("FAILURE");
                 return FormatObtainedConnections(start, connections);
             }
             catch (Exception ex)
@@ -184,7 +193,7 @@ namespace SixDegrees.Controllers
                     Path = tuple.Path.ToDictionary(node => node.Distance, node => node.Value),
                     Links = tuple.Links.Select(link => link.URL)
                 }) ?? Enumerable.Empty<LinkPath<TPath>>(),
-                Metadata = new LinkMetaData() { Time = DateTime.Now - startTime, Calls = callsMade }
+                Metadata = new LinkMetaData() { Time = DateTime.Now - startTime, SearchTime = timeSpentSearching, Calls = callsMade }
             });
         }
 
@@ -215,6 +224,7 @@ namespace SixDegrees.Controllers
                     break;
             }
 
+            SearchController.Log($"All connections retrieved after {DateTime.Now - startTime} since start.");
             return cachedConnections;
         }
 
