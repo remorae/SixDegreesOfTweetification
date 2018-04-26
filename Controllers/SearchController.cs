@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -142,6 +143,60 @@ namespace SixDegrees.Controllers
             }
         }
 
+        [HttpGet("cacheLocations")]
+        public async Task<IActionResult> CacheLocations(string query, bool once = false)
+        {
+            if (query == null)
+                return BadRequest("Invalid parameters.");
+            try
+            {
+                while (RateLimitCache.Get.MinimumRateLimits(QueryType.LocationsByHashtag, rateLimitDb, userManager, User)[AuthenticationType.User] > 0)
+                {
+                    var results = await GetResults<TweetSearchResults>(
+                        query,
+                        AuthenticationType.User,
+                        TwitterAPIUtils.HashtagSearchQuery,
+                        TwitterAPIEndpoint.SearchTweets);
+                    if (results == null || results.Statuses.Count == 0)
+                    {
+                        if (TwitterCache.FindPlacesForHashtag(Configuration, query).Count() > 0)
+                            TwitterCache.MarkGeoQueried(Configuration, query);
+                        string nextHashtag = TwitterCache.FindUnqueriedHashtag(Configuration);
+                        if (once || nextHashtag == null)
+                            return Ok(new
+                            {
+                                Finished = true,
+                                Status = "No more tweets found.",
+                                Found = TwitterCache.FindPlacesForHashtag(Configuration, query).Count(),
+                                Next = nextHashtag
+                            });
+                        else
+                            return await CacheLocations(nextHashtag);
+                    }
+
+                    TwitterCache.UpdatePlaceHashtags(Configuration, results.Statuses.Where(status => status.Place != null && status.Entities.Hashtags.Count > 0));
+                }
+                TimeSpan waitTime = RateLimitCache.Get[TwitterAPIEndpoint.SearchTweets].UntilReset - RateLimitCache.Get[TwitterAPIEndpoint.SearchTweets].SinceLastUpdate;
+                string next = TwitterCache.FindUnqueriedHashtag(Configuration);
+                if (once || next == null)
+                    return Ok(new {
+                        Finished = false,
+                        Status = "Exhausted rate limit.",
+                        Found = TwitterCache.FindPlacesForHashtag(Configuration, query).Count(),
+                        Wait = waitTime
+                    });
+                else
+                {
+                    await Task.Delay(waitTime);
+                    return await CacheLocations(next);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex);
+            }
+        }
+
         /// <summary>
         /// Returns search results for the given hashtag with any associated hashtags and the source tweet urls organized by location.
         /// </summary>
@@ -154,19 +209,28 @@ namespace SixDegrees.Controllers
                 return BadRequest("Invalid parameters.");
             try
             {
-                var results = await GetResults<TweetSearchResults>(
-                    query,
-                    AuthenticationType.Both,
-                    TwitterAPIUtils.HashtagSearchQuery,
-                    TwitterAPIEndpoint.SearchTweets);
                 IDictionary<string, Country> countries = new Dictionary<string, Country>();
                 var coords = new Dictionary<Coordinates, (ISet<string> hashtags, ICollection<string> sources)>();
-                foreach (Status status in results.Statuses)
+
+                if (TwitterCache.HasGeoBeenQueried(Configuration, query))
                 {
-                    if (status.Place != null)
-                        UpdateCountriesWithPlace(countries, status);
-                    else if (status.Coordinates != null)
-                        UpdateCoordinatesWithStatus(coords, status);
+                    foreach (Place place in TwitterCache.FindPlacesForHashtag(Configuration, query))
+                        UpdateCountriesWithPlace(countries, place);
+                }
+                else
+                {
+                    var results = await GetResults<TweetSearchResults>(
+                        query,
+                        AuthenticationType.Both,
+                        TwitterAPIUtils.HashtagSearchQuery,
+                        TwitterAPIEndpoint.SearchTweets);
+                    foreach (Status status in results.Statuses)
+                    {
+                        if (status.Place != null)
+                            UpdateCountriesWithPlace(countries, status);
+                        else if (status.Coordinates != null)
+                            UpdateCoordinatesWithStatus(coords, status);
+                    }
                 }
                 return Ok(new
                 {
@@ -183,6 +247,19 @@ namespace SixDegrees.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
+            }
+        }
+
+        private static void UpdateCountriesWithPlace(IDictionary<string, Country> countries, Place place)
+        {
+            string placeName = place.FullName;
+            string countryName = place.Country;
+            if (!countries.ContainsKey(countryName))
+                countries[countryName] = new Country(countryName);
+            if (!countries[countryName].Places.ContainsKey(placeName))
+            {
+                PlaceResult toAdd = new PlaceResult() { Name = placeName, Type = place.PlaceType, Country = countryName };
+                countries[countryName].Places[placeName] = toAdd;
             }
         }
 
