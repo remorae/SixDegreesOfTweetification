@@ -90,9 +90,9 @@ namespace SixDegrees.Model
         internal static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, TwitterAPIEndpoint endpoint, string query, string token, string tokenSecret, UserRateLimitInfo userStatus)
         {
             AppRateLimitInfo appStatus = RateLimitCache.Get[endpoint];
-            if (!appStatus.Available)
-                throw new Exception($"Endpoint {endpoint} currently unavailable due to rate limits. Time until reset: {appStatus.UntilReset}");
             appStatus.ResetIfNeeded();
+            if (!UseApplicationAuth(authType, token, appStatus, userStatus) && !UseUserAuth(authType, token, userStatus))
+                throw new Exception($"Endpoint {endpoint} currently unavailable due to rate limits. Time until reset: {appStatus.UntilReset - appStatus.SinceLastUpdate}");
             HttpMethod method = HttpMethod(endpoint);
             try
             {
