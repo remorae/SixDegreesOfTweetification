@@ -350,7 +350,7 @@ namespace SixDegrees.Controllers
                 if (userID == null)
                     return BadRequest("Invalid user screen name.");
 
-                if (TwitterCache.UserConnectionsQueried(Configuration, queried) || !allowAPICalls)
+                if (TwitterCache.HaveUserConnectionsBeenQueried(Configuration, queried) || !allowAPICalls)
                 {
                     IEnumerable<UserResult> cachedResults = TwitterCache.FindUserConnections(Configuration, queried).Take(limit);
                     TwitterCache.UpdateUsers(Configuration, await LookupIDs(maxLookupCount * MaxSingleQueryUserLookupCount, cachedResults.Where(user => user.ScreenName == null).Select(user => user.ID).ToList()));
@@ -401,7 +401,7 @@ namespace SixDegrees.Controllers
                 return BadRequest("Invalid parameters.");
             try
             {
-                if (TwitterCache.UserConnectionsQueried(Configuration, user_id) || !allowAPICalls)
+                if (TwitterCache.HaveUserConnectionsBeenQueried(Configuration, user_id) || !allowAPICalls)
                     return Ok(TwitterCache.FindUserConnectionIDs(Configuration, user_id));
 
                 ISet<long> uniqueIds = new HashSet<long>();
@@ -581,7 +581,7 @@ namespace SixDegrees.Controllers
 
         internal async Task<IDictionary<Status, IEnumerable<string>>> GetUniqueHashtags(string query, int max, bool allowAPICalls = true)
         {
-            if (TwitterCache.HashtagConnectionsQueried(Configuration, query.ToLower()) || !allowAPICalls)
+            if (TwitterCache.HaveHashtagConnectionsBeenQueried(Configuration, query.ToLower()) || !allowAPICalls)
                 return FilterHashtags(TwitterCache.FindHashtagConnections(Configuration, query.ToLower(), max));
 
             IDictionary<Status, IEnumerable<string>> results = (await GetResults<TweetSearchResults>(

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using Neo4j.Driver.V1;
 using SixDegrees.Model;
@@ -15,14 +14,35 @@ namespace SixDegrees.Data
             GraphDatabase.Driver(configuration["twitterCacheURI"],
                 AuthTokens.Basic(configuration["twitterCacheUser"], configuration["twitterCachePassword"]));
 
+        private static T DatabaseRead<T>(IConfiguration configuration, Func<ITransaction, T> work)
+        {
+            using (IDriver driver = GetDriver(configuration))
+            {
+                using (ISession session = driver.Session(AccessMode.Read))
+                {
+                    return session.ReadTransaction(work);
+                }
+            }
+        }
+
+        private static void DatabaseWrite(IConfiguration configuration, Action<ITransaction> work)
+        {
+            using (IDriver driver = GetDriver(configuration))
+            {
+                using (ISession session = driver.Session(AccessMode.Write))
+                {
+                    session.WriteTransaction(work);
+                }
+            }
+        }
+
         internal static void UpdateUsers(IConfiguration configuration, IEnumerable<UserResult> users)
         {
             using (IDriver driver = GetDriver(configuration))
             {
-                ICollection<UserResult> toStore = new List<UserResult>();
                 using (ISession session = driver.Session(AccessMode.Write))
                 {
-                    foreach (var user in users.Except(toStore))
+                    foreach (var user in users)
                         session.WriteTransaction(tx => UpdateUser(tx, user));
                 }
             }
@@ -30,7 +50,8 @@ namespace SixDegrees.Data
 
         private static void UpdateUser(ITransaction tx, UserResult user)
         {
-            tx.Run("MERGE (user:User {id: $ID}) " +
+            tx.Run(
+                "MERGE (user:User {id: $ID}) " +
                 "SET user.name = $Name, user.screenName = $ScreenName, user.location = $Location, " +
                 "user.description = $Description, user.followerCount = $FollowerCount, user.friendCount = $FriendCount, " +
                 "user.createdAt = $CreatedAt, user.timeZone = $TimeZone, user.geoEnabled = $GeoEnabled, " +
@@ -52,43 +73,30 @@ namespace SixDegrees.Data
 
         private static void MergeUserID(ITransaction tx, string userID)
         {
-            tx.Run("MERGE (user:User {id: $ID}) ",
+            tx.Run(
+                "MERGE (user:User {id: $ID})",
                 new { ID = userID });
         }
 
-        internal static UserResult LookupUserByName(IConfiguration configuration, string screenName)
-        {
-            using (IDriver driver = GetDriver(configuration))
-            {
-                using (ISession session = driver.Session(AccessMode.Read))
-                {
-                    return session.ReadTransaction(tx => FindUserByName(tx, screenName));
-                }
-            }
-        }
+        internal static UserResult LookupUserByName(IConfiguration configuration, string screenName) =>
+            DatabaseRead(configuration, tx => FindUserByName(tx, screenName));
 
         private static UserResult FindUserByName(ITransaction tx, string screenName)
         {
-            return ToUserResult(tx.Run("MATCH (user:User) " +
+            return ToUserResult(tx.Run(
+                "MATCH (user:User) " +
                 "WHERE user.screenName =~ $Regex " +
                 "RETURN user", new { Regex = "(?i)" + screenName })
                 .SingleOrDefault()?[0].As<INode>().Properties);
         }
 
-        internal static UserResult LookupUser(IConfiguration configuration, string userID)
-        {
-            using (IDriver driver = GetDriver(configuration))
-            {
-                using (ISession session = driver.Session(AccessMode.Read))
-                {
-                    return session.ReadTransaction(tx => FindUser(tx, userID));
-                }
-            }
-        }
+        internal static UserResult LookupUser(IConfiguration configuration, string userID) =>
+            DatabaseRead(configuration, tx => FindUser(tx, userID));
 
         private static UserResult FindUser(ITransaction tx, string userID)
         {
-            return ToUserResult(tx.Run("MATCH (user:User {id: $ID}) " +
+            return ToUserResult(tx.Run(
+                "MATCH (user:User {id: $ID}) " +
                 "RETURN user", new { ID = userID })
                 .SingleOrDefault()?[0].As<INode>().Properties);
         }
@@ -108,7 +116,8 @@ namespace SixDegrees.Data
 
         private static void UpdateUserConnection(ITransaction tx, UserResult queried, UserResult user)
         {
-            tx.Run("MERGE (a:User {id: $ID}) " +
+            tx.Run(
+                "MERGE (a:User {id: $ID}) " +
                 "MERGE (b:User {id: $Other}) " +
                 "MERGE (a)-[:FRIEND_FOLLOWER_OF]->(b) " +
                 "MERGE (a)<-[:FRIEND_FOLLOWER_OF]-(b) " +
@@ -153,6 +162,110 @@ namespace SixDegrees.Data
                 });
         }
 
+        internal static string FindUnqueriedHashtag(IConfiguration configuration) =>
+            DatabaseRead(configuration, FirstUnqueriedHashtag);
+
+        private static string FirstUnqueriedHashtag(ITransaction tx) =>
+            tx.Run("MATCH (t:Hashtag) WHERE NOT EXISTS (t.geoQueried) OR t.geoQueried = false RETURN t.text LIMIT 1").Single()[0].As<string>();
+
+        internal static void MarkGeoQueried(IConfiguration configuration, string hashtag) =>
+            DatabaseWrite(configuration, tx => MarkGeoQueried(tx, hashtag.ToLower()));
+
+        private static void MarkGeoQueried(ITransaction tx, string hashtag)
+        {
+            tx.Run(
+                "MATCH (t:Hashtag {text: $Text}) " +
+                "SET t.geoQueried = true",
+                new { Text = hashtag });
+        }
+
+        internal static bool HasGeoBeenQueried(IConfiguration configuration, string hashtag) =>
+            DatabaseRead(configuration, tx => HasGeoBeenQueried(tx, hashtag.ToLower()));
+
+        private static bool HasGeoBeenQueried(ITransaction tx, string hashtag)
+        {
+            return tx.Run(
+                "MATCH (t:Hashtag {text: $Text} " +
+                "RETURN t.geoQueried",
+                new { Text = hashtag })
+                .SingleOrDefault().As<bool?>() ?? false;
+        }
+
+        internal static IEnumerable<Place> FindPlacesForHashtag(IConfiguration configuration, string hashtag) =>
+            DatabaseRead(configuration, tx => FindPlacesForHashtag(tx, hashtag.ToLower()));
+
+        private static IEnumerable<Place> FindPlacesForHashtag(ITransaction tx, string hashtag)
+        {
+            return tx.Run(
+                "MATCH (t:Hashtag {text: $Text})-[:TWEETED_FROM]-(p:Place) " +
+                "RETURN p",
+                new { Text = hashtag })
+                .Select(record =>
+                {
+                    var place = record[0].As<INode>().Properties;
+                    return ToPlace(place);
+                });
+        }
+
+        private static Place ToPlace(IReadOnlyDictionary<string, object> place)
+        {
+            if (place == null)
+                return null;
+
+            place.TryGetValue("id", out object id);
+            place.TryGetValue("country", out object country);
+            place.TryGetValue("fullName", out object fullName);
+            place.TryGetValue("name", out object name);
+            place.TryGetValue("type", out object type);
+            place.TryGetValue("url", out object url);
+
+            return new Place()
+            {
+                Id = id.ToString(),
+                Country = country.ToString(),
+                FullName = fullName.ToString(),
+                Name = name.ToString(),
+                PlaceType = type.ToString(),
+                Url = url.ToString()
+            };
+        }
+
+        internal static void UpdatePlaceHashtags(IConfiguration configuration, IEnumerable<Status> statuses)
+        {
+            var placeHashtagMap = new Dictionary<Place, HashSet<string>>();
+            foreach (var status in statuses)
+            {
+                if (!placeHashtagMap.ContainsKey(status.Place))
+                    placeHashtagMap[status.Place] = new HashSet<string>();
+                placeHashtagMap[status.Place].UnionWith(status.Entities.Hashtags.Select(hashtag => hashtag.Text.ToLower()));
+            }
+
+            using (IDriver driver = GetDriver(configuration))
+            {
+                using (ISession session = driver.Session(AccessMode.Write))
+                {
+                    foreach (var pair in placeHashtagMap)
+                        session.WriteTransaction(tx => UpdatePlaceConnections(tx, pair.Key, pair.Value));
+                }
+            }
+        }
+
+        private static void UpdatePlaceConnections(ITransaction tx, Place place, IEnumerable<string> hashtags)
+        {
+            tx.Run(
+                "MERGE (p:Place {id: $ID}) " +
+                "SET p.country = $Country, p.fullName = $FullName, p.name = $Name, p.type = $PlaceType, p.url = $Url",
+                new { ID = place.Id, place.Country, place.FullName, place.Name, place.PlaceType, place.Url });
+            foreach (string hashtag in hashtags)
+            {
+                tx.Run(
+                    "MATCH (p:Place {id: $ID}) " +
+                    "MERGE (t:Hashtag {text: $Text}) " +
+                    "MERGE (t)-[:TWEETED_FROM]-(p) ",
+                    new { ID = place.Id, Text = hashtag });
+            }
+        }
+
         internal static void UpdateUserConnections(IConfiguration configuration, string queried, IEnumerable<string> userIDs)
         {
             using (IDriver driver = GetDriver(configuration))
@@ -168,13 +281,15 @@ namespace SixDegrees.Data
 
         private static void MarkQueried(ITransaction tx, string userID)
         {
-            tx.Run("MATCH (user:User {id: $ID}) " +
+            tx.Run(
+                "MATCH (user:User {id: $ID}) " +
                 "SET user.queried = true", new { ID = userID });
         }
 
         private static void UpdateUserConnection(ITransaction tx, string queried, string id)
         {
-            tx.Run("MERGE (a:User {id: $ID}) " +
+            tx.Run(
+                "MERGE (a:User {id: $ID}) " +
                 "MERGE (b:User {id: $Other}) " +
                 "MERGE (a)-[:FRIEND_FOLLOWER_OF]->(b) " +
                 "MERGE (a)<-[:FRIEND_FOLLOWER_OF]-(b)",
@@ -183,7 +298,8 @@ namespace SixDegrees.Data
 
         private static string FindUserConnection(ITransaction tx, string queriedID, string userID)
         {
-            return tx.Run("MATCH (user:User {id: $ID)-[:FRIEND_FOLLOWER_OF]->(friend:User {id: $Other}) " +
+            return tx.Run(
+                "MATCH (user:User {id: $ID)-[:FRIEND_FOLLOWER_OF]->(friend:User {id: $Other}) " +
                 "RETURN friend",
                 new { ID = queriedID, Other = userID })
                 .SingleOrDefault()?.As<string>();
@@ -191,20 +307,13 @@ namespace SixDegrees.Data
 
         internal static IEnumerable<UserResult> FindUserConnections(IConfiguration configuration, UserResult queried) => FindUserConnections(configuration, queried.ID);
 
-        internal static IEnumerable<UserResult> FindUserConnections(IConfiguration configuration, string userID)
-        {
-            using (IDriver driver = GetDriver(configuration))
-            {
-                using (ISession session = driver.Session(AccessMode.Read))
-                {
-                    return session.ReadTransaction(tx => FindUserConnections(tx, userID));
-                }
-            }
-        }
+        internal static IEnumerable<UserResult> FindUserConnections(IConfiguration configuration, string userID) =>
+            DatabaseRead(configuration, tx => FindUserConnections(tx, userID));
 
         private static IEnumerable<UserResult> FindUserConnections(ITransaction tx, string userID)
         {
-            return tx.Run("MATCH (user:User {id: $ID})-[:FRIEND_FOLLOWER_OF]->(friends) " +
+            return tx.Run(
+                "MATCH (user:User {id: $ID})-[:FRIEND_FOLLOWER_OF]->(friends) " +
                 "RETURN friends",
                 new { ID = userID })
                 .Select(record =>
@@ -216,31 +325,30 @@ namespace SixDegrees.Data
 
         internal static bool PathExists<T>(IConfiguration configuration, T start, T end, int maxLength, string label) where T : class
         {
-            using (IDriver driver = GetDriver(configuration))
+            return DatabaseRead(configuration, tx =>
             {
-                using (ISession session = driver.Session(AccessMode.Read))
-                {
-                    if (label == "User")
-                        if (start is UserResult)
-                            return session.ReadTransaction(tx => UserPathExists(tx, (start as UserResult).ID, (end as UserResult).ID, maxLength)).As<bool>();
-                        else
-                            return session.ReadTransaction(tx => UserPathExists(tx, start as string, end as string, maxLength)).As<bool>();
+                if (label == "User")
+                    if (start is UserResult)
+                        return UserPathExists(tx, (start as UserResult).ID, (end as UserResult).ID, maxLength).As<bool>();
                     else
-                        return session.ReadTransaction(tx => HashtagPathExists(tx, start as string, end as string, maxLength)).As<bool>();
-                }
-            }
+                        return UserPathExists(tx, start as string, end as string, maxLength).As<bool>();
+                else
+                    return HashtagPathExists(tx, start as string, end as string, maxLength).As<bool>();
+            });
         }
 
         private static bool UserPathExists(ITransaction tx, string start, string end, int maxLength)
         {
-            return tx.Run("MATCH path=shortestPath((start:User {id: $start})-[*.." + maxLength + "]->(end:User {id: $end})) "
-                + "RETURN path", new { start, end }).Count() > 0;
+            return tx.Run(
+                "MATCH path=shortestPath((start:User {id: $start})-[*.." + maxLength + "]->(end:User {id: $end})) " +
+                "RETURN path", new { start, end }).Count() > 0;
         }
 
         private static bool HashtagPathExists(ITransaction tx, string start, string end, int maxLength)
         {
-            return tx.Run("MATCH path=shortestPath((start:Hashtag {text: $start})-[*.." + maxLength * 2 + "]-(end:Hashtag {text: $end})) " +
-                   "RETURN path ", new { start, end }).Count() > 0;
+            return tx.Run(
+                "MATCH path=shortestPath((start:Hashtag {text: $start})-[*.." + maxLength * 2 + "]-(end:Hashtag {text: $end})) " +
+                "RETURN path ", new { start, end }).Count() > 0;
         }
 
         private static UserResult ToUserResult(IReadOnlyDictionary<string, object> other)
@@ -280,22 +388,16 @@ namespace SixDegrees.Data
             };
         }
 
-        internal static bool UserConnectionsQueried(IConfiguration configuration, UserResult queried) => UserConnectionsQueried(configuration, queried.ID);
+        internal static bool HaveUserConnectionsBeenQueried(IConfiguration configuration, UserResult queried) =>
+            HaveUserConnectionsBeenQueried(configuration, queried.ID);
 
-        internal static bool UserConnectionsQueried(IConfiguration configuration, string userID)
-        {
-            using (IDriver driver = GetDriver(configuration))
-            {
-                using (ISession session = driver.Session(AccessMode.Read))
-                {
-                    return session.ReadTransaction(tx => UserQueried(tx, userID));
-                }
-            }
-        }
+        internal static bool HaveUserConnectionsBeenQueried(IConfiguration configuration, string userID) =>
+            DatabaseRead(configuration, tx => HasUserBeenQueried(tx, userID));
 
-        private static bool UserQueried(ITransaction tx, string userID)
+        private static bool HasUserBeenQueried(ITransaction tx, string userID)
         {
-            bool? result = tx.Run("MATCH (user:User {id: $ID}) " +
+            bool? result = tx.Run(
+                "MATCH (user:User {id: $ID}) " +
                 "RETURN user.queried", new { ID = userID })
                 .SingleOrDefault()?[0].As<bool?>();
             if (result.HasValue)
@@ -304,20 +406,13 @@ namespace SixDegrees.Data
                 return false;
         }
 
-        internal static IEnumerable<string> FindUserConnectionIDs(IConfiguration configuration, string userID)
-        {
-            using (IDriver driver = GetDriver(configuration))
-            {
-                using (ISession session = driver.Session(AccessMode.Read))
-                {
-                    return session.ReadTransaction(tx => FindUserConnectionIDs(tx, userID));
-                }
-            }
-        }
+        internal static IEnumerable<string> FindUserConnectionIDs(IConfiguration configuration, string userID) =>
+            DatabaseRead(configuration, tx => FindUserConnectionIDs(tx, userID));
 
         private static IEnumerable<string> FindUserConnectionIDs(ITransaction tx, string userID)
         {
-            return tx.Run("MATCH (user:User {id: $ID})-[:FRIEND_FOLLOWER_OF]->(friends) " +
+            return tx.Run(
+                "MATCH (user:User {id: $ID})-[:FRIEND_FOLLOWER_OF]->(friends) " +
                 "RETURN friends.id",
                 new { ID = userID })
                 .Select(record => record[0].As<string>());
@@ -325,31 +420,29 @@ namespace SixDegrees.Data
 
         internal static List<(List<ConnectionInfo<T>.Node> Path, List<Status> Links)> ShortestPaths<T>(IConfiguration configuration, T start, T end, int maxLength, string label) where T : class
         {
-            using (IDriver driver = GetDriver(configuration))
+            return DatabaseRead(configuration, tx =>
             {
-                using (ISession session = driver.Session(AccessMode.Read))
-                {
-                    if (label == "User")
-                        if (start is UserResult)
-                            return session.ReadTransaction(tx => ShortestUserPaths(tx, (start as UserResult).ID, (end as UserResult).ID, maxLength))
-                            .As<List<List<ConnectionInfo<T>.Node>>>()
-                            .Select(list => (list, new List<Status>()))
-                            .ToList();
-                        else
-                            return session.ReadTransaction(tx => ShortestUserPaths(tx, start as string, end as string, maxLength))
-                            .As<List<List<ConnectionInfo<UserResult>.Node>>>()
-                            ?.Select(list => (list.Select(node => new ConnectionInfo<T>.Node(node.Value.ID as T, node.Distance)).ToList(), new List<Status>()))
-                            .ToList();
+                if (label == "User")
+                    if (start is UserResult)
+                        return ShortestUserPaths(tx, (start as UserResult).ID, (end as UserResult).ID, maxLength)
+                        .As<List<List<ConnectionInfo<T>.Node>>>()
+                        .Select(list => (list, new List<Status>()))
+                        .ToList();
                     else
-                        return session.ReadTransaction(tx => ShortestHashtagPaths(tx, start as string, end as string, maxLength))
-                            .As<List<(List<ConnectionInfo<T>.Node>, List<Status>)>>();
-                }
-            }
+                        return ShortestUserPaths(tx, start as string, end as string, maxLength)
+                        .As<List<List<ConnectionInfo<UserResult>.Node>>>()
+                        ?.Select(list => (list.Select(node => new ConnectionInfo<T>.Node(node.Value.ID as T, node.Distance)).ToList(), new List<Status>()))
+                        .ToList();
+                else
+                    return ShortestHashtagPaths(tx, start as string, end as string, maxLength)
+                        .As<List<(List<ConnectionInfo<T>.Node>, List<Status>)>>();
+            });
         }
 
         private static List<List<ConnectionInfo<UserResult>.Node>> ShortestUserPaths(ITransaction tx, string start, string end, int maxLength)
         {
-            return tx.Run("MATCH path=allShortestPaths((start:User {id: $start})-[*.." + maxLength + "]->(end:User {id: $end})) "
+            return tx.Run(
+                "MATCH path=allShortestPaths((start:User {id: $start})-[*.." + maxLength + "]->(end:User {id: $end})) "
                 + "RETURN path",
                 new { start, end })
                 .Select(record => record[0]
@@ -363,7 +456,8 @@ namespace SixDegrees.Data
         private static List<(List<ConnectionInfo<string>.Node> Path, List<Status> Links)> ShortestHashtagPaths(ITransaction tx, string start, string end, int maxLength)
         {
             // Multiply max length by two since a hashtag-to-hashtag connection passes through a status node
-            return tx.Run("MATCH path=allShortestPaths((start:Hashtag {text: $start})-[*.." + maxLength * 2 + "]-(end:Hashtag {text: $end})) " +
+            return tx.Run(
+                "MATCH path=allShortestPaths((start:Hashtag {text: $start})-[*.." + maxLength * 2 + "]-(end:Hashtag {text: $end})) " +
                 "RETURN path " +
                 "LIMIT 100",
                 new { start, end })
@@ -430,7 +524,8 @@ namespace SixDegrees.Data
 
         private static void UpdateHashtagConnection(ITransaction tx, string start, Status status, string other)
         {
-            tx.Run("MERGE (a:Hashtag {text: $Text}) " +
+            tx.Run(
+                "MERGE (a:Hashtag {text: $Text}) " +
                 "MERGE (b:Hashtag {text: $Other}) " +
                 "MERGE (a)-[:TWEETED_IN]->(status:Status {idstr: $StatusIdStr})<-[:TWEETED_IN]-(b) " +
                 "SET status.favoriteCount = $FavoriteCount, status.inReplyToScreenName = $InReplyToScreenName, " +
@@ -461,46 +556,29 @@ namespace SixDegrees.Data
 
         private static void MarkHashtagQueried(ITransaction tx, string hashtag)
         {
-            tx.Run("MATCH (tag:Hashtag {text: $Text}) " +
+            tx.Run(
+                "MATCH (tag:Hashtag {text: $Text}) " +
                 "SET tag.queried = true", new { Text = hashtag });
         }
 
-        internal static bool HashtagConnectionsQueried(IConfiguration configuration, string hashtag)
-        {
-            using (IDriver driver = GetDriver(configuration))
-            {
-                using (ISession session = driver.Session(AccessMode.Read))
-                {
-                    return session.ReadTransaction(tx => HashtagQueried(tx, hashtag));
-                }
-            }
-        }
+        internal static bool HaveHashtagConnectionsBeenQueried(IConfiguration configuration, string hashtag) =>
+            DatabaseRead(configuration, tx => HasHashtagBeenQueried(tx, hashtag));
 
-        private static bool HashtagQueried(ITransaction tx, string hashtag)
+        private static bool HasHashtagBeenQueried(ITransaction tx, string hashtag)
         {
-            bool? result = tx.Run("MATCH (tag:Hashtag {text: $Text}) " +
+            return tx.Run(
+                "MATCH (tag:Hashtag {text: $Text}) " +
                 "RETURN tag.queried", new { Text = hashtag })
-                .SingleOrDefault()?[0].As<bool?>();
-            if (result.HasValue)
-                return result.Value;
-            else
-                return false;
+                .SingleOrDefault()?[0].As<bool?>() ?? false;
         }
 
-        internal static IDictionary<Status, IEnumerable<string>> FindHashtagConnections(IConfiguration configuration, string hashtag, int max)
-        {
-            using (IDriver driver = GetDriver(configuration))
-            {
-                using (ISession session = driver.Session(AccessMode.Read))
-                {
-                    return session.ReadTransaction(tx => FindHashtagConnections(tx, hashtag, max));
-                }
-            }
-        }
+        internal static IDictionary<Status, IEnumerable<string>> FindHashtagConnections(IConfiguration configuration, string hashtag, int max) =>
+            DatabaseRead(configuration, tx => FindHashtagConnections(tx, hashtag, max));
 
         private static IDictionary<Status, IEnumerable<string>> FindHashtagConnections(ITransaction tx, string hashtag, int max)
         {
-            return tx.Run("MATCH (start:Hashtag {text: $Text})-[:TWEETED_IN]->(status:Status)<-[TWEETED_IN]-(other) " +
+            return tx.Run(
+                "MATCH (start:Hashtag {text: $Text})-[:TWEETED_IN]->(status:Status)<-[TWEETED_IN]-(other) " +
                 "WHERE other.text <> $Text " +
                 "RETURN status, other.text LIMIT " + max,
                 new { Text = hashtag })
