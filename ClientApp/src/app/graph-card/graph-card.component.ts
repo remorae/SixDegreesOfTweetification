@@ -4,7 +4,7 @@ import { Subject } from 'rxjs/Subject';
 import { UserResult } from '../models/UserResult';
 import { switchMap, catchError } from 'rxjs/operators';
 import { Observable } from 'rxjs/Observable';
-import { Link } from '../services/graph-data.service';
+import { Link, Graph } from '../services/graph-data.service';
 
 @Component({
     selector: 'app-graph-card',
@@ -15,7 +15,7 @@ export class GraphCardComponent implements OnInit, OnChanges {
 
     @Input() nodeData;
     @Input() whatToWhat;
-    @Input() links;
+    @Input() graph;
     cardTitle: string;
     cardBody = [];
     userData: Subject<any> = new Subject<any>();
@@ -37,6 +37,8 @@ export class GraphCardComponent implements OnInit, OnChanges {
         const data = changes['nodeData'];
         if (data.currentValue) {
             this.updateCardContent(data.currentValue);
+        } else {
+            this.showTimeData(this.graph.metadata);
         }
     }
 
@@ -59,7 +61,7 @@ export class GraphCardComponent implements OnInit, OnChanges {
             this.userData.next(data);
 
         } else {
-            const connectedWords: string[] = this.links
+            const connectedWords: string[] = this.graph.links
                 .filter((link) => link.source.id === data.id || link.target.id === data.id)
                 .map((link) => (link.source.id === data.id) ? link.target.id : link.source.id);
             this.cardTitle = '#' + data.id;
@@ -72,8 +74,8 @@ export class GraphCardComponent implements OnInit, OnChanges {
 
     }
 
-    showTimeData(data, metadata) { // TODO: find a place to show this
-        this.cardTitle = data.id;
+    showTimeData(metadata) {
+        this.cardTitle = 'Time Taken';
         const { calls, time } = metadata;
         const [hours, minutes, seconds] = time.toLocaleString().split(':');
         this.cardBody.push(['Calls:', `${calls}`]);

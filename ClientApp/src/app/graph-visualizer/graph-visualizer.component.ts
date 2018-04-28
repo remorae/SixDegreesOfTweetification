@@ -1,6 +1,6 @@
-import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, HostListener } from '@angular/core';
 import * as D3 from 'd3';
-import { ForceLink } from 'd3';
+import { ForceLink, forceCenter, forceX, forceY } from 'd3';
 import { ConnectionMetaData, Link, Node } from '../services/graph-data.service';
 @Component({
     selector: 'app-graph-visualizer',
@@ -18,6 +18,7 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
     @Output() modalOpen: EventEmitter<boolean> = new EventEmitter<boolean>(true);
     readonly maxForceDistance = 250;
     clickedDatum;
+    simulation: D3.Simulation<Node, Link>;
     constructor() {
 
     }
@@ -49,9 +50,22 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
 
     deleteGraph() {
         D3.select('svg.graph-container').selectAll('*').remove();
-        if (!this.graph.nodes) {
-            return;
-        }
+    }
+
+    onSVGClick(event: MouseEvent) {
+        const e = event.target as SVGElement;
+        const dim = e.getBoundingClientRect();
+        const x = event.clientX - dim.left;
+        const y = event.clientY - dim.top;
+        this.simulation.alpha(0.3);
+        this.simulation.force('clickX', forceX(x).strength(1.0));
+        this.simulation.force('clickY', D3.forceY(y).strength(1.0));
+        this.simulation.restart();
+    }
+
+    onSVGRelease(event: MouseEvent) {
+        this.simulation.force('clickX', null);
+        this.simulation.force('clickY', null);
     }
 
 
@@ -62,16 +76,16 @@ export class GraphVisualizerComponent implements OnInit, OnChanges, OnDestroy {
         this.svgWidth = +temp.getBoundingClientRect().width;
         const filteredNodes: Node[] = this.filterNodes();
         const filteredLinks: Link[] = this.filterLinks(filteredNodes);
-        const simulation = this.createSimulation();
+        this.simulation = this.createSimulation();
 
-        simulation
+        this.simulation
             .nodes(filteredNodes)
             .on('tick', ticked);
 
-        simulation.force<ForceLink<Node, Link>>('link').links(filteredLinks);
+        this.simulation.force<ForceLink<Node, Link>>('link').links(filteredLinks);
 
         const linkSelection = this.createLinksGroup(svg, filteredLinks);
-        const nodeSelection = this.createNodesGroup(svg, simulation, filteredNodes);
+        const nodeSelection = this.createNodesGroup(svg, this.simulation, filteredNodes);
         const textSelection = this.createTextGroup(svg, filteredNodes);
         nodeSelection.append('title')
             .text((d: Node) => (d.user) ? d.user.screenName : d.id);
