@@ -1,3 +1,25 @@
 .card-header {
     font-size: 1.75rem;
 }
+
+.card {
+   max-width: 18rem;
+}
+
+tr {
+    width: 100%;
+    table-layout: fixed;
+
+    }
+
+    table{
+     height: 300px;
+     table-layout: fixed;
+      width: 100%             // <-- Select the height of the table   // Firefox Bad Effect
+    }
+    tbody{
+      overflow-y: scroll;
+      height: 200px;            //  <-- Select the height of the body
+      width: 90%;
+      position: absolute;
+    }
