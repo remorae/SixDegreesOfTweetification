@@ -15,11 +15,11 @@ tr {
     table{
      height: 300px;
      table-layout: fixed;
-      width: 100%             // <-- Select the height of the table   // Firefox Bad Effect
+      width: 100%            
     }
     tbody{
       overflow-y: scroll;
-      height: 200px;            //  <-- Select the height of the body
+      height: 200px;           
       width: 90%;
       position: absolute;
     }
