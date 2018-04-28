@@ -31,7 +31,12 @@ export class LoaderService {
         this.loadMap[route] = false;
         if (this.currentRoute === route) {
             this.loadingStatus.next(false);
+        } else {
+            const cue = new Audio('../../assets/SoundEffects/LoadingCue.m4a');
+            cue.load();
+            cue.play();
         }
+
     }
 
     getLoadingStatus(): Subject<boolean> {
