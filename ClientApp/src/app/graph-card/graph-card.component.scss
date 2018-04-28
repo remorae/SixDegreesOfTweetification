@@ -3,23 +3,21 @@
 }
 
 .card {
-   max-width: 18rem;
+    max-width: 18rem;
 }
 
 tr {
     width: 100%;
     table-layout: fixed;
-
-    }
-
-    table{
-     height: 300px;
-     table-layout: fixed;
-      width: 100%            
-    }
-    tbody{
-      overflow-y: scroll;
-      height: 200px;           
-      width: 90%;
-      position: absolute;
-    }
+}
+table {
+    height: 300px;
+    table-layout: fixed;
+    width: 100%;
+}
+tbody {
+    overflow-y: scroll;
+    height: 200px;
+    width: 90%;
+    position: absolute;
+}
