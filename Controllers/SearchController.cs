@@ -150,7 +150,8 @@ namespace SixDegrees.Controllers
                 return BadRequest("Invalid parameters.");
             try
             {
-                while (RateLimitCache.Get.MinimumRateLimits(QueryType.LocationsByHashtag, rateLimitDb, userManager, User).Values.Any(limit => limit > 0))
+                int callsMade = 0;
+                while (callsMade < 50 && RateLimitCache.Get.MinimumRateLimits(QueryType.LocationsByHashtag, rateLimitDb, userManager, User).Values.Any(limit => limit > 0))
                 {
                     var results = await GetResults<TweetSearchResults>(
                         query,
@@ -159,6 +160,7 @@ namespace SixDegrees.Controllers
                         TwitterAPIEndpoint.SearchTweets);
                     if (results == null || results.Statuses.Count == 0)
                     {
+                        ++callsMade;
                         if (TwitterCache.FindPlacesForHashtag(Configuration, query).Count() > 0)
                             TwitterCache.MarkGeoQueried(Configuration, query);
                         string nextHashtag = TwitterCache.FindUnqueriedHashtag(Configuration);
@@ -176,7 +178,7 @@ namespace SixDegrees.Controllers
 
                     TwitterCache.UpdatePlaceHashtags(Configuration, results.Statuses.Where(status => status.Place != null && status.Entities.Hashtags.Count > 0));
                 }
-                if (TwitterCache.FindPlacesForHashtag(Configuration, query).Count() > 0)
+                if (callsMade > 10)
                     TwitterCache.MarkGeoQueried(Configuration, query);
                 TimeSpan waitTime = RateLimitCache.Get[TwitterAPIEndpoint.SearchTweets].UntilReset - RateLimitCache.Get[TwitterAPIEndpoint.SearchTweets].SinceLastUpdate;
                 if (waitTime < TimeSpan.Zero)

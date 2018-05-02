@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -107,7 +108,7 @@ namespace SixDegrees.Model
                             if (!response.IsSuccessStatusCode)
                             {
                                 if (authTypeUsed.Value == AuthenticationType.Application)
-                                    RateLimitCache.Get[endpoint].Update(RateLimitCache.Get[endpoint].Limit - 1);
+                                    RateLimitCache.Get[endpoint].Update(0);
                                 else
                                     userStatus?.Update(userStatus.Limit - 1);
                             }
