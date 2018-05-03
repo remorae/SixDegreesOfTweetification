@@ -160,7 +160,6 @@ namespace SixDegrees.Controllers
                         TwitterAPIEndpoint.SearchTweets);
                     if (results == null || results.Statuses.Count == 0)
                     {
-                        ++callsMade;
                         if (TwitterCache.FindPlacesForHashtag(Configuration, query).Count() > 0)
                             TwitterCache.MarkGeoQueried(Configuration, query);
                         string nextHashtag = TwitterCache.FindUnqueriedHashtag(Configuration);
@@ -175,7 +174,7 @@ namespace SixDegrees.Controllers
                         else
                             return await CacheLocations(nextHashtag);
                     }
-
+                    ++callsMade;
                     TwitterCache.UpdatePlaceHashtags(Configuration, results.Statuses.Where(status => status.Place != null && status.Entities.Hashtags.Count > 0));
                 }
                 if (callsMade > 10)
