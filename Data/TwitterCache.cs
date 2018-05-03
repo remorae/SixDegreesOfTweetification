@@ -185,10 +185,10 @@ namespace SixDegrees.Data
         private static bool HasGeoBeenQueried(ITransaction tx, string hashtag)
         {
             return tx.Run(
-                "MATCH (t:Hashtag {text: $Text} " +
+                "MATCH (t:Hashtag {text: $Text}) " +
                 "RETURN t.geoQueried",
                 new { Text = hashtag })
-                .SingleOrDefault().As<bool?>() ?? false;
+                .SingleOrDefault()[0].As<bool?>() ?? false;
         }
 
         internal static IEnumerable<Place> FindPlacesForHashtag(IConfiguration configuration, string hashtag) =>
