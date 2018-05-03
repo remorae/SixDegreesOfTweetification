@@ -160,8 +160,7 @@ namespace SixDegrees.Controllers
                         TwitterAPIEndpoint.SearchTweets);
                     if (results == null || results.Statuses.Count == 0)
                     {
-                        if (TwitterCache.FindPlacesForHashtag(Configuration, query).Count() > 0)
-                            TwitterCache.MarkGeoQueried(Configuration, query);
+                        TwitterCache.MarkGeoQueried(Configuration, query);
                         string nextHashtag = TwitterCache.FindUnqueriedHashtag(Configuration);
                         if (once || nextHashtag == null)
                             return Ok(new
