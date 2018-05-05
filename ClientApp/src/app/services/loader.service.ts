@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs/Subject';
 import { Router, NavigationEnd } from '@angular/router';
 import { AlertService } from './alert.service';
+import { filter } from 'rxjs/operators/filter';
+import { map } from 'rxjs/operators/map';
 
 export interface LoadingMap {
     [route: string]: boolean;
@@ -13,9 +15,11 @@ export class LoaderService {
     loadMap: LoadingMap = {};
     constructor(private router: Router, private alerts: AlertService) {
         this.router.events
-            .filter(event => event instanceof NavigationEnd)
-            .map((event: NavigationEnd) =>
-                event.urlAfterRedirects.split('/').join('')
+            .pipe(
+                filter(event => event instanceof NavigationEnd),
+                map((event: NavigationEnd) =>
+                    event.urlAfterRedirects.split('/').join('')
+                )
             )
             .subscribe(r => {
                 this.currentRoute = r;

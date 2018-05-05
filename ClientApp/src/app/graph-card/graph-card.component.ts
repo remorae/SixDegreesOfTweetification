@@ -8,9 +8,11 @@ import {
 import { EndpointService } from '../services/endpoint.service';
 import { Subject } from 'rxjs/Subject';
 import { UserResult } from '../models/UserResult';
-import { switchMap, catchError } from 'rxjs/operators';
+import { switchMap } from 'rxjs/operators/switchMap';
+import { catchError } from 'rxjs/operators/catchError';
 import { Observable } from 'rxjs/Observable';
 import { Link, Graph } from '../services/graph-data.service';
+import { empty } from 'rxjs/observable/empty';
 
 @Component({
     selector: 'app-graph-card',
@@ -32,7 +34,7 @@ export class GraphCardComponent implements OnInit, OnChanges {
                 switchMap((data: { id }) =>
                     this.endpoint
                         .getUserInfo(data.id)
-                        .pipe(catchError(err => Observable.empty<UserResult>()))
+                        .pipe(catchError(err => empty<UserResult>()))
                 )
             )
             .subscribe((result: UserResult) => {

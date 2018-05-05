@@ -4,7 +4,7 @@ import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { UserResult } from '../models/UserResult';
 import { EndpointService } from './endpoint.service';
 import { TestData } from './testdata';
-
+import { map } from 'rxjs/operators/map';
 export interface Node extends SimulationNodeDatum {
     id: string;
     group: number;
@@ -12,7 +12,6 @@ export interface Node extends SimulationNodeDatum {
     onPath: boolean;
     isUser: boolean;
     user?: UserResult;
-
 }
 
 export interface Link extends SimulationLinkDatum<Node> {
@@ -30,18 +29,14 @@ export interface Graph {
 }
 
 export interface SixDegreesConnection<T> {
-
-
     connections: { [hashtag: string]: T[] };
     paths: LinkPath<T>[];
     metadata: ConnectionMetaData;
-
 }
 
 export interface LinkPath<T> {
     path: { [key: number]: T };
     links: string[];
-
 }
 export interface ConnectionMetaData {
     time: string;
@@ -53,34 +48,34 @@ export class GraphDataService {
     testData: TestData = new TestData();
     userGraphSub: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
     hashGraphSub: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
-    constructor(private endpoint: EndpointService) {
-    }
-
+    constructor(private endpoint: EndpointService) {}
 
     getHashConnectionData(hashtag1: string, hashtag2: string) {
         this.endpoint
             .getHashSixDegrees(hashtag1, hashtag2)
-            .map(this.hashDegreesToGraph)
+            .pipe(map(this.hashDegreesToGraph))
             .subscribe(
                 (graph: Graph) => {
                     this.hashGraphSub.next(graph);
                 },
-                (error) => {
+                error => {
                     console.log(error);
-                });
+                }
+            );
     }
 
     getUserConnectionData(user1: string, user2: string) {
         this.endpoint
             .getUserSixDegrees(user1, user2)
-            .map(this.sixDegreesToGraph)
+            .pipe(map(this.sixDegreesToGraph))
             .subscribe(
                 (graph: Graph) => {
                     this.userGraphSub.next(graph);
                 },
-                (error) => {
+                error => {
                     console.log(error);
-                });
+                }
+            );
     }
 
     getLatestUserData(): BehaviorSubject<Graph> {
@@ -93,8 +88,7 @@ export class GraphDataService {
 
     hashDegreesToGraph = (data: SixDegreesConnection<string>) => {
         return this.mapToGraph(data, false);
-    }
-
+    };
 
     mapToGraph = (data: SixDegreesConnection<string>, isUserGraph: boolean) => {
         const nodeMap = new Map<string, Node>();
@@ -105,13 +99,26 @@ export class GraphDataService {
         const [start, end] = this.markPath(data, nodeMap, linkMap, links);
         this.colorizeGraph(nodeMap, links, start);
         return { nodes, links, metadata: data.metadata, nodeMap, linkMap };
-    }
+    };
 
-    createNodes(data: SixDegreesConnection<UserResult | string>, nodeMap: Map<string, Node>, isUserGraph) {
-        const values = [].concat(...(Object.values(data.connections).concat(Object.keys(data.connections))));
-        const nodes: Node[] = values.map((e) => {
-            return { id: e, group: 1, isShown: true, onPath: false, isUser: isUserGraph };
-
+    createNodes(
+        data: SixDegreesConnection<UserResult | string>,
+        nodeMap: Map<string, Node>,
+        isUserGraph
+    ) {
+        const values = [].concat(
+            ...Object.values(data.connections).concat(
+                Object.keys(data.connections)
+            )
+        );
+        const nodes: Node[] = values.map(e => {
+            return {
+                id: e,
+                group: 1,
+                isShown: true,
+                onPath: false,
+                isUser: isUserGraph
+            };
         });
         nodes.forEach((e: Node, i: number) => {
             if (!nodeMap.has(e.id)) {
@@ -119,10 +126,12 @@ export class GraphDataService {
             }
         });
         return Array.from(nodeMap.values());
-
     }
 
-    createLinks(data: SixDegreesConnection<string | UserResult>, linkMap: Map<string, Link>) {
+    createLinks(
+        data: SixDegreesConnection<string | UserResult>,
+        linkMap: Map<string, Link>
+    ) {
         const links: Link[] = [];
         for (const element of Object.keys(data.connections)) {
             data.connections[element].forEach((c: any) => {
@@ -133,14 +142,18 @@ export class GraphDataService {
                     end = c.id;
                 }
 
-                const link = { source: element, target: end, value: 1, onPath: false };
+                const link = {
+                    source: element,
+                    target: end,
+                    value: 1,
+                    onPath: false
+                };
                 const linkKey = `${link.source} ${link.target}`;
                 const reverse = `${link.target} ${link.source}`;
 
                 if (!linkMap.has(linkKey)) {
                     linkMap.set(linkKey, link);
                     links.push(link);
-
                 }
 
                 if (!linkMap.has(reverse)) {
@@ -152,29 +165,34 @@ export class GraphDataService {
     }
 
     pointToNodeID(nodeMap: Map<string, Node>, pathPoint: any) {
-
-
         const node = nodeMap.get(pathPoint);
         return node.id;
-
     }
 
-
-    markPath(data: SixDegreesConnection<string | UserResult>, nodeMap: Map<string, Node>, linkMap: Map<string, Link>, links: Link[]) {
+    markPath(
+        data: SixDegreesConnection<string | UserResult>,
+        nodeMap: Map<string, Node>,
+        linkMap: Map<string, Link>,
+        links: Link[]
+    ) {
         const paths = data.paths;
         let start: string = null;
         let end: string = null;
         paths.forEach(linkPath => {
-            const pathPoints: string[] = Object.values(linkPath.path)
-                .map((e: any) => {
+            const pathPoints: string[] = Object.values(linkPath.path).map(
+                (e: any) => {
                     if (e.screenName) {
                         return e.id;
                     } else {
                         return e;
                     }
-                });
+                }
+            );
             start = this.pointToNodeID(nodeMap, pathPoints[0]);
-            end = this.pointToNodeID(nodeMap, pathPoints[pathPoints.length - 1]);
+            end = this.pointToNodeID(
+                nodeMap,
+                pathPoints[pathPoints.length - 1]
+            );
 
             for (let i = 1; i < pathPoints.length; i++) {
                 const sourceNode = pathPoints[i - 1];
@@ -182,28 +200,37 @@ export class GraphDataService {
                 const linkKey = `${sourceNode} ${targetNode}`;
                 const reverseKey = `${targetNode} ${sourceNode}`;
                 const link = linkMap.get(linkKey) || linkMap.get(reverseKey);
-                const url = (linkPath.links[i - 1]) ? (linkPath.links[i - 1]) : null;
+                const url = linkPath.links[i - 1]
+                    ? linkPath.links[i - 1]
+                    : null;
 
                 if (nodeMap.has(sourceNode) && nodeMap.has(targetNode)) {
                     const source = nodeMap.get(sourceNode);
                     const target = nodeMap.get(targetNode);
                     source.onPath = true;
-                    source.user = (linkPath.path[i - 1] as UserResult).screenName ? linkPath.path[i - 1] as UserResult : null;
+                    source.user = (linkPath.path[i - 1] as UserResult)
+                        .screenName
+                        ? (linkPath.path[i - 1] as UserResult)
+                        : null;
                     target.onPath = true;
-                    target.user = (linkPath.path[i] as UserResult).screenName ? linkPath.path[i] as UserResult : null;
-
-
+                    target.user = (linkPath.path[i] as UserResult).screenName
+                        ? (linkPath.path[i] as UserResult)
+                        : null;
                 }
                 if (link) {
                     link.onPath = true;
                     link.value = 4;
                     link.linkUrl = url;
                 } else {
-                    const newLink: Link = { source: sourceNode, target: targetNode, value: 4, onPath: true };
+                    const newLink: Link = {
+                        source: sourceNode,
+                        target: targetNode,
+                        value: 4,
+                        onPath: true
+                    };
                     links.push(newLink);
                     linkMap.set(linkKey, newLink);
                 }
-
             }
         });
         return [start, end];
@@ -221,10 +248,11 @@ export class GraphDataService {
         queue.push(startNode.id);
 
         while (queue.length > 0) {
-
             const curr = queue.shift();
             const currNode = nodeMap.get(curr);
-            const neighbors = links.filter((e) => e.source === curr || e.target === curr);
+            const neighbors = links.filter(
+                e => e.source === curr || e.target === curr
+            );
             neighbors.forEach(n => {
                 const target = nodeMap.get(n.target);
                 if (!visited.has(n.target)) {
@@ -242,8 +270,6 @@ export class GraphDataService {
         }
     }
 
-
-
     trimMatchingEntries<T>(array: T[], filter: (e, i) => boolean): T[] {
         let i = array.length;
         const deleted = [];
@@ -256,8 +282,7 @@ export class GraphDataService {
         return deleted;
     }
 
-
     sixDegreesToGraph = (data): Graph => {
         return this.mapToGraph(data, true);
-    }
+    };
 }
