@@ -4,6 +4,38 @@
 
 .card {
     max-width: 18rem;
+    min-width: 18rem;
+}
+
+.card-body {
+    height: 26rem;
+    overflow-y: auto;
+}
+
+.fauxTable {
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: space-between;
+    // border: 1px solid black;
+    font-size: 1rem;
+    // margin: 0.5rem;
+    line-height: 1.5;
+}
+
+.fauxRow {
+    width: 100%;
+}
+.fauxCell {
+    display: flex;
+    flex-flow: row nowrap;
+    flex-grow: 1;
+    flex-basis: 0;
+    padding: 0.5rem 0.5rem 0.75rem;
+    word-break: break-word;
+}
+
+.fauxCell.font-weight-bold {
+    padding-bottom: 0;
 }
 
 tr {
@@ -11,13 +43,13 @@ tr {
     table-layout: fixed;
 }
 table {
-    height: 300px;
+    height: 100%;
     table-layout: fixed;
     width: 100%;
 }
 tbody {
     overflow-y: scroll;
-    height: 200px;
+    height: 24rem;
     width: 90%;
     position: absolute;
 }
