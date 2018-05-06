@@ -54,6 +54,7 @@ export class GraphCardComponent implements OnInit, OnChanges {
 
     updateCardContent(data) {
         this.cardBody = [];
+        this.cardTitle = 'Loading...';
 
         if (data.user) {
             this.cardTitle = '@' + data.user.screenName;
@@ -99,7 +100,6 @@ export class GraphCardComponent implements OnInit, OnChanges {
         const { calls, time } = metadata;
         const [hours, minutes, seconds] = time.toLocaleString().split(':');
         this.cardBody.push(['Calls:', `${calls}`]);
-        this.cardBody.push(['Time Taken:', '']);
         this.cardBody.push(['Hours', hours]);
         this.cardBody.push(['Minutes', minutes]);
         this.cardBody.push(['Seconds', seconds]);
