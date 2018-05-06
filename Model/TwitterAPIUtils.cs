@@ -108,7 +108,12 @@ namespace SixDegrees.Model
                             if (!response.IsSuccessStatusCode)
                             {
                                 if (authTypeUsed.Value == AuthenticationType.Application)
-                                    RateLimitCache.Get[endpoint].Update(0);
+                                {
+                                    if (response.ReasonPhrase.Contains("429")) // Too many requests
+                                        RateLimitCache.Get[endpoint].Update(0);
+                                    else
+                                        RateLimitCache.Get[endpoint].Update(RateLimitCache.Get[endpoint].Limit - 1);
+                                }
                                 else
                                     userStatus?.Update(userStatus.Limit - 1);
                             }
