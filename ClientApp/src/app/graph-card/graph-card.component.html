@@ -1,19 +1,35 @@
-<div class="card text-white bg-primary col-sm px-0">
+<div class="card text-white bg-primary px-0">
     <div class="card-header text-center" style="font-size: 1.25rem">{{whatToWhat}}</div>
     <div class="card-header text-center">{{cardTitle}}</div>
     <div class="card-body">
-        <table>
+
+        <div class="fauxTable">
             <ng-container *ngFor="let entry of cardBody">
-                <tr>
+                <div class="fauxRow">
                     <ng-container *ngIf="entry.length === 2; else singleCell">
-                        <td class="font-weight-bold">{{entry[0]}}</td>
-                        <td>{{entry[1]}}</td>
+                        <div class="font-weight-bold fauxCell">{{entry[0]}}</div>
+                        <div class="fauxCell">{{entry[1]}}</div>
                     </ng-container>
                     <ng-template #singleCell>
-                        <td colspan="100%" class="text-center">{{entry}}</td>
+                        <div class="text-center fauxCell">{{entry}}</div>
                     </ng-template>
-                </tr>
+                </div>
             </ng-container>
-        </table>
+        </div>
+        <!--<table>
+            <tbody>
+                <ng-container *ngFor="let entry of cardBody">
+                    <tr>
+                        <ng-container *ngIf="entry.length === 2; else singleCell">
+                            <td class="font-weight-bold">{{entry[0]}}</td>
+                            <td>{{entry[1]}}</td>
+                        </ng-container>
+                        <ng-template #singleCell>
+                            <td colspan="100%" class="text-center">{{entry}}</td>
+                        </ng-template>
+                    </tr>
+                </ng-container>
+            </tbody>
+        </table> -->
     </div>
 </div>
