@@ -8,6 +8,7 @@ import * as D3 from 'd3';
 export class CloudDataService {
 
     allWords: D3.Map<WeightedWord> = D3.map<WeightedWord>();
+    currentWords: D3.Map<WeightedWord> = D3.map<WeightedWord>();
     wordsAdded: number;
 
     constructor(private endpoint: EndpointService) {
@@ -18,6 +19,7 @@ export class CloudDataService {
         return this.endpoint.searchRelatedHashtags(hashtag).map((results: string[]): WeightedWord[] => {
 
             const oldCount = this.allWords.size();
+            this.currentWords.clear();
 
             results.forEach((hash) => {
                 if (this.allWords.has(hash)) {
@@ -25,13 +27,21 @@ export class CloudDataService {
                 } else {
                     this.allWords.set(hash, { text: hash, size: 10, occurrence: 1 });
                 }
+                if (this.currentWords.has(hash)) {
+                    this.currentWords.get(hash).occurrence++;
+                } else {
+                    this.currentWords.set(hash, { text: hash, size: 10, occurrence: 1 });
+                }
             });
 
             this.wordsAdded = this.allWords.size() - oldCount;
             this.allWords.each((word) => {
-
                 const limiter = (this.allWords.size() > 100) ? this.allWords.size() / 100 : 1;
-                word.size = 10  + (Math.random() * 90)  / limiter;
+                word.size = 10 + (Math.random() * 90)  / limiter;
+            });
+            this.currentWords.each((word) => {
+                const limiter = (this.currentWords.size() > 100) ? this.currentWords.size() / 100 : 1;
+                word.size = 10 + (Math.random() * 90)  / limiter;
             });
 
             return this.allWords.values();
@@ -44,13 +54,16 @@ export class CloudDataService {
 
     dropCachedWords(): void {
         this.allWords.clear();
+        this.currentWords.clear();
     }
 
     getWordsAdded(): number {
         return this.wordsAdded;
     }
 
-
+    getCurrentWords(): WeightedWord[] {
+        return this.currentWords.values();
+    }
 
     init(): WeightedWord[] {
         return ['Hello', 'world', 'normally', 'you', 'want', 'more', 'words', 'than', 'this',
