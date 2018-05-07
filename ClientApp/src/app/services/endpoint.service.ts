@@ -1,17 +1,23 @@
 import { Injectable, Inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs/Observable';
-import 'rxjs/add/observable/empty';
+import { empty } from 'rxjs/observable/empty';
 import { Country } from '../models';
 import { Subject } from 'rxjs/Subject';
-import 'rxjs/add/operator/finally';
-import 'rxjs/add/operator/catch';
-import { UserConnectionInfo, UserConnectionMap, UserResult } from '../models/UserResult';
+import { catchError } from 'rxjs/operators/catchError';
+import { finalize } from 'rxjs/operators/finalize';
+import {
+    UserConnectionInfo,
+    UserConnectionMap,
+    UserResult
+} from '../models/UserResult';
 import { HashConnectionMap } from '../models/HashConnectionInfo';
 import { SixDegreesConnection } from './graph-data.service';
 import { AlertService } from './alert.service';
 import { LoaderService } from './loader.service';
 import { Router, NavigationEnd } from '@angular/router';
+import { map } from 'rxjs/operators/map';
+import { filter } from 'rxjs/operators/filter';
 
 export enum QueryType {
     TweetsByHashtag = 'TweetsByHashtag',
@@ -56,20 +62,24 @@ export class EndpointService {
     private hitBackend: Subject<any> = new Subject<any>();
     pushLatest = () => {
         this.hitBackend.next();
-    }
+    };
 
-    constructor(private http: HttpClient,
+    constructor(
+        private http: HttpClient,
         @Inject('BASE_URL') baseUrl: string,
         private alerts: AlertService,
         private loader: LoaderService,
-        private router: Router) {
+        private router: Router
+    ) {
         this.baseUrl = baseUrl;
         this.router.events
-            .filter(event => event instanceof NavigationEnd)
-            .map((event: NavigationEnd) =>
-                event.urlAfterRedirects.split('/').join('')
+            .pipe(
+                filter(event => event instanceof NavigationEnd),
+                map((event: NavigationEnd) =>
+                    event.urlAfterRedirects.split('/').join('')
+                )
             )
-            .subscribe((r) => {
+            .subscribe(r => {
                 this.route = r;
             });
     }
@@ -85,38 +95,48 @@ export class EndpointService {
     callAPI<T>(urlChunks: string[]) {
         const currentRoute: string = this.route;
         this.showLoader();
-        return this.http.get<T>(`${this.baseUrl}${urlChunks.join('')}`)
-            .finally(() => {
+        return this.http.get<T>(`${this.baseUrl}${urlChunks.join('')}`).pipe(
+            finalize(() => {
                 this.loader.endLoading(currentRoute);
-            })
-            .finally(this.pushLatest)
-            .catch((err: HttpErrorResponse, caught: Observable<T>) => {
+            }),
+            finalize(this.pushLatest),
+            catchError((err: HttpErrorResponse, caught: Observable<T>) => {
                 this.alerts.addError(err.error);
-                return Observable.empty<T>();
-            });
+                return empty<T>();
+            })
+        );
     }
     public getAllRateLimits() {
         return this.http.get<RateInfo>(this.baseUrl + 'api/ratelimit/all'); // can't use pushLatest
     }
 
     public searchLocations(hashtag: string): Observable<Country[]> {
-
-        return this.callAPI<LocationData>(['api/search/locations?query=', hashtag]).map(val => val.countries);
+        return this.callAPI<LocationData>([
+            'api/search/locations?query=',
+            hashtag
+        ]).pipe(map(val => val.countries));
     }
 
     public searchRelatedHashtags(hashtag: string): Observable<string[]> {
-
         return this.callAPI<string[]>(['api/search/hashtags?query=', hashtag]);
     }
 
-
     public getUserSixDegrees(user1: string, user2: string) {
-        return this.callAPI<SixDegreesConnection<UserResult>>(['api/search/degrees/users?user1=', user1, '&user2=', user2]);
-
+        return this.callAPI<SixDegreesConnection<UserResult>>([
+            'api/search/degrees/users?user1=',
+            user1,
+            '&user2=',
+            user2
+        ]);
     }
 
     public getHashSixDegrees(hashtag1: string, hashtag2: string) {
-        return this.callAPI<SixDegreesConnection<string>>(['api/search/degrees/hashtags?hashtag1=', hashtag1, '&hashtag2=', hashtag2]);
+        return this.callAPI<SixDegreesConnection<string>>([
+            'api/search/degrees/hashtags?hashtag1=',
+            hashtag1,
+            '&hashtag2=',
+            hashtag2
+        ]);
     }
 
     public getUserInfo(id: string) {

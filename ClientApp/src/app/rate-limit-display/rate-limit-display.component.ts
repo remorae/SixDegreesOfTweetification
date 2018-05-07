@@ -6,9 +6,8 @@ import {
     AuthPair
 } from '../services/endpoint.service';
 import { Router, NavigationEnd } from '@angular/router';
-import 'rxjs/add/operator/filter';
-import 'rxjs/add/operator/map';
-
+import { filter } from 'rxjs/operators/filter';
+import { map } from 'rxjs/operators/map';
 @Component({
     selector: 'app-rate-limit-display',
     templateUrl: './rate-limit-display.component.html',
@@ -25,9 +24,11 @@ export class RateLimitDisplayComponent implements OnInit {
             this.displayCurrentRates(this.currentComponentName);
         });
         this.router.events
-            .filter(event => event instanceof NavigationEnd)
-            .map((event: NavigationEnd) =>
-                event.urlAfterRedirects.split('/').join('')
+            .pipe(
+                filter(event => event instanceof NavigationEnd),
+                map((event: NavigationEnd) =>
+                    event.urlAfterRedirects.split('/').join('')
+                )
             )
             .subscribe((componentName: string) => {
                 this.currentComponentName = componentName;
@@ -47,11 +48,14 @@ export class RateLimitDisplayComponent implements OnInit {
             case 'geo':
                 return [QueryType.LocationsByHashtag]; // TODO: update when adding components
             case 'word-cloud':
-            return [QueryType.HashtagsFromHashtag];
+                return [QueryType.HashtagsFromHashtag];
             case 'user-to-user':
-            return [QueryType.UserConnectionsByScreenName, QueryType.UserByScreenName];
+                return [
+                    QueryType.UserConnectionsByScreenName,
+                    QueryType.UserByScreenName
+                ];
             case 'hash-to-hash':
-            return [QueryType.HashtagConnectionsByHashtag];
+                return [QueryType.HashtagConnectionsByHashtag];
             default:
                 return null;
         }
