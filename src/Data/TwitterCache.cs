@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using Neo4j.Driver.V1;
 using SixDegrees.Model;
@@ -9,12 +8,21 @@ using SixDegrees.Model.JSON;
 
 namespace SixDegrees.Data
 {
-    public class TwitterCache
+    /// <summary>
+    /// Handles interactions with the Neo4j database when retrieving Twitter information.
+    /// </summary>
+    class TwitterCache
     {
         private static IDriver GetDriver(IConfiguration configuration) =>
             GraphDatabase.Driver(configuration["twitterCacheURI"],
                 AuthTokens.Basic(configuration["twitterCacheUser"], configuration["twitterCachePassword"]));
 
+        /// <summary>
+        /// Ensures all given users are in the cache.
+        /// </summary>
+        /// <seealso cref="UpdateUsersByIDs(IConfiguration, IEnumerable{string})"/>
+        /// <param name="configuration"></param>
+        /// <param name="users"></param>
         internal static void UpdateUsers(IConfiguration configuration, IEnumerable<UserResult> users)
         {
             using (IDriver driver = GetDriver(configuration))
@@ -38,6 +46,12 @@ namespace SixDegrees.Data
                 new { user.ID, user.Name, user.ScreenName, user.Location, user.Description, user.FollowerCount, user.FriendCount, user.CreatedAt, user.TimeZone, user.GeoEnabled, user.Verified, user.StatusCount, user.Lang, user.ProfileImage });
         }
 
+        /// <summary>
+        /// Ensures all given users are in the cache and only stores IDs.
+        /// </summary>
+        /// <seealso cref="UpdateUsers(IConfiguration, IEnumerable{UserResult})"/>
+        /// <param name="configuration"></param>
+        /// <param name="userIDs"></param>
         internal static void UpdateUsersByIDs(IConfiguration configuration, IEnumerable<string> userIDs)
         {
             using (IDriver driver = GetDriver(configuration))
@@ -56,6 +70,13 @@ namespace SixDegrees.Data
                 new { ID = userID });
         }
 
+        /// <summary>
+        /// Returns a cached user's information if it exists in the database.
+        /// </summary>
+        /// <seealso cref="LookupUser(IConfiguration, string)"/>
+        /// <param name="configuration"></param>
+        /// <param name="screenName"></param>
+        /// <returns></returns>
         internal static UserResult LookupUserByName(IConfiguration configuration, string screenName)
         {
             using (IDriver driver = GetDriver(configuration))
@@ -75,6 +96,13 @@ namespace SixDegrees.Data
                 .SingleOrDefault()?[0].As<INode>().Properties);
         }
 
+        /// <summary>
+        /// Returns a cached user's information by ID if it exists in the database.
+        /// </summary>
+        /// <seealso cref="LookupUserByName(IConfiguration, string)"/>
+        /// <param name="configuration"></param>
+        /// <param name="userID"></param>
+        /// <returns></returns>
         internal static UserResult LookupUser(IConfiguration configuration, string userID)
         {
             using (IDriver driver = GetDriver(configuration))
@@ -93,6 +121,13 @@ namespace SixDegrees.Data
                 .SingleOrDefault()?[0].As<INode>().Properties);
         }
 
+        /// <summary>
+        /// Ensures the given user has cached connections to the given collection of users and caches any user info not already in the database.
+        /// </summary>
+        /// <seealso cref="UpdateUserConnections(IConfiguration, string, ICollection{string})"/>
+        /// <param name="configuration"></param>
+        /// <param name="queried">The user to update connections for.</param>
+        /// <param name="users">The list of users connected to the queried user.</param>
         internal static void UpdateUserConnections(IConfiguration configuration, UserResult queried, ICollection<UserResult> users)
         {
             using (IDriver driver = GetDriver(configuration))
@@ -153,6 +188,13 @@ namespace SixDegrees.Data
                 });
         }
 
+        /// <summary>
+        /// Ensures the given user has cached connections to the given collection of users (by ID).
+        /// </summary>
+        /// <seealso cref="UpdateUserConnections(IConfiguration, UserResult, ICollection{UserResult})"/>
+        /// <param name="configuration"></param>
+        /// <param name="queried">The ID of the user to update connections for.</param>
+        /// <param name="userIDs">The list of user IDs connected to the queried user.</param>
         internal static void UpdateUserConnections(IConfiguration configuration, string queried, IEnumerable<string> userIDs)
         {
             using (IDriver driver = GetDriver(configuration))
@@ -189,8 +231,22 @@ namespace SixDegrees.Data
                 .SingleOrDefault()?.As<string>();
         }
 
+        /// <summary>
+        /// Finds all cached user connections for the given user.
+        /// </summary>
+        /// <seealso cref="FindUserConnections(IConfiguration, string)"/>
+        /// <param name="configuration"></param>
+        /// <param name="queried">The user to find connections for.</param>
+        /// <returns></returns>
         internal static IEnumerable<UserResult> FindUserConnections(IConfiguration configuration, UserResult queried) => FindUserConnections(configuration, queried.ID);
 
+        /// <summary>
+        /// Finds all cached user connections for the given user ID.
+        /// </summary>
+        /// <seealso cref="FindUserConnections(IConfiguration, UserResult)"/>
+        /// <param name="configuration"></param>
+        /// <param name="userID">The ID of the user to find connections for.</param>
+        /// <returns></returns>
         internal static IEnumerable<UserResult> FindUserConnections(IConfiguration configuration, string userID)
         {
             using (IDriver driver = GetDriver(configuration))
@@ -214,6 +270,16 @@ namespace SixDegrees.Data
                 });
         }
 
+        /// <summary>
+        /// Determines whether a cached path exists between the given objects.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="configuration"></param>
+        /// <param name="start">The starting node information to use with the query.</param>
+        /// <param name="end">The ending node information to use with the query.</param>
+        /// <param name="maxLength">The cap on the limit of considered paths.</param>
+        /// <param name="label">The Neo4j node label corresponding to the node type.</param>
+        /// <returns></returns>
         internal static bool PathExists<T>(IConfiguration configuration, T start, T end, int maxLength, string label) where T : class
         {
             using (IDriver driver = GetDriver(configuration))
@@ -280,8 +346,22 @@ namespace SixDegrees.Data
             };
         }
 
+        /// <summary>
+        /// Returns whether the given user has had its connections queried and cached previously.
+        /// </summary>
+        /// <seealso cref="UserConnectionsQueried(IConfiguration, string)"/>
+        /// <param name="configuration"></param>
+        /// <param name="queried">The user to check cached connections for.</param>
+        /// <returns></returns>
         internal static bool UserConnectionsQueried(IConfiguration configuration, UserResult queried) => UserConnectionsQueried(configuration, queried.ID);
 
+        /// <summary>
+        /// Returns whether the given user has had its connections queried and cached previously.
+        /// </summary>
+        /// <param name="configuration"></param>
+        /// <param name="queried">The ID of the user to check cached connections for.</param>
+        /// <seealso cref="UserConnectionsQueried(IConfiguration, UserResult)"/>
+        /// <returns></returns>
         internal static bool UserConnectionsQueried(IConfiguration configuration, string userID)
         {
             using (IDriver driver = GetDriver(configuration))
@@ -304,6 +384,12 @@ namespace SixDegrees.Data
                 return false;
         }
 
+        /// <summary>
+        /// Returns cached connected user IDs for the specified user ID.
+        /// </summary>
+        /// <param name="configuration"></param>
+        /// <param name="userID">The ID of the user to obtain cached connections for.</param>
+        /// <returns></returns>
         internal static IEnumerable<string> FindUserConnectionIDs(IConfiguration configuration, string userID)
         {
             using (IDriver driver = GetDriver(configuration))
@@ -323,6 +409,16 @@ namespace SixDegrees.Data
                 .Select(record => record[0].As<string>());
         }
 
+        /// <summary>
+        /// Finds all shortest paths between the given start and end objects.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="configuration"></param>
+        /// <param name="start">The starting node information to use with the query.</param>
+        /// <param name="end">The ending node information to use with the query.</param>
+        /// <param name="maxLength">The cap on the limit of considered paths.</param>
+        /// <param name="label">The Neo4j node label corresponding to the node type.</param>
+        /// <returns></returns>
         internal static List<(List<ConnectionInfo<T>.Node> Path, List<Status> Links)> ShortestPaths<T>(IConfiguration configuration, T start, T end, int maxLength, string label) where T : class
         {
             using (IDriver driver = GetDriver(configuration))
@@ -415,6 +511,13 @@ namespace SixDegrees.Data
                 .ToList();
         }
 
+        /// <summary>
+        /// Ensures the given connections are cached for the specified hashtag.
+        /// </summary>
+        /// <param name="configuration"></param>
+        /// <param name="start">The hashtag to update connections for.</param>
+        /// <param name="link">The tweet that linked the hashtags.</param>
+        /// <param name="connections">The list of hashtags the given starting tag is used with.</param>
         internal static void UpdateHashtagConnections(IConfiguration configuration, string start, Status link, IEnumerable<string> connections)
         {
             using (IDriver driver = GetDriver(configuration))
@@ -465,6 +568,12 @@ namespace SixDegrees.Data
                 "SET tag.queried = true", new { Text = hashtag });
         }
 
+        /// <summary>
+        /// Returns whether the given hashtag has had its connections queried and cached previously.
+        /// </summary>
+        /// <param name="configuration"></param>
+        /// <param name="hashtag">The hashtag to check cached connections for.</param>
+        /// <returns></returns>
         internal static bool HashtagConnectionsQueried(IConfiguration configuration, string hashtag)
         {
             using (IDriver driver = GetDriver(configuration))
@@ -487,6 +596,13 @@ namespace SixDegrees.Data
                 return false;
         }
 
+        /// <summary>
+        /// Returns other cached hashtag connections for the given hashtag.
+        /// </summary>
+        /// <param name="configuration"></param>
+        /// <param name="hashtag">The hashtag to search for.</param>
+        /// <param name="max">The maximum number of hashtags to return.</param>
+        /// <returns></returns>
         internal static IDictionary<Status, IEnumerable<string>> FindHashtagConnections(IConfiguration configuration, string hashtag, int max)
         {
             using (IDriver driver = GetDriver(configuration))
