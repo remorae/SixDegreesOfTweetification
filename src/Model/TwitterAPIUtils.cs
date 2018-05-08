@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 
 namespace SixDegrees.Model
 {
+    /// <summary>
+    /// Helper methods for interacting with the Twitter API
+    /// </summary>
     static class TwitterAPIUtils
     {
         private const int TweetCount = 100;
@@ -93,45 +96,52 @@ namespace SixDegrees.Model
             if (!appStatus.Available)
                 throw new Exception($"Endpoint {endpoint} currently unavailable due to rate limits. Time until reset: {appStatus.UntilReset}");
             appStatus.ResetIfNeeded();
-            HttpMethod method = HttpMethod(endpoint);
             try
             {
                 using (var client = new HttpClient())
+                using (var request = new HttpRequestMessage(HttpMethod(endpoint), GetUri(endpoint, query)))
                 {
-                    using (var request = new HttpRequestMessage(method, GetUri(endpoint, query)))
+                    if (!TryAuthorize(request, config, authType, token, tokenSecret, appStatus, userStatus, out AuthenticationType? authTypeUsed))
+                        throw new Exception($"Unable to authenticate Twitter API call of type {authType}, endpoint {endpoint}.");
+                    using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
                     {
-                        if (!TryAuthorize(request, config, authType, token, tokenSecret, appStatus, userStatus, out AuthenticationType? authTypeUsed))
-                            throw new Exception($"Unable to authenticate Twitter API call of type {authType}, endpoint {endpoint}.");
-                        using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead))
-                        {
-                            if (!response.IsSuccessStatusCode)
-                            {
-                                if (authTypeUsed.Value == AuthenticationType.Application)
-                                    RateLimitCache.Get[endpoint].Update(RateLimitCache.Get[endpoint].Limit - 1);
-                                else
-                                    userStatus?.Update(userStatus.Limit - 1);
-                            }
-                            response.EnsureSuccessStatusCode();
-                            if (response.Headers.TryGetValues("x-rate-limit-remaining", out IEnumerable<string> remaining) &&
-                                response.Headers.TryGetValues("x-rate-limit-reset", out IEnumerable<string> reset))
-                            {
-                                if (int.TryParse(remaining.FirstOrDefault(), out int limitRemaining) &&
-                                    double.TryParse(reset.FirstOrDefault(), out double secondsUntilReset))
-                                {
-                                    if (authTypeUsed.Value == AuthenticationType.Application)
-                                        RateLimitCache.Get[endpoint].Update(limitRemaining, UntilEpochSeconds(secondsUntilReset));
-                                    else
-                                        userStatus?.Update(limitRemaining, UntilEpochSeconds(secondsUntilReset));
-                                }
-                            }
-                            return await response.Content.ReadAsStringAsync();
-                        }
+                        HandleFailure(endpoint, userStatus, authTypeUsed, response);
+                        response.EnsureSuccessStatusCode();
+                        UpdateRateLimits(endpoint, userStatus, authTypeUsed, response);
+                        return await response.Content.ReadAsStringAsync();
                     }
                 }
             }
             catch (Exception ex)
             {
                 throw new Exception($"Twitter API call failed: {ex.Message}");
+            }
+        }
+
+        private static void HandleFailure(TwitterAPIEndpoint endpoint, UserRateLimitInfo userStatus, AuthenticationType? authTypeUsed, HttpResponseMessage response)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                if (authTypeUsed.Value == AuthenticationType.Application)
+                    RateLimitCache.Get[endpoint].Update(RateLimitCache.Get[endpoint].Limit - 1);
+                else
+                    userStatus?.Update(userStatus.Limit - 1);
+            }
+        }
+
+        private static void UpdateRateLimits(TwitterAPIEndpoint endpoint, UserRateLimitInfo userStatus, AuthenticationType? authTypeUsed, HttpResponseMessage response)
+        {
+            if (response.Headers.TryGetValues("x-rate-limit-remaining", out IEnumerable<string> remaining) &&
+                response.Headers.TryGetValues("x-rate-limit-reset", out IEnumerable<string> reset))
+            {
+                if (int.TryParse(remaining.FirstOrDefault(), out int limitRemaining) &&
+                    double.TryParse(reset.FirstOrDefault(), out double secondsUntilReset))
+                {
+                    if (authTypeUsed.Value == AuthenticationType.Application)
+                        RateLimitCache.Get[endpoint].Update(limitRemaining, UntilEpochSeconds(secondsUntilReset));
+                    else
+                        userStatus?.Update(limitRemaining, UntilEpochSeconds(secondsUntilReset));
+                }
             }
         }
 

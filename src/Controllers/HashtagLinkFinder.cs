@@ -10,6 +10,9 @@ using SixDegrees.Model.JSON;
 
 namespace SixDegrees.Controllers
 {
+    /// <summary>
+    /// Finds paths between two hashtags.
+    /// </summary>
     class HashtagLinkFinder : DegreeLinkFinder<string>
     {
         public HashtagLinkFinder(IConfiguration configuration, SearchController controller, RateLimitDbContext rateLimitDb,
@@ -21,17 +24,17 @@ namespace SixDegrees.Controllers
         protected override string Label => "Hashtag";
 
         protected override TwitterAPIEndpoint RateLimitEndpoint => TwitterAPIEndpoint.SearchTweets;
-
+        
         protected override void EnsureLinksToNext<TPath>(Dictionary<string, ICollection<string>> cachedConnections,
-            string key, ConnectionInfo<TPath>.Node node)
+            string key, Connection<TPath>.Node node)
         {
             if (!cachedConnections[key].Contains(node.Value as string))
                 cachedConnections[key].Add(node.Value as string);
         }
-
-        protected override ICollection<string> ExtractConnections(object lookup) =>
+        
+        protected override ICollection<string> ExtractCachedConnections(object lookup) =>
             ((IDictionary<Status, IEnumerable<string>>)lookup).Aggregate(new HashSet<string>(), SearchController.AppendValuesInStatus);
-
+        
         protected override IEnumerable<string> ExtractValuesFromSearchResults(object results, IDictionary<Status, ICollection<string>> links)
         {
             var newLinks = (IDictionary<Status, IEnumerable<string>>)results;
@@ -39,7 +42,7 @@ namespace SixDegrees.Controllers
                 links.Add(entry.Key, entry.Value.ToList());
             return newLinks.Aggregate(new List<string>(), (collection, entry) => { collection.AddRange(entry.Value); return collection; });
         }
-
+        
         protected override async Task<IActionResult> FindConnections(string query, bool allowAPICalls) =>
             Ok(await Controller.GetUniqueHashtags(query, maximumConnectionsPerNode, allowAPICalls));
     }

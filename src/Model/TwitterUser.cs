@@ -1,6 +1,9 @@
 ﻿namespace SixDegrees.Model
 {
-    public class UserResult
+    /// <summary>
+    /// Holds information of a Twitter user.
+    /// </summary>
+    public class TwitterUser
     {
         public string ID { get; set; }
         public string Name { get; set; }

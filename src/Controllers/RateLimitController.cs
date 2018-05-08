@@ -13,6 +13,9 @@ using System.Threading.Tasks;
 
 namespace SixDegrees.Controllers
 {
+    /// <summary>
+    /// Accesses cached rate limits from the front-end.
+    /// </summary>
     [Route("api/[controller]")]
     public class RateLimitController : Controller
     {
@@ -137,24 +140,32 @@ namespace SixDegrees.Controllers
                     default:
                         throw new Exception("Unimplemented TwitterAPIEndpoint");
                 }
-                RateLimitCache.Get[endpoint].Update(GetLimit(appResults, key));
+                RateLimitCache.Get[endpoint].Update(ParseLimit(appResults, key));
                 var userInfo = GetCurrentUserInfo(rateLimitDb, endpoint, userManager, User);
                 if (userInfo != null)
                 {
-                    userInfo.Update(GetLimit(userResults, key));
+                    userInfo.Update(ParseLimit(userResults, key));
                     rateLimitDb.Update(userInfo);
                     rateLimitDb.SaveChanges();
                 }
                 else
                 {
                     var user = new UserRateLimitInfo() { Type = endpoint };
-                    user.Update(GetLimit(userResults, key));
+                    user.Update(ParseLimit(userResults, key));
                     rateLimitDb.Add(user);
                     rateLimitDb.SaveChanges();
                 }
             }
         }
 
+        /// <summary>
+        /// Get rate limits for the current user.
+        /// </summary>
+        /// <param name="rateLimitDb"></param>
+        /// <param name="endpoint"></param>
+        /// <param name="userManager"></param>
+        /// <param name="user"></param>
+        /// <returns></returns>
         internal static UserRateLimitInfo GetCurrentUserInfo(RateLimitDbContext rateLimitDb, TwitterAPIEndpoint endpoint, UserManager<ApplicationUser> userManager, ClaimsPrincipal user)
         {
             if (!user.Identity.IsAuthenticated || user.GetTwitterAccessToken() == null)
@@ -176,7 +187,7 @@ namespace SixDegrees.Controllers
             return info;
         }
 
-        private static int GetLimit(RateLimitResults results, string key)
+        private static int ParseLimit(RateLimitResults results, string key)
         {
             string resourceName = key.Substring(1, key.IndexOf('/', 1) - 1);
             return (int)(results?.Resources.GetValueOrDefault(resourceName)?.GetValueOrDefault(key)?.Remaining ?? 0);

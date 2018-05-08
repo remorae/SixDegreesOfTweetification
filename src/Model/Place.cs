@@ -1,9 +1,11 @@
-﻿using SixDegrees.Model;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace SixDegrees.Model
 {
-    public class PlaceResult
+    /// <summary>
+    /// Represents a Twitter Place and any hashtags tweeted from its location.
+    /// </summary>
+    public class Place
     {
         public string Name { get; set; }
         public string Type { get; set; }

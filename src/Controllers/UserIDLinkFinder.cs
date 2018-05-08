@@ -10,6 +10,9 @@ using SixDegrees.Model.JSON;
 
 namespace SixDegrees.Controllers
 {
+    /// <summary>
+    /// Finds paths between two users by ID.
+    /// </summary>
     class UserIDLinkFinder : DegreeLinkFinder<string>
     {
         public UserIDLinkFinder(IConfiguration configuration, SearchController controller,
@@ -26,22 +29,23 @@ namespace SixDegrees.Controllers
             Ok(((await Controller.GetUserConnectionIDs(query, allowAPICalls) as OkObjectResult)?.Value as IEnumerable<string>));
 
         protected override void EnsureLinksToNext<TPath>(Dictionary<string, ICollection<string>> cachedConnections,
-            string key, ConnectionInfo<TPath>.Node node)
+            string key, Connection<TPath>.Node node)
         {
-            if (!cachedConnections[key].Contains((node.Value as UserResult).ID))
-                cachedConnections[key].Add((node.Value as UserResult).ID);
+            if (!cachedConnections[key].Contains((node.Value as TwitterUser).ID))
+                cachedConnections[key].Add((node.Value as TwitterUser).ID);
         }
 
         protected override async Task<IActionResult> HandleCachedLinkData(
-            List<(List<ConnectionInfo<string>.Node> Path, List<Status> Links)> cachedPaths)
+            List<(List<Connection<string>.Node> Path, List<Status> Links)> cachedPaths)
         {
-            var replacedPaths = new List<(List<ConnectionInfo<UserResult>.Node>, List<Status>)>();
+            // We still want populated user objects for the path itself.
+            var replacedPaths = new List<(List<Connection<TwitterUser>.Node>, List<Status>)>();
             foreach (var (Path, Links) in cachedPaths)
             {
                 var users = await Controller.LookupIDs(SearchController.MaxSingleQueryUserLookupCount, Path.Select(node => node.Value as string).ToList());
-                replacedPaths.Add((users.Select((user, index) => new ConnectionInfo<UserResult>.Node(user, index)).ToList(), Links));
+                replacedPaths.Add((users.Select((user, index) => new Connection<TwitterUser>.Node(user, index)).ToList(), Links));
             }
-            return await FormatCachedLinkData((UserResult user, bool allowAPICalls) => FindConnections(user.ID as string, allowAPICalls), replacedPaths);
+            return await FormatCachedLinkData((TwitterUser user, bool allowAPICalls) => FindConnections(user.ID as string, allowAPICalls), replacedPaths);
         }
     }
 }
