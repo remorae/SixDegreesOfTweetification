@@ -34,7 +34,7 @@ export class AlertService {
             new Message(
                 'Finished!',
                 route + ' has finished loading!',
-                'info',
+                'success',
                 '/' + route
             )
         );
