@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Twitter;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -31,20 +30,25 @@ namespace SixDegrees
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
+        /// <summary>
+        /// Used at runtime to add services to the container.
+        /// </summary>
+        /// <param name="services"></param>
         public void ConfigureServices(IServiceCollection services)
         {
-            // In production, the Angular files will be served from this directory
+            // Angular source directory
             services.AddSpaStaticFiles(configuration =>
             {
                 configuration.RootPath = "ClientApp/dist";
             });
 
+            // Database setup
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
             services.AddDbContext<RateLimitDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("RateLimitConnection")));
 
+            // Identity model setup
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
                 {
                     options.Lockout.AllowedForNewUsers = true;
@@ -69,8 +73,10 @@ namespace SixDegrees
             
             services.AddMvc();
 
+            // CSRF Protection
             services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
 
+            // Twitter authentication setup
             services
                 .AddAuthentication()
                 .AddTwitter(twitterOptions =>
@@ -97,9 +103,15 @@ namespace SixDegrees
             });
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        /// <summary>
+        /// Used at runtime within the HTTP request pipeline.
+        /// </summary>
+        /// <param name="app"></param>
+        /// <param name="env"></param>
+        /// <param name="antiforgery"></param>
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, IAntiforgery antiforgery)
         {
+            // Enforce HTTPS
             int? httpsPort = null;
             var httpsSection = Configuration.GetSection("HttpServer:Endpoints:Https");
             if (httpsSection.Exists())
@@ -125,6 +137,7 @@ namespace SixDegrees
 
             app.UseAuthentication();
 
+            // CSRF Protection + compatibility with Angular
             app.Use(async (context, next) =>
             {
                 // XSRF-TOKEN used by angular in the $http if provided
@@ -137,6 +150,7 @@ namespace SixDegrees
                 await next.Invoke();
             });
 
+            // Default route for controller endpoints
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
