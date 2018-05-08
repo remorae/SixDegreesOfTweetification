@@ -8,7 +8,12 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-// See https://blogs.msdn.microsoft.com/webdev/2017/11/29/configuring-https-in-asp-net-core-across-different-platforms/
+/// <summary>
+/// Helper class for using Kestrel and HTTPS configuration.
+/// </summary>
+/// <remarks>
+/// See https://blogs.msdn.microsoft.com/webdev/2017/11/29/configuring-https-in-asp-net-core-across-different-platforms/
+/// </remarks>
 public static class KestrelServerOptionsExtensions
 {
     public static void ConfigureEndpoints(this KestrelServerOptions options)
