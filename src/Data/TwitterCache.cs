@@ -11,7 +11,7 @@ namespace SixDegrees.Data
     /// <summary>
     /// Handles interactions with the Neo4j database when retrieving Twitter information.
     /// </summary>
-    class TwitterCache
+    static class TwitterCache
     {
         private static IDriver GetDriver(IConfiguration configuration) =>
             GraphDatabase.Driver(configuration["twitterCacheURI"],
@@ -23,11 +23,11 @@ namespace SixDegrees.Data
         /// <seealso cref="UpdateUsersByIDs(IConfiguration, IEnumerable{string})"/>
         /// <param name="configuration"></param>
         /// <param name="users"></param>
-        internal static void UpdateUsers(IConfiguration configuration, IEnumerable<UserResult> users)
+        internal static void UpdateUsers(IConfiguration configuration, IEnumerable<TwitterUser> users)
         {
             using (IDriver driver = GetDriver(configuration))
             {
-                ICollection<UserResult> toStore = new List<UserResult>();
+                ICollection<TwitterUser> toStore = new List<TwitterUser>();
                 using (ISession session = driver.Session(AccessMode.Write))
                 {
                     foreach (var user in users.Except(toStore))
@@ -36,7 +36,7 @@ namespace SixDegrees.Data
             }
         }
 
-        private static void UpdateUser(ITransaction tx, UserResult user)
+        private static void UpdateUser(ITransaction tx, TwitterUser user)
         {
             tx.Run("MERGE (user:User {id: $ID}) " +
                 "SET user.name = $Name, user.screenName = $ScreenName, user.location = $Location, " +
@@ -49,7 +49,7 @@ namespace SixDegrees.Data
         /// <summary>
         /// Ensures all given users are in the cache and only stores IDs.
         /// </summary>
-        /// <seealso cref="UpdateUsers(IConfiguration, IEnumerable{UserResult})"/>
+        /// <seealso cref="UpdateUsers(IConfiguration, IEnumerable{TwitterUser})"/>
         /// <param name="configuration"></param>
         /// <param name="userIDs"></param>
         internal static void UpdateUsersByIDs(IConfiguration configuration, IEnumerable<string> userIDs)
@@ -77,7 +77,7 @@ namespace SixDegrees.Data
         /// <param name="configuration"></param>
         /// <param name="screenName"></param>
         /// <returns></returns>
-        internal static UserResult LookupUserByName(IConfiguration configuration, string screenName)
+        internal static TwitterUser LookupUserByName(IConfiguration configuration, string screenName)
         {
             using (IDriver driver = GetDriver(configuration))
             {
@@ -88,7 +88,7 @@ namespace SixDegrees.Data
             }
         }
 
-        private static UserResult FindUserByName(ITransaction tx, string screenName)
+        private static TwitterUser FindUserByName(ITransaction tx, string screenName)
         {
             return ToUserResult(tx.Run("MATCH (user:User) " +
                 "WHERE user.screenName =~ $Regex " +
@@ -103,7 +103,7 @@ namespace SixDegrees.Data
         /// <param name="configuration"></param>
         /// <param name="userID"></param>
         /// <returns></returns>
-        internal static UserResult LookupUser(IConfiguration configuration, string userID)
+        internal static TwitterUser LookupUser(IConfiguration configuration, string userID)
         {
             using (IDriver driver = GetDriver(configuration))
             {
@@ -114,7 +114,7 @@ namespace SixDegrees.Data
             }
         }
 
-        private static UserResult FindUser(ITransaction tx, string userID)
+        private static TwitterUser FindUser(ITransaction tx, string userID)
         {
             return ToUserResult(tx.Run("MATCH (user:User {id: $ID}) " +
                 "RETURN user", new { ID = userID })
@@ -128,7 +128,7 @@ namespace SixDegrees.Data
         /// <param name="configuration"></param>
         /// <param name="queried">The user to update connections for.</param>
         /// <param name="users">The list of users connected to the queried user.</param>
-        internal static void UpdateUserConnections(IConfiguration configuration, UserResult queried, ICollection<UserResult> users)
+        internal static void UpdateUserConnections(IConfiguration configuration, TwitterUser queried, ICollection<TwitterUser> users)
         {
             using (IDriver driver = GetDriver(configuration))
             {
@@ -141,7 +141,7 @@ namespace SixDegrees.Data
             }
         }
 
-        private static void UpdateUserConnection(ITransaction tx, UserResult queried, UserResult user)
+        private static void UpdateUserConnection(ITransaction tx, TwitterUser queried, TwitterUser user)
         {
             tx.Run("MERGE (a:User {id: $ID}) " +
                 "MERGE (b:User {id: $Other}) " +
@@ -191,7 +191,7 @@ namespace SixDegrees.Data
         /// <summary>
         /// Ensures the given user has cached connections to the given collection of users (by ID).
         /// </summary>
-        /// <seealso cref="UpdateUserConnections(IConfiguration, UserResult, ICollection{UserResult})"/>
+        /// <seealso cref="UpdateUserConnections(IConfiguration, TwitterUser, ICollection{TwitterUser})"/>
         /// <param name="configuration"></param>
         /// <param name="queried">The ID of the user to update connections for.</param>
         /// <param name="userIDs">The list of user IDs connected to the queried user.</param>
@@ -238,16 +238,16 @@ namespace SixDegrees.Data
         /// <param name="configuration"></param>
         /// <param name="queried">The user to find connections for.</param>
         /// <returns></returns>
-        internal static IEnumerable<UserResult> FindUserConnections(IConfiguration configuration, UserResult queried) => FindUserConnections(configuration, queried.ID);
+        internal static IEnumerable<TwitterUser> FindUserConnections(IConfiguration configuration, TwitterUser queried) => FindUserConnections(configuration, queried.ID);
 
         /// <summary>
         /// Finds all cached user connections for the given user ID.
         /// </summary>
-        /// <seealso cref="FindUserConnections(IConfiguration, UserResult)"/>
+        /// <seealso cref="FindUserConnections(IConfiguration, TwitterUser)"/>
         /// <param name="configuration"></param>
         /// <param name="userID">The ID of the user to find connections for.</param>
         /// <returns></returns>
-        internal static IEnumerable<UserResult> FindUserConnections(IConfiguration configuration, string userID)
+        internal static IEnumerable<TwitterUser> FindUserConnections(IConfiguration configuration, string userID)
         {
             using (IDriver driver = GetDriver(configuration))
             {
@@ -258,7 +258,7 @@ namespace SixDegrees.Data
             }
         }
 
-        private static IEnumerable<UserResult> FindUserConnections(ITransaction tx, string userID)
+        private static IEnumerable<TwitterUser> FindUserConnections(ITransaction tx, string userID)
         {
             return tx.Run("MATCH (user:User {id: $ID})-[:FRIEND_FOLLOWER_OF]->(friends) " +
                 "RETURN friends",
@@ -287,8 +287,8 @@ namespace SixDegrees.Data
                 using (ISession session = driver.Session(AccessMode.Read))
                 {
                     if (label == "User")
-                        if (start is UserResult)
-                            return session.ReadTransaction(tx => UserPathExists(tx, (start as UserResult).ID, (end as UserResult).ID, maxLength)).As<bool>();
+                        if (start is TwitterUser)
+                            return session.ReadTransaction(tx => UserPathExists(tx, (start as TwitterUser).ID, (end as TwitterUser).ID, maxLength)).As<bool>();
                         else
                             return session.ReadTransaction(tx => UserPathExists(tx, start as string, end as string, maxLength)).As<bool>();
                     else
@@ -309,7 +309,7 @@ namespace SixDegrees.Data
                    "RETURN path ", new { start, end }).Count() > 0;
         }
 
-        private static UserResult ToUserResult(IReadOnlyDictionary<string, object> other)
+        private static TwitterUser ToUserResult(IReadOnlyDictionary<string, object> other)
         {
             if (other == null)
                 return null;
@@ -327,7 +327,7 @@ namespace SixDegrees.Data
             other.TryGetValue("statusCount", out object statusCount);
             other.TryGetValue("lang", out object lang);
             other.TryGetValue("profileImage", out object profileImage);
-            return new UserResult()
+            return new TwitterUser()
             {
                 ID = other["id"].As<string>(),
                 Name = name?.As<string>(),
@@ -353,14 +353,14 @@ namespace SixDegrees.Data
         /// <param name="configuration"></param>
         /// <param name="queried">The user to check cached connections for.</param>
         /// <returns></returns>
-        internal static bool UserConnectionsQueried(IConfiguration configuration, UserResult queried) => UserConnectionsQueried(configuration, queried.ID);
+        internal static bool UserConnectionsQueried(IConfiguration configuration, TwitterUser queried) => UserConnectionsQueried(configuration, queried.ID);
 
         /// <summary>
         /// Returns whether the given user has had its connections queried and cached previously.
         /// </summary>
         /// <param name="configuration"></param>
         /// <param name="queried">The ID of the user to check cached connections for.</param>
-        /// <seealso cref="UserConnectionsQueried(IConfiguration, UserResult)"/>
+        /// <seealso cref="UserConnectionsQueried(IConfiguration, TwitterUser)"/>
         /// <returns></returns>
         internal static bool UserConnectionsQueried(IConfiguration configuration, string userID)
         {
@@ -419,31 +419,31 @@ namespace SixDegrees.Data
         /// <param name="maxLength">The cap on the limit of considered paths.</param>
         /// <param name="label">The Neo4j node label corresponding to the node type.</param>
         /// <returns></returns>
-        internal static List<(List<ConnectionInfo<T>.Node> Path, List<Status> Links)> ShortestPaths<T>(IConfiguration configuration, T start, T end, int maxLength, string label) where T : class
+        internal static List<(List<Connection<T>.Node> Path, List<Status> Links)> ShortestPaths<T>(IConfiguration configuration, T start, T end, int maxLength, string label) where T : class
         {
             using (IDriver driver = GetDriver(configuration))
             {
                 using (ISession session = driver.Session(AccessMode.Read))
                 {
                     if (label == "User")
-                        if (start is UserResult)
-                            return session.ReadTransaction(tx => ShortestUserPaths(tx, (start as UserResult).ID, (end as UserResult).ID, maxLength))
-                            .As<List<List<ConnectionInfo<T>.Node>>>()
+                        if (start is TwitterUser)
+                            return session.ReadTransaction(tx => ShortestUserPaths(tx, (start as TwitterUser).ID, (end as TwitterUser).ID, maxLength))
+                            .As<List<List<Connection<T>.Node>>>()
                             .Select(list => (list, new List<Status>()))
                             .ToList();
                         else
                             return session.ReadTransaction(tx => ShortestUserPaths(tx, start as string, end as string, maxLength))
-                            .As<List<List<ConnectionInfo<UserResult>.Node>>>()
-                            ?.Select(list => (list.Select(node => new ConnectionInfo<T>.Node(node.Value.ID as T, node.Distance)).ToList(), new List<Status>()))
+                            .As<List<List<Connection<TwitterUser>.Node>>>()
+                            ?.Select(list => (list.Select(node => new Connection<T>.Node(node.Value.ID as T, node.Distance)).ToList(), new List<Status>()))
                             .ToList();
                     else
                         return session.ReadTransaction(tx => ShortestHashtagPaths(tx, start as string, end as string, maxLength))
-                            .As<List<(List<ConnectionInfo<T>.Node>, List<Status>)>>();
+                            .As<List<(List<Connection<T>.Node>, List<Status>)>>();
                 }
             }
         }
 
-        private static List<List<ConnectionInfo<UserResult>.Node>> ShortestUserPaths(ITransaction tx, string start, string end, int maxLength)
+        private static List<List<Connection<TwitterUser>.Node>> ShortestUserPaths(ITransaction tx, string start, string end, int maxLength)
         {
             return tx.Run("MATCH path=allShortestPaths((start:User {id: $start})-[*.." + maxLength + "]->(end:User {id: $end})) "
                 + "RETURN path",
@@ -451,12 +451,12 @@ namespace SixDegrees.Data
                 .Select(record => record[0]
                 .As<IPath>()
                 .Nodes
-                .Select((node, index) => new ConnectionInfo<UserResult>.Node(ToUserResult(node.Properties), index))
+                .Select((node, index) => new Connection<TwitterUser>.Node(ToUserResult(node.Properties), index))
                 .ToList())
                 .ToList();
         }
 
-        private static List<(List<ConnectionInfo<string>.Node> Path, List<Status> Links)> ShortestHashtagPaths(ITransaction tx, string start, string end, int maxLength)
+        private static List<(List<Connection<string>.Node> Path, List<Status> Links)> ShortestHashtagPaths(ITransaction tx, string start, string end, int maxLength)
         {
             // Multiply max length by two since a hashtag-to-hashtag connection passes through a status node
             return tx.Run("MATCH path=allShortestPaths((start:Hashtag {text: $start})-[*.." + maxLength * 2 + "]-(end:Hashtag {text: $end})) " +
@@ -468,9 +468,9 @@ namespace SixDegrees.Data
                 .ToList();
         }
 
-        private class PathEqualityComparer : EqualityComparer<(List<ConnectionInfo<string>.Node> Path, List<Status> Links)>
+        private class PathEqualityComparer : EqualityComparer<(List<Connection<string>.Node> Path, List<Status> Links)>
         {
-            public override bool Equals((List<ConnectionInfo<string>.Node> Path, List<Status> Links) x, (List<ConnectionInfo<string>.Node> Path, List<Status> Links) y)
+            public override bool Equals((List<Connection<string>.Node> Path, List<Status> Links) x, (List<Connection<string>.Node> Path, List<Status> Links) y)
             {
                 if (x.Path.Count != y.Path.Count)
                     return false;
@@ -480,7 +480,7 @@ namespace SixDegrees.Data
                 return true;
             }
 
-            public override int GetHashCode((List<ConnectionInfo<string>.Node> Path, List<Status> Links) obj)
+            public override int GetHashCode((List<Connection<string>.Node> Path, List<Status> Links) obj)
             {
                 return obj.Path
                     .Select(node => node.Value.GetHashCode())
@@ -488,7 +488,7 @@ namespace SixDegrees.Data
             }
         }
 
-        private static Func<IRecord, (List<ConnectionInfo<string>.Node>, List<Status>)> ToPathWithLinks() =>
+        private static Func<IRecord, (List<Connection<string>.Node>, List<Status>)> ToPathWithLinks() =>
             record => (GetPath(record), GetLinks(record));
 
         private static List<Status> GetLinks(IRecord record)
@@ -501,13 +501,13 @@ namespace SixDegrees.Data
                 .ToList();
         }
 
-        private static List<ConnectionInfo<string>.Node> GetPath(IRecord record)
+        private static List<Connection<string>.Node> GetPath(IRecord record)
         {
             return record[0]
                 .As<IPath>()
                 .Nodes
                 .Where(node => node.Labels.Contains("Hashtag"))
-                .Select((node, index) => new ConnectionInfo<string>.Node(node.Properties["text"].ToString(), index))
+                .Select((node, index) => new Connection<string>.Node(node.Properties["text"].ToString(), index))
                 .ToList();
         }
 

@@ -8,6 +8,9 @@ using SixDegrees.Model;
 
 namespace SixDegrees.Controllers
 {
+    /// <summary>
+    /// Handles account management for authenticated users.
+    /// </summary>
     [Route("manage/[action]")]
     public class ManageController : Controller
     {

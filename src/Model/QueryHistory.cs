@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace SixDegrees.Model
 {
+    /// <summary>
+    /// Tracks the most recent queries for each Twitter API endpoint.
+    /// </summary>
     class QueryHistory
     {
         private static QueryHistory instance;

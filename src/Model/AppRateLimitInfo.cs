@@ -2,6 +2,9 @@
 
 namespace SixDegrees.Model
 {
+    /// <summary>
+    /// Represents cached application rate limits for the Twitter application used at runtime.
+    /// </summary>
     class AppRateLimitInfo : RateLimitInfo
     {
         internal AppRateLimitInfo()

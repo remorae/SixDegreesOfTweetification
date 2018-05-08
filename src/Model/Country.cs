@@ -2,10 +2,13 @@
 
 namespace SixDegrees.Model
 {
+    /// <summary>
+    /// Represents a country from Earth that contains Twitter places.
+    /// </summary>
     class Country
     {
-        internal string Name { get; set; }
-        internal IDictionary<string, PlaceResult> Places { get; } = new Dictionary<string, PlaceResult>();
+        internal string Name { get; }
+        internal IDictionary<string, Place> Places { get; } = new Dictionary<string, Place>();
 
         internal Country(string name)
         {

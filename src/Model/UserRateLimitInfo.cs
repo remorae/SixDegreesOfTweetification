@@ -2,6 +2,9 @@
 
 namespace SixDegrees.Model
 {
+    /// <summary>
+    /// Represents cached user rate limits for the Twitter application used at runtime.
+    /// </summary>
     public class UserRateLimitInfo : RateLimitInfo
     {
         public string UserID { get; set; }

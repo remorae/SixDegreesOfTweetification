@@ -3,11 +3,19 @@ using System.Collections.Generic;
 
 namespace SixDegrees.Model
 {
+    /// <summary>
+    /// Represents cached rate limit information for a specific Twitter API endpoint.
+    /// </summary>
     public abstract class RateLimitInfo
     {
-
+        /// <summary>
+        /// Twitter API rate limits reset every 15 minutes.
+        /// </summary>
         protected const long TwitterAPIResetIntervalMillis = (15 * TimeSpan.TicksPerMinute / TimeSpan.TicksPerMillisecond);
 
+        /// <summary>
+        /// Default rate limits for each authentication type.
+        /// </summary>
         protected static readonly IDictionary<TwitterAPIEndpoint, IDictionary<AuthenticationType, int>> AuthLimits
             = new Dictionary<TwitterAPIEndpoint, IDictionary<AuthenticationType, int>>()
         {
@@ -68,12 +76,29 @@ namespace SixDegrees.Model
 
         internal abstract void OnTypeChanged();
 
+        /// <summary>
+        ///  When the cached rate limit was last changed.
+        /// </summary>
         public DateTime LastUpdated { get; set; }
-
+        /// <summary>
+        /// The current cached limit.
+        /// </summary>
         public int Limit { get; set; }
+        /// <summary>
+        /// Whether the cache is out of date.
+        /// </summary>
         protected bool NeedsReset => SinceLastUpdate > UntilReset;
+        /// <summary>
+        /// How long it has been since the cache was last updated.
+        /// </summary>
         internal TimeSpan SinceLastUpdate => DateTime.Now - LastUpdated;
+        /// <summary>
+        /// The reported time remaining until the rate limit window resets according to Twitter.
+        /// </summary>
         public TimeSpan UntilReset { get; set; } = TimeSpan.FromMilliseconds(TwitterAPIResetIntervalMillis);
+        /// <summary>
+        /// Whether the correspondering Twitter API endpoint's rate limit has been exhausted.
+        /// </summary>
         internal bool Available => NeedsReset || Limit > 0;
 
         internal void ResetIfNeeded()

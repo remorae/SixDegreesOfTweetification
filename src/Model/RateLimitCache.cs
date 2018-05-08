@@ -8,6 +8,9 @@ using SixDegrees.Data;
 
 namespace SixDegrees.Model
 {
+    /// <summary>
+    /// Manages cached rate limit information for Twitter.
+    /// </summary>
     class RateLimitCache
     {
         private static RateLimitCache instance;
@@ -29,6 +32,11 @@ namespace SixDegrees.Model
                 { AuthenticationType.User, -1 }
             };
 
+        /// <summary>
+        /// Which Twitter API endpoints are used by the given SixDegrees endpoint.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
         private static IEnumerable<TwitterAPIEndpoint?> Endpoints(QueryType type)
         {
             switch (type)
@@ -71,18 +79,33 @@ namespace SixDegrees.Model
             => Enum.GetValues(typeof(QueryType)).Cast<QueryType>()
             .ToDictionary(type => type, type => MinimumRateLimits(type, rateLimitDb, userManager, user));
 
-        internal static bool HasEndpoint(QueryType type) => Endpoints(type).Count() > 0;
-
         internal void Reset(QueryType type)
         {
             foreach (TwitterAPIEndpoint endpoint in Endpoints(type))
                 cache[endpoint].ResetIfNeeded();
         }
 
+        /// <summary>
+        /// How long until the rate limits reset for the given SixDegrees endpoint.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
         internal TimeSpan? UntilReset(QueryType type) => Endpoints(type).Max(endpoint => cache[endpoint.Value].UntilReset as TimeSpan?) ?? null;
 
+        /// <summary>
+        /// How long it has been since the cached rate limits were updated for the given SixDegrees endpoint.
+        /// </summary>
+        /// <param name="type"></param>
         internal TimeSpan? SinceLastUpdate(QueryType type) => Endpoints(type).Max(endpoint => cache[endpoint.Value].SinceLastUpdate as TimeSpan?) ?? null;
 
+        /// <summary>
+        /// The maximum number of calls available for a given SixDegrees endpoint assuming all related Twitter API endpoints will be hit.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="dbContext"></param>
+        /// <param name="userManager"></param>
+        /// <param name="user">The user accessing the SixDegrees API.</param>
+        /// <returns></returns>
         internal IDictionary<AuthenticationType, int> MinimumRateLimits(QueryType type, RateLimitDbContext dbContext, UserManager<ApplicationUser> userManager, ClaimsPrincipal user) => new Dictionary<AuthenticationType, int>()
             {
                 { AuthenticationType.Application, Endpoints(type).Min(endpoint => { var info = cache[endpoint.Value]; info.ResetIfNeeded(); return info.Limit as int?; }) ?? -1 },

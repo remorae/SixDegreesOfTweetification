@@ -4,6 +4,9 @@ using System.Linq;
 
 namespace SixDegrees.Model
 {
+    /// <summary>
+    /// Cached query information to support traversing through multiple "pages" of Twitter data upon repeat queries.
+    /// </summary>
     class QueryInfo
     {
         internal static bool UsesMaxID(TwitterAPIEndpoint endpoint)
