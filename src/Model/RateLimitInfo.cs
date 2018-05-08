@@ -5,7 +5,9 @@ namespace SixDegrees.Model
 {
     public abstract class RateLimitInfo
     {
+
         protected const long TwitterAPIResetIntervalMillis = (15 * TimeSpan.TicksPerMinute / TimeSpan.TicksPerMillisecond);
+
         protected static readonly IDictionary<TwitterAPIEndpoint, IDictionary<AuthenticationType, int>> AuthLimits
             = new Dictionary<TwitterAPIEndpoint, IDictionary<AuthenticationType, int>>()
         {

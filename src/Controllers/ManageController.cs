@@ -69,7 +69,7 @@ namespace SixDegrees.Controllers
             var user = await userManager.GetUserAsync(User);
             if (user == null)
             {
-                return BadRequest($"User is not authenticated.");
+                return Unauthorized();
             }
 
             var info = await signInManager.GetExternalLoginInfoAsync(user.Id);
