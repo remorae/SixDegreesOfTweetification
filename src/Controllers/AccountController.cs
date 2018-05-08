@@ -16,6 +16,12 @@ using SixDegrees.Services;
 
 namespace SixDegrees.Controllers
 {
+    /// <summary>
+    /// Handles authentication and account creation for both standard and Twitter logins.
+    /// </summary>
+    /// <remarks>
+    /// Emails are currently not verified. See <see cref="EmailSender"/> for implementation.
+    /// </remarks>
     [Route("account/[action]")]
     public class AccountController : Controller
     {
@@ -39,9 +45,6 @@ namespace SixDegrees.Controllers
             this.logger = logger;
         }
 
-        [TempData]
-        public string ErrorMessage { get; set; }
-
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> Login(string returnUrl = null)
@@ -51,10 +54,15 @@ namespace SixDegrees.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Attempts to log in the user with the given credentials.
+        /// </summary>
+        /// <param name="model">Contains the credentials of the user requesting authentication.</param>
+        /// <returns>Whether or not login succeeded.</returns>
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login([FromBody] LoginModel model, string returnUrl = null)
+        public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
             if (TryValidateModel(model))
             {
@@ -77,6 +85,9 @@ namespace SixDegrees.Controllers
             return BadRequest("Illegal credentials.");
         }
 
+        /// <summary>
+        /// Logs out the currently authenticated user.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
@@ -86,6 +97,10 @@ namespace SixDegrees.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Called when the user requesting authentication is locked out.
+        /// </summary>
+        /// <returns>A lockout error message.</returns>
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Lockout()
@@ -93,6 +108,12 @@ namespace SixDegrees.Controllers
             return BadRequest("Account locked out.");
         }
 
+        /// <summary>
+        /// Attempts to register and login a new account with the given details.
+        /// </summary>
+        /// <param name="model">The registration details of the user requesting a new account.</param>
+        /// <param name="returnUrl">The URL to return to after registration.</param>
+        /// <returns></returns>
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -121,6 +142,12 @@ namespace SixDegrees.Controllers
             return BadRequest($"Invalid registration info: {string.Join(";", ModelState.Values.SelectMany(v => v.Errors.Select(b => b.ErrorMessage)))}");
         }
 
+        /// <summary>
+        /// Redirects to the external login provider of the given name in order to authenticate a user.
+        /// </summary>
+        /// <param name="provider">The name of the provider to use to login.</param>
+        /// <param name="returnUrl">Where to return to after the external login.</param>
+        /// <returns>Whether or not the external login succeeded.</returns>
         [AllowAnonymous]
         public async Task<IActionResult> ExternalLogin(string provider, string returnUrl = null)
         {
@@ -132,6 +159,12 @@ namespace SixDegrees.Controllers
             return Challenge(properties, provider);
         }
 
+        /// <summary>
+        /// Called via the external login provider. Determines whether a new account should be created or whether the user can be logged in immediately.
+        /// </summary>
+        /// <param name="returnUrl">The URL to return to after method execution.</param>
+        /// <param name="remoteError"></param>
+        /// <returns>Whether or not the external login succeeded.</returns>
         [HttpGet]
         public async Task<IActionResult> ExternalLoginCallback(string returnUrl = null, string remoteError = null)
         {
@@ -163,10 +196,16 @@ namespace SixDegrees.Controllers
             }
         }
 
+        /// <summary>
+        /// Attempts to register and login a new account with the given details and previously stored external login information.
+        /// </summary>
+        /// <param name="model">The registration details of the user requesting a new account.</param>
+        /// <param name="returnUrl">The URL to return to after registration.</param>
+        /// <returns>Whether or not the registration succeeded.</returns>
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ExternalLoginConfirmation([FromBody] ExternalLoginModel model, string returnUrl = null)
+        public async Task<IActionResult> ExternalLoginConfirmation([FromBody] RegistrationModel model, string returnUrl = null)
         {
             if (TryValidateModel(model))
             {
@@ -212,6 +251,12 @@ namespace SixDegrees.Controllers
             return controller.Redirect($"https://{request.Host.Value}{localUrl}");
         }
 
+        /// <summary>
+        /// Confirms the email of the user with the given ID and code.
+        /// </summary>
+        /// <param name="userId">The ID of the user whose email is being confirmed.</param>
+        /// <param name="code">The unique code generated prior to email confirmation.</param>
+        /// <returns>Whether or not the confirmation succeeded.</returns>
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> ConfirmEmail(string userId, string code)
@@ -232,6 +277,10 @@ namespace SixDegrees.Controllers
                 return BadRequest("Error");
         }
 
+        /// <summary>
+        /// Determines whether the currently authenticated user has an attached, external Twitter login.
+        /// </summary>
+        /// <returns>True if the user has Twitter authentication.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<bool> TwitterAvailable()
@@ -242,10 +291,11 @@ namespace SixDegrees.Controllers
             return logins.Where(login => login.LoginProvider == "Twitter").Count() > 0;
         }
 
+        /// <summary>
+        /// Used by the front-end to assist with navigation.
+        /// </summary>
+        /// <returns>True if the current user is authenticated.</returns>
         [HttpPost]
-        public bool Authenticated()
-        {
-            return User.Identity.IsAuthenticated;
-        }
+        public bool Authenticated() => User.Identity.IsAuthenticated;
     }
 }
