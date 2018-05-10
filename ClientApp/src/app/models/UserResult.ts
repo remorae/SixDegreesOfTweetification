@@ -5,7 +5,7 @@ export interface UserResult {
     Location: string;
     Description: string;
     FollowerCount: number; // long
-    FriendCount: number;  // long
+    FriendCount: number; // long
     CreatedAt: string;
     TimeZone: string;
     GeoEnabled: boolean;
@@ -14,7 +14,6 @@ export interface UserResult {
     Lang: string;
     ProfileImage: string;
 }
-
 
 export class UserConnectionInfo {
     distance: number;

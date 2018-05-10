@@ -1,21 +1,32 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+    Component,
+    OnInit,
+    OnDestroy,
+    ViewChild,
+    AfterViewInit
+} from '@angular/core';
 import { UserInput } from '../models/userInput';
 import { HashConnectionMap } from '../models/HashConnectionInfo';
 import { GraphDataService, Graph } from '../services/graph-data.service';
 import { InputCacheService } from '../services/input-cache.service';
+import { DualInputComponent } from '../dual-input/dual-input.component';
 
 @Component({
     selector: 'app-hash-to-hash-page',
     templateUrl: './hash-to-hash-page.component.html',
     styleUrls: ['./hash-to-hash-page.component.scss']
 })
-export class HashToHashPageComponent implements OnInit {
+export class HashToHashPageComponent implements OnInit, AfterViewInit {
+    @ViewChild(DualInputComponent) dualInput;
     latestSearchStart;
     latestSearchEnd;
     hashGraph;
     modalActive = false;
     freshNavigation = false;
-    constructor(private graphData: GraphDataService, private inputCache: InputCacheService) { }
+    constructor(
+        private graphData: GraphDataService,
+        private inputCache: InputCacheService
+    ) {}
 
     ngOnInit() {
         this.graphData.getLatestHashData().subscribe((g: Graph) => {
@@ -26,12 +37,18 @@ export class HashToHashPageComponent implements OnInit {
         });
 
         this.inputCache.getPreviousHashes().subscribe((s: string[]) => {
-
             this.latestSearchStart = s[0];
             this.latestSearchEnd = s[1];
         });
 
         this.freshNavigation = true;
+    }
+
+    ngAfterViewInit() {
+        // if (this.latestSearchStart && this.latestSearchEnd) {
+        //     this.dualInput.firstSub().value = this.latestSearchStart;
+        //     this.dualInput.SecondSub().value = this.latestSearchEnd;
+        // }
     }
 
     onUserSubmit(input: UserInput) {
