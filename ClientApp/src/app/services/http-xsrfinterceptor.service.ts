@@ -1,16 +1,26 @@
 import { Injectable } from '@angular/core';
-import { HttpXsrfTokenExtractor, HttpRequest, HttpHandler, HttpEvent, HttpInterceptor } from '@angular/common/http';
+import {
+    HttpXsrfTokenExtractor,
+    HttpRequest,
+    HttpHandler,
+    HttpEvent,
+    HttpInterceptor
+} from '@angular/common/http';
 import { Observable } from 'rxjs/Observable';
 
 @Injectable()
 export class HttpXsrfInterceptorService implements HttpInterceptor {
-    constructor(private tokenService: HttpXsrfTokenExtractor) { }
+    constructor(private tokenService: HttpXsrfTokenExtractor) {}
 
-    intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    intercept(
+        req: HttpRequest<any>,
+        next: HttpHandler
+    ): Observable<HttpEvent<any>> {
         const headerName = 'X-XSRF-TOKEN';
         const lcUrl = req.url.toLowerCase();
-        if (req.method === 'GET' || req.method === 'HEAD')
+        if (req.method === 'GET' || req.method === 'HEAD') {
             return next.handle(req);
+        }
         // DO NOT skip absolute URLs.
         const token = this.tokenService.getToken();
 

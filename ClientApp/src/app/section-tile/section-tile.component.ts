@@ -1,9 +1,9 @@
 import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
-  selector: 'app-section-tile',
-  templateUrl: './section-tile.component.html',
-  styleUrls: ['./section-tile.component.scss']
+    selector: 'app-section-tile',
+    templateUrl: './section-tile.component.html',
+    styleUrls: ['./section-tile.component.scss']
 })
 export class SectionTileComponent implements OnInit {
     @Input() iconPath: string;
@@ -12,7 +12,9 @@ export class SectionTileComponent implements OnInit {
     @Input() route: string;
     isCurrentPage: boolean;
 
-    constructor() { const thing = document; }
+    constructor() {
+        const thing = document;
+    }
 
-    ngOnInit() { }
+    ngOnInit() {}
 }

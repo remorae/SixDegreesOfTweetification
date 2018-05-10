@@ -18,8 +18,8 @@ export class HashVisualizerComponent implements OnInit, AfterViewInit {
             x = Math.sin(2 * Math.PI / 3),
             y = Math.cos(2 * Math.PI / 3);
 
-        let offset = 0,
-            speed = 4;
+        let offset = 0;
+        const speed = 4;
         const start = Date.now();
 
         const svg = select('div.gearbox')
