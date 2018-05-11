@@ -16,9 +16,7 @@
     display: flex;
     flex-flow: column nowrap;
     justify-content: space-between;
-    // border: 1px solid black;
     font-size: 1rem;
-    // margin: 0.5rem;
     line-height: 1.5;
 }
 
@@ -36,20 +34,4 @@
 
 .fauxCell.font-weight-bold {
     padding-bottom: 0;
-}
-
-tr {
-    width: 100%;
-    table-layout: fixed;
-}
-table {
-    height: 100%;
-    table-layout: fixed;
-    width: 100%;
-}
-tbody {
-    overflow-y: scroll;
-    height: 24rem;
-    width: 90%;
-    position: absolute;
 }

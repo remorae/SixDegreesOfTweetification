@@ -21,12 +21,12 @@ export class GMapsService extends GoogleMapsAPIWrapper {
         console.log('Getting Address - ', address);
         const geocoder = new google.maps.Geocoder();
         return Observable.create(observer => {
-            geocoder.geocode( { 'address': address}, function(results, status) {
+            geocoder.geocode({ address: address }, function(results, status) {
                 if (status === google.maps.GeocoderStatus.OK) {
                     const resultLocation: LatLng = results[0].geometry.location;
                     const latLong: LatLngLiteral = {
                         lat: resultLocation.lat(),
-                        lng: resultLocation.lng(),
+                        lng: resultLocation.lng()
                     };
                     observer.next(latLong);
                     observer.complete();

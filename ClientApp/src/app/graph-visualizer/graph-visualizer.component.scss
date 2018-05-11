@@ -1,15 +1,12 @@
 .graph-container {
-   //overflow: visible;
-   height: calc(100vh - 64px);
-   width: 100%;
-  }
+    //overflow: visible;
+    height: calc(100vh - 64px);
+    width: 100%;
+}
 
 .animate {
     animation: drop-fade-in 0.5s ease-out;
 }
-
-
-
 
 svg text {
     cursor: default;

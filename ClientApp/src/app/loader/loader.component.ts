@@ -8,14 +8,10 @@ import { Observable } from 'rxjs/Observable';
     styleUrls: ['./loader.component.scss']
 })
 export class LoaderComponent implements OnInit {
-
     loading = false;
-    constructor(private loader: LoaderService) {
-    }
+    constructor(private loader: LoaderService) {}
 
     ngOnInit() {
-        this.loader.getLoadingStatus()
-            .subscribe(b => this.loading = b);
+        this.loader.getLoadingStatus().subscribe(b => (this.loading = b));
     }
-
 }
