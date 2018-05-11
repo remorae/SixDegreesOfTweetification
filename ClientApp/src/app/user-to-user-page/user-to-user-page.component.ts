@@ -1,6 +1,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { UserInput } from '../models/userInput';
-import { UserResult, UserConnectionInfo, UserConnectionMap } from '../models/UserResult';
+import {
+    UserResult,
+    UserConnectionInfo,
+    UserConnectionMap
+} from '../models/UserResult';
 import { GraphDataService, Graph } from '../services/graph-data.service';
 import { InputCacheService } from '../services/input-cache.service';
 
@@ -15,16 +19,18 @@ export class UserToUserPageComponent implements OnInit {
     userRelationshipGraph: Graph;
     modalActive = false;
     freshNavigation = false;
-    constructor(private graphData: GraphDataService, private inputCache: InputCacheService) { }
+    constructor(
+        private graphData: GraphDataService,
+        private inputCache: InputCacheService
+    ) {}
 
     ngOnInit() {
-        this.graphData.getLatestUserData()
-            .subscribe((g: Graph) => {
-                this.userRelationshipGraph = g;
-                if (this.userRelationshipGraph &&  this.freshNavigation) {
-                    this.showModal();
-                }
-            });
+        this.graphData.getLatestUserData().subscribe((g: Graph) => {
+            this.userRelationshipGraph = g;
+            if (this.userRelationshipGraph && this.freshNavigation) {
+                this.showModal();
+            }
+        });
 
         this.inputCache.getPreviousUsers().subscribe((s: string[]) => {
             [this.latestSearchStart, this.latestSearchEnd] = s;

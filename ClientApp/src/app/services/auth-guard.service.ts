@@ -15,9 +15,12 @@ export class AuthGuard implements CanActivate {
     ) {}
     canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot) {
         const url: string = state.url;
-        
-        if (url === "/login" || url === "/register" || url === "/externallogin") {
 
+        if (
+            url === '/login' ||
+            url === '/register' ||
+            url === '/externallogin'
+        ) {
             if (!this.authService.isLoggedIn()) {
                 return true;
             }
@@ -25,8 +28,7 @@ export class AuthGuard implements CanActivate {
 
             this.router.navigate(['/account']);
             return false;
-        }
-        else {
+        } else {
             if (this.authService.isLoggedIn()) {
                 return true;
             }
