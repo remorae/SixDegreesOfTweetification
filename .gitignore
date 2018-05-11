@@ -237,3 +237,7 @@ _Pvt_Extensions
 .fake/
 
 blacklist\.txt
+
+/ClientApp/docs/**
+!.gitkeep
+
