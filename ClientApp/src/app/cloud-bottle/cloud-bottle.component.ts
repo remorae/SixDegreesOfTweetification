@@ -18,7 +18,10 @@ export interface WeightedWord {
     size: number;
     occurrence: number;
 }
-
+/**
+ *  @example Draws the word cloud, based on the input array of WeightedWords. Words will be oriented and sized in the cloud based on the word-fitting library
+ *      written by Jason Davies, and then rendered as SVG elements with D3.js
+ */
 @Component({
     selector: 'app-cloud-bottle',
     templateUrl: './cloud-bottle.component.html',
@@ -32,12 +35,20 @@ export class CloudBottleComponent implements OnInit, OnChanges {
     @Output() cloudDrawn: EventEmitter<string> = new EventEmitter<string>(true);
     constructor() {}
 
-    ngOnInit() {
+    /**
+     * @example Acquires the dimensions of the svg element on component initialization
+     */
+    ngOnInit(): void {
         const temp = document.querySelector('svg.bottle') as SVGElement;
         this.cloudHeight = temp.getBoundingClientRect().height;
         this.cloudWidth = temp.getBoundingClientRect().width;
     }
-    ngOnChanges(changes: SimpleChanges) {
+    /**
+     * @example Whenever the input array of WeightedWords is changed, delete the previous wordcloud and render a new one.
+     *      Broadcast whether any work was done via an EventEmitter.
+     * @param changes Tracks changes made to the @Input array of words
+     */
+    ngOnChanges(changes: SimpleChanges): void {
         const wordChange = changes['words'];
         let drawn: CloudState = 'unchanged';
         if (
@@ -61,7 +72,10 @@ export class CloudBottleComponent implements OnInit, OnChanges {
         this.cloudDrawn.emit(drawn);
     }
 
-    buildLayout() {
+    /**
+     * @example Fit as many words as possible into the cloud. Once the orientation data is processed, render the cloud.
+     */
+    buildLayout(): void {
         // https://github.com/jasondavies/d3-cloud for cloud generator
         d3.layout
             .cloud()
@@ -72,19 +86,25 @@ export class CloudBottleComponent implements OnInit, OnChanges {
             // turns out ~~ just chops off everything to the right of the decimal
             .font('Impact')
             .fontSize(d => d.size)
-            .on('end', input => {
+            .on('end', _ => {
                 // doesn't work without this arrow function
-                this.createCloud(input);
+                this.createCloud();
             })
             .start();
     }
-    dropCloud() {
+    /**
+     * @example Delete all elements corresponding to the wordcloud, then broadcast that the cloud has been cleared.
+     */
+    dropCloud(): void {
         D3.select('svg.bottle')
             .selectAll('*')
             .remove();
         this.cloudDrawn.emit('empty');
     }
-    createCloud(input) {
+    /**
+     * @example Convert the word orientation data into SVG text elements. Elements are colored based on a D3 Categorical Color Scale.
+     */
+    createCloud(): void {
         const fill: D3.ScaleOrdinal<string, string> = D3.scaleOrdinal(
             D3.schemeCategory10
         );

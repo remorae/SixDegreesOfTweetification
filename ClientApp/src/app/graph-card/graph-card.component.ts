@@ -13,7 +13,9 @@ import { catchError } from 'rxjs/operators/catchError';
 import { Observable } from 'rxjs/Observable';
 import { Link, Graph } from '../services/graph-data.service';
 import { empty } from 'rxjs/observable/empty';
-
+/**
+ * @example Displays the data for the currently highlighted node in the Graph Visualizer
+ */
 @Component({
     selector: 'app-graph-card',
     templateUrl: './graph-card.component.html',
@@ -27,8 +29,13 @@ export class GraphCardComponent implements OnInit, OnChanges {
     cardBody = [];
     userData: Subject<any> = new Subject<any>();
     constructor(private endpoint: EndpointService) {}
-
-    ngOnInit() {
+    /**
+     * @example Sets up a subscription to the component's own Subject. Whenever the highlighted node is a user node and does not have
+     *      backing user data, the user's id can be fed into the subject and their data will be fetched from the server.
+     *      The intent of the switchMap is to cancel in-progress network requests every time a new request is made. Clicking on multiple
+     *      new nodes should not present any race conditions.
+     */
+    ngOnInit(): void {
         this.userData
             .pipe(
                 switchMap((data: { id }) =>
@@ -42,7 +49,11 @@ export class GraphCardComponent implements OnInit, OnChanges {
                 this.updateCardContent(this.nodeData);
             });
     }
-
+    /**
+     *  @example If there is no highlighted node, show the time and calls required to find the path between nodes.
+     *      If there is a node, display its data.
+     * @param changes Tracks the changes to the component's input variables.
+     */
     ngOnChanges(changes: SimpleChanges) {
         const data = changes['nodeData'];
         if (data.currentValue) {
@@ -51,7 +62,15 @@ export class GraphCardComponent implements OnInit, OnChanges {
             this.showTimeData(this.graph.metadata);
         }
     }
-
+    /**
+     * @example If the data has attached user data already, display it in a table format.
+     *          The profileimage link is potentially obscene, and is excluded.
+     *
+     *          If the data node is a user node, but lacks backing data, fetch it.
+     *
+     *          If the node is a hashtag node, show all the words with connections to it.
+     * @param data The attached metadata for the currently highlighted node element
+     */
     updateCardContent(data) {
         this.cardBody = [];
         this.cardTitle = 'Loading...';
@@ -88,8 +107,10 @@ export class GraphCardComponent implements OnInit, OnChanges {
             });
         }
     }
-
-    toTitleCase(str) {
+    /**
+     *@example Converts camelCase to Title Case
+     */
+    toTitleCase(str: string) {
         return str
             .replace(/([A-Z])/g, match => ` ${match}`)
             .replace(/^./, match => match.toUpperCase());
