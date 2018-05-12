@@ -1,22 +1,22 @@
 .gearbox {
-width: 960px;
-height: 500px;
+    width: 960px;
+    height: 500px;
 }
 
-  path {
+path {
     fill-rule: evenodd;
     stroke: #333;
     stroke-width: 2px;
-  }
+}
 
-  .sun path {
+.sun path {
     fill: #6baed6;
-  }
+}
 
-  .planet path {
+.planet path {
     fill: #9ecae1;
-  }
+}
 
-  .annulus path {
+.annulus path {
     fill: #c6dbef;
-  }
+}

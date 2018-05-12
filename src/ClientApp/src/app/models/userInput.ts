@@ -7,4 +7,3 @@ export class UserInput {
     }
 }
 export type HashOrHandle = 'hashtag' | 'handle';
-

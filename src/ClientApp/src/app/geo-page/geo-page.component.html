@@ -10,12 +10,7 @@
         <h4 *ngIf="places && !!places.length">Hover over a marker to see its address!</h4>
 
         <agm-map [latitude]="latitude" [longitude]="longitude" [zoom]="zoom">
-            <agm-marker
-                *ngFor="let place of places"
-                [latitude]="place.lat"
-                [longitude]="place.lng"
-                [title]="place.name"
-            >
+            <agm-marker *ngFor="let place of places" [latitude]="place.lat" [longitude]="place.lng" [title]="place.name">
             </agm-marker>
             <!-- [radius]="" <-- if agm-circle
                 [fillColor]=""

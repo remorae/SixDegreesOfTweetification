@@ -16,12 +16,11 @@ export class LoginComponent implements OnInit {
         private router: Router,
         private authService: AuthenticationService
     ) {
-        this.authService.getUpdatedLoginStatus()
-            .subscribe(res => {
-                if (res) {
-                    this.router.navigate(['home']);
-                }
-            });
+        this.authService.getUpdatedLoginStatus().subscribe(res => {
+            if (res) {
+                this.router.navigate(['home']);
+            }
+        });
     }
 
     ngOnInit() {}
@@ -36,7 +35,9 @@ export class LoginComponent implements OnInit {
                 }
             },
             error => {
-                this.message = JSON.stringify(error.error).replace(new RegExp(';', 'g'), '\n').replace(new RegExp('"', 'g'), '');
+                this.message = JSON.stringify(error.error)
+                    .replace(new RegExp(';', 'g'), '\n')
+                    .replace(new RegExp('"', 'g'), '');
             }
         );
     }
