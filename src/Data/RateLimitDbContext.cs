@@ -3,6 +3,9 @@ using SixDegrees.Model;
 
 namespace SixDegrees.Data
 {
+    /// <summary>
+    /// Used to access the rate limit cache database.
+    /// </summary>
     public class RateLimitDbContext : DbContext
     {
         public RateLimitDbContext(DbContextOptions<RateLimitDbContext> contextOptions)

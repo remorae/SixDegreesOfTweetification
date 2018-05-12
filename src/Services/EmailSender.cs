@@ -2,6 +2,9 @@
 
 namespace SixDegrees.Services
 {
+    /// <summary>
+    /// Sends emails to users.
+    /// </summary>
     public class EmailSender : IEmailSender
     {
         /// <summary>

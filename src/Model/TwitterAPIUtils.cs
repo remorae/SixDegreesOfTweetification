@@ -89,9 +89,22 @@ namespace SixDegrees.Model
         {
             return $"user_id={string.Join(",", userIds)}";
         }
-
-        internal static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, TwitterAPIEndpoint endpoint, string query, string token, string tokenSecret, UserRateLimitInfo userStatus)
+        
+        /// <summary>
+        /// Attempts to authenticate a call to the Twitter API with the given query string and authentication info. Updates rate limits if applicable.
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="authType"></param>
+        /// <param name="endpoint"></param>
+        /// <param name="query"></param>
+        /// <param name="token"></param>
+        /// <param name="tokenSecret"></param>
+        /// <param name="userStatus"></param>
+        /// <returns></returns>
+        internal static async Task<string> GetResponse(IConfiguration config, AuthenticationType authType, TwitterAPIEndpoint endpoint,
+            string query, string token, string tokenSecret, UserRateLimitInfo userStatus)
         {
+            // Yep, that's a lot of parameters.
             AppRateLimitInfo appStatus = RateLimitCache.Get[endpoint];
             if (!appStatus.Available)
                 throw new Exception($"Endpoint {endpoint} currently unavailable due to rate limits. Time until reset: {appStatus.UntilReset}");

@@ -107,6 +107,9 @@ namespace SixDegrees.Model
                 Reset();
         }
 
+        /// <summary>
+        /// Resets the cache for the given endpoint.
+        /// </summary>
         protected abstract void Reset();
 
         internal void Update(int remaining)

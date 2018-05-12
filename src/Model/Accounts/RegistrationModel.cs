@@ -2,6 +2,9 @@
 
 namespace SixDegrees.Model.AccountViewModel
 {
+    /// <summary>
+    /// Information required to register a new account.
+    /// </summary>
     public class RegistrationModel
     {
         [Required]
