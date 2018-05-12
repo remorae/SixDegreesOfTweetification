@@ -4,7 +4,10 @@ import { EndpointService } from '../services/endpoint.service';
 import { GMapsService } from '../services/g-maps.service';
 import { UserInput } from '../models/userInput';
 import { LatLngLiteral } from '@agm/core/services/google-maps-types';
-
+/**
+ * @example This component allows the user to input a hashtag. Once they do, markers will
+ *       be placed on the map based on the geo-data attached to tweets that used that hashtag.
+ */
 @Component({
     selector: 'app-geo-page',
     templateUrl: './geo-page.component.html',
@@ -19,14 +22,19 @@ export class GeoPageComponent implements OnInit {
     longitude = 0;
     zoom = 2;
     loading = false;
-
     constructor(
         private endpoint: EndpointService,
         private googleMap: GMapsService
     ) {}
 
     ngOnInit() {}
-
+    /**
+     * @example Given a hashtag, this method queries the backend for associated countries and locations.
+     *      Once it has those, it will match those places to specific lat/long pairs, and the combination will be used
+     *      to create markers in the component template.
+     *
+     * @param input The submitted value of the geopage's single input element.
+     */
     onUserSubmit(input: UserInput) {
         this.latestSearch = input.inputs[0];
         this.places = [];
