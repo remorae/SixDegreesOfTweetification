@@ -2,6 +2,9 @@
 
 namespace SixDegrees.Model.AccountViewModel
 {
+    /// <summary>
+    /// Information required to log into an existing account.
+    /// </summary>
     public class LoginModel
     {
         [Required]

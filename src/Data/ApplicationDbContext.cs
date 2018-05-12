@@ -4,6 +4,9 @@ using SixDegrees.Model;
 
 namespace SixDegrees.Data
 {
+    /// <summary>
+    /// Used to access the Identity database.
+    /// </summary>
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> contextOptions)

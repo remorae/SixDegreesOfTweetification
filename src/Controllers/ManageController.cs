@@ -28,6 +28,11 @@ namespace SixDegrees.Controllers
             this.signInManager = signInManager;
         }
 
+        /// <summary>
+        /// Removes the given external login provider from the current user.
+        /// </summary>
+        /// <param name="provider"></param>
+        /// <returns></returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RemoveExternal(string provider)
@@ -55,6 +60,11 @@ namespace SixDegrees.Controllers
             return Ok();
         }
         
+        /// <summary>
+        /// Begins the external login process to add a new external login provider to the current user.
+        /// </summary>
+        /// <param name="provider"></param>
+        /// <returns></returns>
         public async Task<IActionResult> LinkLogin(string provider)
         {
             if (provider == null)
@@ -66,6 +76,10 @@ namespace SixDegrees.Controllers
             return new ChallengeResult(provider, properties);
         }
 
+        /// <summary>
+        /// Called from external login providers upon successful authentication; connects the external login method to the current user.
+        /// </summary>
+        /// <returns></returns>
         [HttpGet]
         public async Task<IActionResult> LinkLoginCallback()
         {
