@@ -2,14 +2,15 @@
     <aside *ngFor="let message of messages$ | async; index as i">
         <div class="alert" [ngClass]="{'alert-info': message.style==='info',
             'alert-danger': message.style==='danger',
-            'alert-primary':  message.style==='primary'}">
-
+            'alert-primary':  message.style==='primary',
+            'alert-success': message.style==='success'}">
             <button class="close" (click)="dismiss($event, i)">
                 <span>&times;</span>
             </button>
             <h4 class="alert-heading text-center">{{message.header}}</h4>
             <hr>
-            <p [routerLink]="message.link || ''" class="text-center">{{message.content}}</p>
+            <p class="text-center">{{message.content}}</p>
+            <button *ngIf="message.link" [routerLink]="message.link" (click)="dismiss($event, i)" class="btn btn-success d-block mx-auto">Go There Now!</button>
         </div>
 
     </aside>

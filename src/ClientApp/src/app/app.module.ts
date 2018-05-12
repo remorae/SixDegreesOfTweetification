@@ -1,11 +1,14 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { HttpClientModule, HttpClientXsrfModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import {
+    HttpClientModule,
+    HttpClientXsrfModule,
+    HTTP_INTERCEPTORS
+} from '@angular/common/http';
 import { RouterModule, Routes } from '@angular/router';
 
 import { AgmCoreModule } from '@agm/core';
-
 import { AppComponent } from './app.component';
 import { HomeComponent } from './home/home.component';
 import { NavbarComponent } from './navbar/navbar.component';
@@ -29,27 +32,59 @@ import { RegisterComponent } from './register/register.component';
 import { ExternalLoginComponent } from './external-login/external-login.component';
 import { AccountComponent } from './account/account.component';
 import { CloudBottleComponent } from './cloud-bottle/cloud-bottle.component';
-import { CloudDataService} from './services/cloud-data.service';
-import { GraphDataService} from './services/graph-data.service';
+import { CloudDataService } from './services/cloud-data.service';
+import { GraphDataService } from './services/graph-data.service';
 import { GraphVisualizerComponent } from './graph-visualizer/graph-visualizer.component';
 import { HashVisualizerComponent } from './hash-visualizer/hash-visualizer.component';
-import { InputCacheService} from './services/input-cache.service';
+import { InputCacheService } from './services/input-cache.service';
 import { AlertComponent } from './alert/alert.component';
-import { AlertService} from './services/alert.service';
+import { AlertService } from './services/alert.service';
 import { LoaderComponent } from './loader/loader.component';
-import { LoaderService} from './services/loader.service';
+import { LoaderService } from './services/loader.service';
 import { GraphCardComponent } from './graph-card/graph-card.component';
 const appRoutes: Routes = [
     { path: '', component: LoginComponent, pathMatch: 'full' },
-    { path: 'login', component: LoginComponent, pathMatch: 'full', canActivate: [AuthGuard] },
-    { path: 'externallogin', component: ExternalLoginComponent, pathMatch: 'full', canActivate: [AuthGuard] },
-    { path: 'register', component: RegisterComponent, pathMatch: 'full', canActivate: [AuthGuard] },
-    { path: 'account', component: AccountComponent, pathMatch: 'full', canActivate: [AuthGuard] },
+    {
+        path: 'login',
+        component: LoginComponent,
+        pathMatch: 'full',
+        canActivate: [AuthGuard]
+    },
+    {
+        path: 'externallogin',
+        component: ExternalLoginComponent,
+        pathMatch: 'full',
+        canActivate: [AuthGuard]
+    },
+    {
+        path: 'register',
+        component: RegisterComponent,
+        pathMatch: 'full',
+        canActivate: [AuthGuard]
+    },
+    {
+        path: 'account',
+        component: AccountComponent,
+        pathMatch: 'full',
+        canActivate: [AuthGuard]
+    },
     { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
-    { path: 'hash-to-hash', component: HashToHashPageComponent, canActivate: [AuthGuard] },
+    {
+        path: 'hash-to-hash',
+        component: HashToHashPageComponent,
+        canActivate: [AuthGuard]
+    },
     { path: 'geo', component: GeoPageComponent, canActivate: [AuthGuard] },
-    { path: 'user-to-user', component: UserToUserPageComponent, canActivate: [AuthGuard] },
-    { path: 'word-cloud', component: WordCloudPageComponent, canActivate: [AuthGuard] },
+    {
+        path: 'user-to-user',
+        component: UserToUserPageComponent,
+        canActivate: [AuthGuard]
+    },
+    {
+        path: 'word-cloud',
+        component: WordCloudPageComponent,
+        canActivate: [AuthGuard]
+    }
 ];
 @NgModule({
     declarations: [
@@ -75,14 +110,14 @@ const appRoutes: Routes = [
         HashVisualizerComponent,
         AlertComponent,
         LoaderComponent,
-        GraphCardComponent,
+        GraphCardComponent
     ],
     imports: [
         BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
         HttpClientModule,
         HttpClientXsrfModule.withOptions({
             cookieName: 'XSRF-TOKEN',
-            headerName: 'X-XSRF-TOKEN',
+            headerName: 'X-XSRF-TOKEN'
         }),
         FormsModule,
         ReactiveFormsModule,
@@ -95,7 +130,11 @@ const appRoutes: Routes = [
         AuthenticationService,
         AuthGuard,
         EndpointService,
-        { provide: HTTP_INTERCEPTORS, useClass: HttpXsrfInterceptorService, multi: true },
+        {
+            provide: HTTP_INTERCEPTORS,
+            useClass: HttpXsrfInterceptorService,
+            multi: true
+        },
         CloudDataService,
         GraphDataService,
         InputCacheService,

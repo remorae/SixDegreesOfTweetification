@@ -3,7 +3,7 @@
         <div class="input-group-prepend">
             <span class="input-group-text">{{labelText}}</span>
         </div>
-        <input class="form-control" formControlName="firstSub"/>
+        <input class="form-control" formControlName="firstSub" />
         <div class="input-group-append">
             <button class="btn btn-primary" [disabled]="userForm.invalid" type="submit">Go!</button>
         </div>
@@ -13,11 +13,7 @@
         <small *ngIf="firstSub?.errors?.required && firstSub.touched" class="text-danger">
             Input is Required.
         </small>
-        <small
-            *ngIf="firstSub?.errors?.pattern && firstSub.invalid"
-            class="text-danger"
-            title="Leave out the {{inputType}} ({{labelText}}) symbol and make sure there are no spaces in the input."
-        >
+        <small *ngIf="firstSub?.errors?.pattern && firstSub.invalid" class="text-danger" title="Leave out the {{inputType}} ({{labelText}}) symbol and make sure there are no spaces in the input.">
             Input is not a valid {{inputType}}.
         </small>
     </div>
