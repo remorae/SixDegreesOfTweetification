@@ -240,3 +240,4 @@ blacklist\.txt
 _site/
 src/log\.txt
 src/api/
+_exported_templates/
