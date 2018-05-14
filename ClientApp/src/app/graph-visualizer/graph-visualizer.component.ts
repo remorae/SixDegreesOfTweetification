@@ -302,12 +302,13 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
     /**
      * @example Highlights the clicked node with a larger border and bright blue coloring.
      *          Passes this highlighted node to the Graph Card Component.
+     *          Removes the highlighting on the old highlighted node.
      * @param d unused
-     * @param i The index into the selection of node elements in the page.
+     * @param index The index into the selection of node elements in the page.
      * @param selection The selection of node elements in the page.
      * @param color the d3 ordinal scale used to color nodes.
      */
-    highlightNode(d, i: number, selection, color) {
+    highlightNode(d, index: number, selection, color) {
         if (this.highlightedIndex >= 0) {
             const reference = selection[this.highlightedIndex];
             const data = reference.__data__;
@@ -317,8 +318,8 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
                 .attr('fill', color(data.group.toString()));
         }
 
-        this.highlightedIndex = i;
-        const newHighlight = selection[i];
+        this.highlightedIndex = index;
+        const newHighlight = selection[index];
         const newData = newHighlight.__data__;
         select(newHighlight)
             .attr('stroke', '#1dcaff')
@@ -327,7 +328,10 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
 
         this.updateCardContent(newData);
     }
-
+    /**
+     * @example Updates the node whose data is played in the graph-card component.
+     * @param data The node that was highlighted on click
+     */
     updateCardContent(data) {
         this.clickedDatum = data;
     }
