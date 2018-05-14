@@ -26,6 +26,9 @@ import {
     event
 } from 'd3';
 import { ConnectionMetaData, Link, Node } from '../services/graph-data.service';
+/**
+ * @example Displays a D3.js Force Vertlet simulation with draggable nodes to represent the connections between hashtags or between users.
+ */
 @Component({
     selector: 'app-graph-visualizer',
     templateUrl: './graph-visualizer.component.html',
@@ -52,21 +55,28 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
     clickedDatum;
     simulation: Simulation<Node, Link>;
     constructor() {}
-
+    /**
+     * @example Prevents mouse dragging from highlighting the text on nodes in most cases.
+     *
+     */
     onDragEvent(e: Event) {
         e.preventDefault();
     }
-
     ngOnDestroy() {
         this.deleteGraph();
-        this.headerContent = '';
     }
-
+    /**
+     * @example Signal the graph's modal window should be closed, and remove the graph's elements from the DOM.
+     */
     onXClick() {
         this.deleteGraph();
         this.modalOpen.emit(false);
     }
-
+    /**
+     *  @example Whenever the underlying graph data is changed, delete the old graph, and redraw the old graph
+     *          after the fade-in animation completes to avoid choppiness. This will typically just run on component intialization.
+     * @param changes Tracks changes made to the underlying graph data.
+     */
     ngOnChanges(changes: SimpleChanges) {
         const graphChange = changes['graph'];
 
@@ -77,13 +87,19 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
             }, 500);
         }
     }
-
+    /**
+     * @example Remove all elements inside the svg.
+     */
     deleteGraph() {
         select('svg.graph-container')
             .selectAll('*')
             .remove();
     }
-
+    /**
+     * @example Whenever the background of the graph is clicked, create a positioning force centered there to compact the graph.
+     *          The alpha and restart are necessary to inject energy back into the simulation so the graph will drift apart afterwards.
+     * @param mouseEvent A click event that occurred on the background of the graph.
+     */
     onSVGClick(mouseEvent: MouseEvent) {
         const e = mouseEvent.target as SVGElement;
         const dim = e.getBoundingClientRect();
@@ -94,12 +110,20 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
         this.simulation.force('clickY', forceY(y).strength(1.0));
         this.simulation.restart();
     }
-
+    /**
+     *  @example Removes the positioning force that was created on click.
+     * @param mouseEvent The release of the mouse after clicking on the background of the graph.
+     */
     onSVGRelease(mouseEvent: MouseEvent) {
         this.simulation.force('clickX', null);
         this.simulation.force('clickY', null);
     }
-
+    /**
+     * @example Creates the Force Vertlet simulation, attaches an eventhandler to update each selection according
+     *          to the simulation's values, attaches link forces associated with the graph connections, creates the
+     *          3 selections of SVG elements, and appends a title to the nodes.
+     *
+     */
     drawGraph() {
         // credit to https://bl.ocks.org/mbostock/4062045
         const svg = select('svg.graph-container');
@@ -143,15 +167,24 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
             textSelection.attr('x', d => d.x).attr('y', d => d.y);
         }
     }
-
+    /**
+     * @example Currently does nothing.
+     */
     filterNodes(): Node[] {
         return this.graph.nodes;
     }
-
+    /**
+     * @example Currently does nothing.
+     */
     filterLinks(filteredNodes: Node[]): Link[] {
         return this.graph.links;
     }
-
+    /**
+     * @example Creates a Simulation with link forces based on graph links,
+     *          gives each node a negative charge that is only visible in close proximity,
+     *          places a centering force in the middle of the svg,
+     *          and prevents nodes from colliding with each other.
+     */
     createSimulation(): Simulation<Node, Link> {
         return forceSimulation<Node, Link>()
             .force('link', forceLink().id((d: { id }) => d.id))
@@ -163,6 +196,12 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
             );
     }
 
+    /**
+     *  @example Creates SVG line elements that match to the graph's listed links.
+     *          Lines on the shortest computed path are made darker.
+     * @param svg The selection for the svg in the component
+     * @param links The links in the underlying graph.
+     */
     createLinksGroup(
         svg: Selection<BaseType, {}, HTMLElement, any>,
         links: Link[]
@@ -184,7 +223,11 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
                 .attr('stroke-opacity', (d: Link) => (d.onPath ? '1' : '0.6'))
         );
     }
-
+    /**
+     * @example Uses the graph nodes positions to place a distance count on each node in the shortest path.
+     * @param svg The svg selection for the svg in the component.
+     * @param nodes The nodes in the underlying graph.
+     */
     createTextGroup(
         svg: Selection<BaseType, {}, HTMLElement, any>,
         nodes: Node[]
@@ -202,7 +245,14 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
             .attr('dy', '5px')
             .text(d => (d.onPath ? d.group : ''));
     }
-
+    /**
+     * @example Creates a collection of SVG circle elements,
+     *          adds an event handler for highlighting a node on click, and
+     *          adds several drag functions to dictate node drag behavior.
+     * @param svg The svg selection for the svg in the component.
+     * @param simulation The Force Vertlet simulation
+     * @param nodes The nodes in the underlying graph.
+     */
     createNodesGroup(
         svg: Selection<BaseType, {}, HTMLElement, any>,
         simulation: Simulation<Node, Link>,
@@ -249,8 +299,16 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
             d.fy = null;
         }
     }
-
-    highlightNode(d, i: number, selection, color) {
+    /**
+     * @example Highlights the clicked node with a larger border and bright blue coloring.
+     *          Passes this highlighted node to the Graph Card Component.
+     *          Removes the highlighting on the old highlighted node.
+     * @param d unused
+     * @param index The index into the selection of node elements in the page.
+     * @param selection The selection of node elements in the page.
+     * @param color the d3 ordinal scale used to color nodes.
+     */
+    highlightNode(d, index: number, selection, color) {
         if (this.highlightedIndex >= 0) {
             const reference = selection[this.highlightedIndex];
             const data = reference.__data__;
@@ -260,8 +318,8 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
                 .attr('fill', color(data.group.toString()));
         }
 
-        this.highlightedIndex = i;
-        const newHighlight = selection[i];
+        this.highlightedIndex = index;
+        const newHighlight = selection[index];
         const newData = newHighlight.__data__;
         select(newHighlight)
             .attr('stroke', '#1dcaff')
@@ -270,7 +328,10 @@ export class GraphVisualizerComponent implements OnChanges, OnDestroy {
 
         this.updateCardContent(newData);
     }
-
+    /**
+     * @example Updates the node whose data is played in the graph-card component.
+     * @param data The node that was highlighted on click
+     */
     updateCardContent(data) {
         this.clickedDatum = data;
     }
