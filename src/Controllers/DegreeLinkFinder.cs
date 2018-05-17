@@ -277,13 +277,23 @@ namespace SixDegrees.Controllers
                     if (lookupResults != null)
                     {
                         cachedConnections[key] = ExtractCachedConnections(lookupResults);
-                        if (i < Path.Count - 1)
-                            EnsureLinksToNext(cachedConnections, key, Path[i + 1]);
                         count += cachedConnections[key].Count;
                     }
                 }
                 if (count >= MaxNodesPerDegreeSearch)
                     break;
+            }
+
+            // It's possible that some paths didn't get put into the connections due to limits
+            foreach (var (Path, Links) in cachedPaths)
+            {
+                for (int i = 0; i < Path.Count; ++i)
+                {
+                    var node = Path[i];
+                    string key = GetAppropriateKey(node);
+                    if (i < Path.Count - 1)
+                        EnsureLinksToNext(cachedConnections, key, Path[i + 1]);
+                }
             }
 
             return cachedConnections;
