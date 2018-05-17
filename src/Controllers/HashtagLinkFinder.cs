@@ -30,7 +30,7 @@ namespace SixDegrees.Controllers
         {
             if (!cachedConnections.ContainsKey(key))
                 cachedConnections[key] = new HashSet<string>();
-            else if (!cachedConnections[key].Contains(node.Value as string))
+            if (!cachedConnections[key].Contains(node.Value as string))
                 cachedConnections[key].Add(node.Value as string);
         }
         
