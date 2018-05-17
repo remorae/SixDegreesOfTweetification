@@ -241,3 +241,6 @@ _site/
 src/log\.txt
 src/api/
 _exported_templates/
+src/ClientApp/package-lock\.json
+
+src/ClientApp/package\.json
