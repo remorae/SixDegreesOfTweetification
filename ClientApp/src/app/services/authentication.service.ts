@@ -130,7 +130,10 @@ export class AuthenticationService {
                 onCompletion
             );
     }
-
+    /**
+     * @example Look at rewriting this method if you have issues logging in.
+     * @returns Whether the user is logged in or not.
+     */
     isLoggedIn(): boolean {
         this.getUpdatedLoginStatus().subscribe(res => {
             if (res) {
