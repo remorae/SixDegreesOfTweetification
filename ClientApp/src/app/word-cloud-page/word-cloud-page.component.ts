@@ -17,7 +17,7 @@ export class WordCloudPageComponent implements OnInit {
     currentHashCloudWords: WeightedWord[] = [];
     newlyAdded: number;
     cloudState: CloudState;
-    constructor(private cloudData: CloudDataService) { }
+    constructor(private cloudData: CloudDataService) {}
 
     ngOnInit() {
         this.cloudState = 'empty';
@@ -26,11 +26,12 @@ export class WordCloudPageComponent implements OnInit {
     onUserSubmit(input: UserInput) {
         this.latestSearch = input.inputs[0];
         this.cloudState = 'loading';
-        this.cloudData.getRelatedHashes(this.latestSearch).subscribe((increasedSet: WeightedWord[]) => {
-            this.allCloudWords = increasedSet;
-            this.currentHashCloudWords = this.cloudData.getCurrentWords();
-        });
-
+        this.cloudData
+            .getRelatedHashes(this.latestSearch)
+            .subscribe((increasedSet: WeightedWord[]) => {
+                this.allCloudWords = increasedSet;
+                this.currentHashCloudWords = this.cloudData.getCurrentWords();
+            });
     }
 
     onRadioClick(event: any) {

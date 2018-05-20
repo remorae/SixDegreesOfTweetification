@@ -27,6 +27,7 @@ export class DualInputComponent implements OnInit {
     get secondSub() {
         return this.userForm.get('secondSub');
     }
+
     ngOnInit() {
         this.createForm();
         this.labelText = this.inputType === 'hashtag' ? '#' : '@';

@@ -15,18 +15,22 @@ export class ExternalLoginComponent implements OnInit {
     constructor(
         private router: Router,
         private authService: AuthenticationService
-    ) { }
+    ) {}
 
-    ngOnInit() { }
+    ngOnInit() {}
 
     register() {
-        this.authService.registerExternal(this.email, this.password, this.confirmPassword).subscribe(
-            val => {
-                this.router.navigate(['home']);
-            },
-            error => {
-                this.message = JSON.stringify(error.error).replace(new RegExp(';', 'g'), '\n').replace(new RegExp('"', 'g'), '');
-            }
-        );
+        this.authService
+            .registerExternal(this.email, this.password, this.confirmPassword)
+            .subscribe(
+                val => {
+                    this.router.navigate(['home']);
+                },
+                error => {
+                    this.message = JSON.stringify(error.error)
+                        .replace(new RegExp(';', 'g'), '\n')
+                        .replace(new RegExp('"', 'g'), '');
+                }
+            );
     }
 }
