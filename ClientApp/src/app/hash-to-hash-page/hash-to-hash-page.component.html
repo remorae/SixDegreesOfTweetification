@@ -4,13 +4,8 @@
 </div>
 <div *ngIf="hashGraph" class="card mb-3">
     <div class="card-body">
-        <button class="btn btn-primary"  (click)="showModal()">Show connections for #{{latestSearchStart}} and #{{latestSearchEnd}}</button>
+        <button class="btn btn-primary" (click)="showModal()">Show connections for #{{latestSearchStart}} and #{{latestSearchEnd}}</button>
     </div>
 </div>
 
-<app-graph-visualizer
-    (modalOpen)="changeModal($event)"
-    *ngIf="modalActive"
-    [graph]="hashGraph"
-    [whatToWhat]="'#' + latestSearchStart + ' to #' + latestSearchEnd"
-></app-graph-visualizer>
+<app-graph-visualizer (modalOpen)="changeModal($event)" *ngIf="modalActive" [graph]="hashGraph" [whatToWhat]="'#' + latestSearchStart + ' to #' + latestSearchEnd"></app-graph-visualizer>

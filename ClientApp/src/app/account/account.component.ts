@@ -3,12 +3,11 @@ import { AuthenticationService } from '../services/authentication.service';
 import { Router } from '@angular/router';
 
 @Component({
-  selector: 'app-account',
-  templateUrl: './account.component.html',
-  styleUrls: ['./account.component.scss']
+    selector: 'app-account',
+    templateUrl: './account.component.html',
+    styleUrls: ['./account.component.scss']
 })
 export class AccountComponent implements OnInit {
-
     constructor(
         private router: Router,
         private authService: AuthenticationService
@@ -20,15 +19,16 @@ export class AccountComponent implements OnInit {
         });
     }
 
-    canAddTwitter: boolean = false;
-    canRemoveTwitter: boolean = false;
-    private hasTwitterLogin: boolean = false;
+    canAddTwitter = false;
+    canRemoveTwitter = false;
+    private hasTwitterLogin = false;
 
-    ngOnInit() {
-    }
+    ngOnInit() {}
 
     logout(): void {
-        this.authService.logout(() => {this.router.navigate(['login'])});
+        this.authService.logout(() => {
+            this.router.navigate(['login']);
+        });
     }
 
     addTwitter(): void {
@@ -36,11 +36,10 @@ export class AccountComponent implements OnInit {
     }
 
     removeTwitter(): void {
-        this.authService.removeTwitter()
-            .subscribe(res => {
-                this.hasTwitterLogin = false;
-                this.canRemoveTwitter = false;
-                this.canAddTwitter = true;
-            });
+        this.authService.removeTwitter().subscribe(res => {
+            this.hasTwitterLogin = false;
+            this.canRemoveTwitter = false;
+            this.canAddTwitter = true;
+        });
     }
 }
