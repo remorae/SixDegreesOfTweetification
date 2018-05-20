@@ -235,9 +235,9 @@ _Pvt_Extensions
 .fake/
 
 blacklist\.txt
-_site/
-src/log\.txt
-src/api/
+_docs/
+log\.txt
+api/
 _exported_templates/
 src/ClientApp/package-lock\.json
 src/ClientApp/package\.json
