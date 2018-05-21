@@ -102,12 +102,22 @@ export class GraphDataService {
 
         const nodes = this.createNodes(data, nodeMap, isUserGraph);
         const links: Link[] = this.createLinks(data, linkMap);
-        const start: any = isUserGraph
+        if (!this.hasGraphPath(data)) {
+            this.alerts.addError(
+                'Unable to create path between start and destination!'
+            );
+            return null;
+        }
+        const start: string = isUserGraph
             ? (data.paths[0].path[0] as UserResult).id
-            : data.paths[0].path[0];
+            : data.paths[0].path[0].toString();
         this.colorizeGraph(nodeMap, links, start);
         return { nodes, links, metadata: data.metadata, nodeMap, linkMap };
     };
+
+    hasGraphPath(data: SixDegreesConnection<string | UserResult>): boolean {
+        return !!data.paths[0];
+    }
 
     createNodes(
         data: SixDegreesConnection<UserResult | string>,
