@@ -42,6 +42,7 @@ export class UserToUserPageComponent implements OnInit {
     onUserSubmit(input: UserInput) {
         const [start, end] = input.inputs;
         this.userRelationshipGraph = undefined;
+        this.graphData.getLatestUserData().next(null);
         this.graphData.getUserConnectionData(start, end);
         this.latestSearchStart = start;
         this.latestSearchEnd = end;

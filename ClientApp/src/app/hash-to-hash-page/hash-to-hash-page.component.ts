@@ -54,6 +54,7 @@ export class HashToHashPageComponent implements OnInit, AfterViewInit {
     onUserSubmit(input: UserInput) {
         const [hashtag1, hashtag2] = input.inputs;
         this.hashGraph = undefined;
+        this.graphData.hashGraphSub.next(null);
         this.graphData.getHashConnectionData(hashtag1, hashtag2);
         this.latestSearchStart = hashtag1;
         this.latestSearchEnd = hashtag2;
