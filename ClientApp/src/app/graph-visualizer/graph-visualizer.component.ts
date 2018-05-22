@@ -8,22 +8,22 @@ import {
     SimpleChanges
 } from '@angular/core';
 import {
+    BaseType,
     ForceLink,
-    forceX,
+    Selection,
     Simulation,
-    select,
-    forceY,
-    forceSimulation,
-    forceLink,
-    forceManyBody,
+    drag,
+    event,
     forceCenter,
     forceCollide,
-    BaseType,
-    Selection,
+    forceLink,
+    forceManyBody,
+    forceSimulation,
+    forceX,
+    forceY,
     scaleOrdinal,
     schemeCategory10,
-    drag,
-    event
+    select
 } from 'd3';
 import { ConnectionMetaData, Link, Node } from '../services/graph-data.service';
 /**
