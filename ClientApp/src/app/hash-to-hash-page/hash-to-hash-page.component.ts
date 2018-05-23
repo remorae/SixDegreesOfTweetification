@@ -1,23 +1,19 @@
-import {
-    Component,
-    OnInit,
-    OnDestroy,
-    ViewChild,
-    AfterViewInit
-} from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { UserInput } from '../models/userInput';
 import { HashConnectionMap } from '../models/HashConnectionInfo';
 import { GraphDataService, Graph } from '../services/graph-data.service';
 import { InputCacheService } from '../services/input-cache.service';
 import { DualInputComponent } from '../dual-input/dual-input.component';
-
+/**
+ * @example Houses a dual input component, and requests data using the input hashtags,
+ *          which is then passed into a graph-visualizer component.
+ */
 @Component({
     selector: 'app-hash-to-hash-page',
     templateUrl: './hash-to-hash-page.component.html',
     styleUrls: ['./hash-to-hash-page.component.scss']
 })
-export class HashToHashPageComponent implements OnInit, AfterViewInit {
-    @ViewChild(DualInputComponent) dualInput;
+export class HashToHashPageComponent implements OnInit {
     latestSearchStart;
     latestSearchEnd;
     hashGraph;
@@ -28,11 +24,18 @@ export class HashToHashPageComponent implements OnInit, AfterViewInit {
         private inputCache: InputCacheService
     ) {}
 
-    ngOnInit() {
+    /**
+     * @example When a graph is loaded from the GraphDataService, the graph-visualizer will only
+     *          be immediately shown if the user has not navigated away from the page.
+     *
+     *          If there was navigation away from the page before the latest graph loaded,
+     *          the previously searched terms are pulled from the InputCacheService.
+     */
+    ngOnInit(): void {
         this.graphData.getLatestHashData().subscribe((g: Graph) => {
             this.hashGraph = g;
             if (this.hashGraph && this.freshNavigation) {
-                this.showModal(); //TODO: Potential Errors if they navigate back while a query is ongoing.
+                this.showModal();
             }
         });
 
@@ -43,14 +46,13 @@ export class HashToHashPageComponent implements OnInit, AfterViewInit {
 
         this.freshNavigation = true;
     }
-
-    ngAfterViewInit() {
-        // if (this.latestSearchStart && this.latestSearchEnd) {
-        //     this.dualInput.firstSub().value = this.latestSearchStart;
-        //     this.dualInput.SecondSub().value = this.latestSearchEnd;
-        // }
-    }
-
+    /**
+     *  @example Clears the current graph locally and in the GraphDataService,
+     *           queries for a new graph with the latest pair of hashtags,
+     *           and caches said pair of hashtags.
+     *
+     * @param input The pair of hashtags input by the user in the dual-input component.
+     */
     onUserSubmit(input: UserInput) {
         const [hashtag1, hashtag2] = input.inputs;
         this.hashGraph = undefined;
@@ -61,12 +63,17 @@ export class HashToHashPageComponent implements OnInit, AfterViewInit {
 
         this.inputCache.cachePreviousHashes(hashtag1, hashtag2);
     }
-
-    showModal() {
+    /**
+     * @example Displays the graph-visualizer modal window.
+     */
+    showModal(): void {
         this.modalActive = true;
     }
 
-    changeModal(value) {
+    /**
+     *  @example Conditionally hides or displays the graph-visualizer modal.
+     */
+    changeModal(value): void {
         this.modalActive = value;
     }
 }
