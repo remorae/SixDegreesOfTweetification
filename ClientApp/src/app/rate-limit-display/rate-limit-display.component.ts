@@ -8,6 +8,10 @@ import {
 import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators/filter';
 import { map } from 'rxjs/operators/map';
+/**
+ * @example Component responsible for displaying the Twitter API rate limits that would be
+ *          associated with a given page.
+ */
 @Component({
     selector: 'app-rate-limit-display',
     templateUrl: './rate-limit-display.component.html',
@@ -18,7 +22,17 @@ export class RateLimitDisplayComponent implements OnInit {
     currentComponentName: string;
     currentPagesRates: any[];
     constructor(private endpoint: EndpointService, private router: Router) {}
-    ngOnInit() {
+    /**
+     * @example Queries the backend for all the Twitter API rate limits being tracked by the server.
+     *
+     *          Depending on the current route, displays a different slice of the rate limits in the nav-bar.
+     *          It watches said changes via the Router events Observable.
+     *
+     *          Since the component is never reinstantiated, it listens to a Subject in the
+     *          EndpointService that triggers every time an API call is made (except for its own rate limit
+     *          requests. When the Subject triggers, new rate limits are requested.)
+     */
+    ngOnInit(): void {
         this.endpoint.getAllRateLimits().subscribe(rates => {
             this.translateRates(rates);
             this.displayCurrentRates(this.currentComponentName);
@@ -42,7 +56,11 @@ export class RateLimitDisplayComponent implements OnInit {
             });
         });
     }
-
+    /**
+     *  @example Maps a route fragment to an array of names associated with a given API endpoint.
+     * @param componentName The route fragment associated with a given component.
+     * @returns The associated list of Endpoint names for a component.
+     */
     public mapComponentToQueryType(componentName: string): QueryType[] {
         switch (componentName) {
             case 'geo':
@@ -60,8 +78,11 @@ export class RateLimitDisplayComponent implements OnInit {
                 return null;
         }
     }
-
-    public displayCurrentRates(componentName: string) {
+    /**
+     *  @examples Converts the returned QueryTypes into a Title Case display
+     * @param componentName The route fragment corresponding to the currently active component.
+     */
+    public displayCurrentRates(componentName: string): void {
         const types: QueryType[] = this.mapComponentToQueryType(componentName);
 
         if (types && this.allRates) {
