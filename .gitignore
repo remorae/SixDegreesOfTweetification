@@ -238,8 +238,6 @@ blacklist\.txt
 
 src/ClientApp/docs/**
 src/ClientApp/node_modules/**
-ClientApp/node_modules/**
-ClientApp/docs/**
 !.gitkeep
 
 _site/
