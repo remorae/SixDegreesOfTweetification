@@ -212,12 +212,8 @@ export class GraphDataService {
                 const linkKey = `${link.source} ${link.target}`;
                 const reverse = `${link.target} ${link.source}`;
 
-                if (!linkMap.has(linkKey)) {
+                if (!linkMap.has(linkKey) && !linkMap.has(reverse)) {
                     linkMap.set(linkKey, link);
-                }
-
-                if (!linkMap.has(reverse)) {
-                    linkMap.set(reverse, link);
                 }
             });
         }
