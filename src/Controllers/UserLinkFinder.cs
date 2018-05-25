@@ -25,6 +25,8 @@ namespace SixDegrees.Controllers
 
         protected override void EnsureLinksToNext<TPath>(Dictionary<string, ICollection<TwitterUser>> cachedConnections, string key, Connection<TPath>.Node node)
         {
+            if (!cachedConnections.ContainsKey(key))
+                cachedConnections[key] = new HashSet<TwitterUser>();
             if (!cachedConnections[key].Contains(node.Value as TwitterUser))
                 cachedConnections[key].Add(node.Value as TwitterUser);
         }
