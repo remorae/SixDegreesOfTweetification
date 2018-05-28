@@ -7,7 +7,9 @@ import {
     HttpInterceptor
 } from '@angular/common/http';
 import { Observable } from 'rxjs/Observable';
-
+/**
+ * @example Intercepts front-end http traffic and adds an anti XSRF Token to HTTP headers
+ */
 @Injectable()
 export class HttpXsrfInterceptorService implements HttpInterceptor {
     constructor(private tokenService: HttpXsrfTokenExtractor) {}
