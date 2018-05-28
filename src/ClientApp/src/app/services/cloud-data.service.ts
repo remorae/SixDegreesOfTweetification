@@ -5,6 +5,9 @@ import { Country, PlaceResult } from '../models';
 import { Observable } from 'rxjs/Observable';
 import { map } from 'rxjs/operators/map';
 import { Map as D3Map, map as d3map } from 'd3';
+/**
+ * @example Fetches and transforms the data associated with the Word Cloud
+ */
 @Injectable()
 export class CloudDataService {
     allWords: D3Map<WeightedWord> = d3map<WeightedWord>();
@@ -12,6 +15,11 @@ export class CloudDataService {
 
     constructor(private endpoint: EndpointService) {}
 
+    /** @example Queries the backend for  associated words, filters out existing words and increments
+     *      their occurrence, then sizes each word based on occurence.
+     * @returns Returns an Observable that emits the latest words associated with the latest hashtag.
+     * @param hashtag The hashtag input by the user.
+     */
     getRelatedHashes(hashtag: string): Observable<WeightedWord[]> {
         return this.endpoint.searchRelatedHashtags(hashtag).pipe(
             map((results: string[]): WeightedWord[] => {
@@ -42,15 +50,21 @@ export class CloudDataService {
             })
         );
     }
-
+    /**
+     * @returns The total number of words in the map.
+     */
     getTotalWordCount(): number {
         return this.allWords.size();
     }
-
+    /**
+     * @returns Removes all existing words in the map.
+     */
     dropCachedWords(): void {
         this.allWords.clear();
     }
-
+    /**
+     * @returns Get how many new words were added to the map.
+     */
     getWordsAdded(): number {
         return this.wordsAdded;
     }

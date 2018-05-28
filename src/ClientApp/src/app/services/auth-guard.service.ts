@@ -6,14 +6,26 @@ import {
     CanActivate,
     Router
 } from '@angular/router';
-
+/**
+ * @example Prevents the user from activating particular routes in the application unless they've already been logged in.
+ */
 @Injectable()
 export class AuthGuard implements CanActivate {
     constructor(
         private authService: AuthenticationService,
         private router: Router
     ) {}
-    canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot) {
+    /**
+     * @example Verifies that the user is logged-in, and routes them appropriately. You'll notice that this should actually be
+     *      two separate guards, based on the explicit url checks being done in CanActivate.
+     * @returns Whether the user can or cannot be routed to the requested route.
+     * @param route Unused
+     * @param state Information about the route the user is attempting to activate
+     */
+    canActivate(
+        route: ActivatedRouteSnapshot,
+        state: RouterStateSnapshot
+    ): boolean {
         const url: string = state.url;
 
         if (

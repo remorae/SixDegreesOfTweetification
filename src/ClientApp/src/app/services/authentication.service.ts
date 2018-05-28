@@ -22,7 +22,9 @@ export interface ExternalLogin {
     Password: string;
     ConfirmPassword: string;
 }
-
+/**
+ * @example Handles the API calls for various flavors of user authentication.
+ */
 @Injectable()
 export class AuthenticationService {
     constructor(private http: HttpClient, @Inject('BASE_URL') baseUrl: string) {
@@ -36,7 +38,11 @@ export class AuthenticationService {
 
     externalLoginUrl = 'account/ExternalLogin?provider=Twitter';
     linkLoginUrl = 'manage/LinkLogin?provider=Twitter';
-
+    /**
+     * @example Logs the user in and sets the authentication item in localStorage.
+     * @param email The user's email
+     * @param password The user's password.
+     */
     login(email: string, password: string): Observable<Object> {
         const info: Login = {
             Email: email,
@@ -62,7 +68,12 @@ export class AuthenticationService {
                 )
             );
     }
-
+    /**
+     * @example Registers the user with no external login credentials.
+     * @param email the user's email
+     * @param password the user's password
+     * @param confirmPassword  the user's password, reentered as confirmation.
+     */
     register(
         email: string,
         password: string,
@@ -89,7 +100,12 @@ export class AuthenticationService {
                 })
             );
     }
-
+    /**
+     * @example Registers the user with external login credentials.
+     * @param email the user's email
+     * @param password the user's password
+     * @param confirmPassword  the user's password, reentered as confirmation.
+     */
     registerExternal(
         email: string,
         password: string,
@@ -113,7 +129,10 @@ export class AuthenticationService {
                 })
             );
     }
-
+    /**
+     * @example Logs the user out and removes the authentication token the backend is looking for.
+     * @param onCompletion A callback that will be invoked on the successful completition of the post to the backend.
+     */
     logout(onCompletion: () => void): void {
         this.http
             .post(this.baseUrl + 'account/Logout', {
@@ -147,6 +166,9 @@ export class AuthenticationService {
         return this.loggedIn;
     }
 
+    /**
+     * @example Verifies whether the user is authenticated or not.
+     */
     getUpdatedLoginStatus(): Observable<boolean> {
         return this.http.post<boolean>(this.baseUrl + 'account/Authenticated', {
             headers: new HttpHeaders({
@@ -154,7 +176,9 @@ export class AuthenticationService {
             })
         });
     }
-
+    /**
+     * @example Checks whether the user has attached Twitter credentials.
+     */
     hasTwitterLogin(): Observable<boolean> {
         return this.http.post<boolean>(
             this.baseUrl + 'account/TwitterAvailable',
@@ -165,7 +189,9 @@ export class AuthenticationService {
             }
         );
     }
-
+    /**
+     * @example Removes the associated Twitter credentials for the currently logged-in user.
+     */
     removeTwitter(): Observable<Object> {
         return this.http.post(
             this.baseUrl + 'manage/RemoveExternal?provider=Twitter',
