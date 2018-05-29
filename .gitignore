@@ -242,3 +242,4 @@ _exported_templates/
 src/ClientApp/package-lock\.json
 src/ClientApp/package\.json
 Properties/launchSettings\.json
+installers/
