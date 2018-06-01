@@ -5,21 +5,13 @@
 
         <div class="btn-group btn-group-toggle mx-3" data-toggle="buttons">
             <label [ngClass]="{ active: allOrCurrent === 'current' }" class="btn btn-secondary">
-                <input
-                    type="radio"
-                    value="current"
-                    [checked]="allOrCurrent === 'current'"
-                    (click)="onRadioClick($event)"> Current Hashtag Only
+                <input type="radio" value="current" [checked]="allOrCurrent === 'current'" (click)="onRadioClick($event)"> Current Hashtag Only
             </label>
             <label [ngClass]="{ active: allOrCurrent === 'all' }" class="btn btn-secondary">
-                <input
-                    type="radio"
-                    value="all"
-                    [checked]="allOrCurrent === 'all'"
-                    (click)="onRadioClick($event)"> All Hashtags for Session
+                <input type="radio" value="all" [checked]="allOrCurrent === 'all'" (click)="onRadioClick($event)"> All Hashtags for Session
             </label>
         </div>
-        <button *ngIf="allOrCurrent === 'all'" class="mr-3 btn btn-primary" [disabled]="!this.allCloudWords.length" (click)="clearCloud()">Clear Cloud</button>
+        <button class="mr-3 btn btn-primary" [disabled]="!this.allCloudWords.length" (click)="clearCloud()">Clear Cloud</button>
         <span *ngIf="cloudState === 'new'" class="bg-success rounded p-2">Words Added!</span>
         <span *ngIf="cloudState === 'unchanged'" class="bg-danger rounded  p-2">No New Results</span>
 
