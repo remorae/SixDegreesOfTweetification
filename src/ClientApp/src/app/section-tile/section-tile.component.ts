@@ -1,5 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
-
+/**
+ * @example Displays a clickable section tile that navigates the user to the related component.
+ */
 @Component({
     selector: 'app-section-tile',
     templateUrl: './section-tile.component.html',

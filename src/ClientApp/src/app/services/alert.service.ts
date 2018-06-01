@@ -14,6 +14,10 @@ export class Message {
         this.link = link;
     }
 }
+/**
+ * @example Manages an array of Messages that are displayed as alerts by the Alert Component.
+ *      Other components can have this service injected if they need to alert the user to something.
+ */
 @Injectable()
 export class AlertService {
     messages: Message[] = [];
@@ -21,14 +25,23 @@ export class AlertService {
         this.messages
     );
     constructor() {}
-
+    /**
+     * @returns The active messages, wrapped in a BehaviorSubject.
+     */
     getAlerts(): BehaviorSubject<Message[]> {
         return this.alerts;
     }
-
-    addError(message: string) {
+    /**
+     * @example Adds an error message to the list.
+     * @param message The message that should be displayed with the error.
+     */
+    addError(message: string): void {
         this.messages.push(new Message('Error', message, 'danger'));
     }
+    /**
+     * @example Adds a success message to the list, with a router-usable link.
+     * @param route The route fragment corresponding to a component that finished loading a resource.
+     */
     addLoadingFinishedMessage(route: string) {
         this.messages.push(
             new Message(

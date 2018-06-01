@@ -6,7 +6,9 @@ interface TileProps {
     description: string;
     route: string;
 }
-
+/**
+ * @example Contains and specifies a selection of navigable section tiles that can be clicked to navigate to another component.
+ */
 @Component({
     selector: 'app-tile-column',
     templateUrl: './tile-column.component.html',

@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthenticationService } from '../services/authentication.service';
 import { Router } from '@angular/router';
-
+/**
+ * @example Displays the UI for registering a user after they have logged in.
+ */
 @Component({
     selector: 'app-register',
     templateUrl: './register.component.html',
@@ -17,9 +19,13 @@ export class RegisterComponent implements OnInit {
         private authService: AuthenticationService
     ) {}
 
-    ngOnInit() {}
+    ngOnInit(): void {}
 
-    register() {
+    /**
+     * @example Registers the email and password with the backend, then navigates
+     *          to the homepage on success.
+     */
+    register(): void {
         this.authService
             .register(this.email, this.password, this.confirmPassword)
             .subscribe(
