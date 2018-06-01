@@ -235,6 +235,11 @@ _Pvt_Extensions
 .fake/
 
 blacklist\.txt
+
+src/ClientApp/docs/**
+src/ClientApp/node_modules/**
+!.gitkeep
+
 _site/
 src/log\.txt
 src/api/

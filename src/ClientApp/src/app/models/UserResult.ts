@@ -1,18 +1,18 @@
 export interface UserResult {
-    ID: string;
-    Name: string;
+    id: string;
+    name: string;
     screenName: string;
-    Location: string;
-    Description: string;
-    FollowerCount: number; // long
-    FriendCount: number; // long
-    CreatedAt: string;
-    TimeZone: string;
-    GeoEnabled: boolean;
-    Verified: boolean;
-    StatusCount: number; // long
-    Lang: string;
-    ProfileImage: string;
+    location: string;
+    description: string;
+    followerCount: number; // long
+    friendCount: number; // long
+    createdAt: string;
+    timeZone: string;
+    geoEnabled: boolean;
+    verified: boolean;
+    statusCount: number; // long
+    lang: string;
+    profileImage: string;
 }
 
 export class UserConnectionInfo {

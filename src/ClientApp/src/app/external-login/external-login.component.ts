@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthenticationService } from '../services/authentication.service';
 import { Router } from '@angular/router';
-
+/**
+ * @example Provides the UI for registering the user with an external source of authentication. Twitter, in this case.
+ */
 @Component({
     selector: 'app-external-login',
     templateUrl: './external-login.component.html',
@@ -19,7 +21,7 @@ export class ExternalLoginComponent implements OnInit {
 
     ngOnInit() {}
 
-    register() {
+    register(): void {
         this.authService
             .registerExternal(this.email, this.password, this.confirmPassword)
             .subscribe(
