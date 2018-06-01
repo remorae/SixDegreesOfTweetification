@@ -39,7 +39,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
      * @example Acquires the dimensions of the svg element on component initialization
      */
     ngOnInit(): void {
-        const temp = document.querySelector('svg.bottle') as SVGElement;
+        const temp = document.querySelector('div.bottle') as HTMLDivElement;
         this.cloudHeight = temp.getBoundingClientRect().height;
         this.cloudWidth = temp.getBoundingClientRect().width;
     }
@@ -58,7 +58,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
             this.cloudWords = this.words.map(word => ({ ...word }));
             this.dropCloud();
             this.buildLayout();
-            drawn = 'new';
+            drawn = 'empty';
             if (
                 wordChange.currentValue.length < wordChange.previousValue.length
             ) {
@@ -96,7 +96,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
      * @example Delete all elements corresponding to the wordcloud, then broadcast that the cloud has been cleared.
      */
     dropCloud(): void {
-        D3.select('svg.bottle')
+        D3.select('div.bottle')
             .selectAll('*')
             .remove();
         this.cloudDrawn.emit('empty');
@@ -108,7 +108,11 @@ export class CloudBottleComponent implements OnInit, OnChanges {
         const fill: D3.ScaleOrdinal<string, string> = D3.scaleOrdinal(
             D3.schemeCategory10
         );
-        D3.select('svg.bottle')
+        D3.select('div.bottle')
+            .append('svg')
+            .attr('class', 'stylable')
+            .attr('height', '100%')
+            .attr('width', '100%')
             .append('g')
             .attr(
                 'transform',
@@ -129,7 +133,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
             )
             .text((d: WeightedWord) => d.text);
 
-        const cloudy = document.querySelector('.bottle') as SVGElement;
+        const cloudy = document.querySelector('svg.stylable') as SVGElement;
         cloudy.setAttribute(
             'style',
             'animation: grow-fade-in 0.75s cubic-bezier(0.17, 0.67, 0, 1)'
