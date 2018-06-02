@@ -18,4 +18,5 @@
     </div>
 </div>
 <!-- Can't be an NgIf due to timing issues with adding the element back to the DOM-->
-<app-cloud-bottle [words]="allOrCurrent === 'all' ? allCloudWords : currentHashCloudWords" (cloudDrawn)="checkCloudDrawn($event)"></app-cloud-bottle>
+<app-cloud-bottle [allOrCurrent]="allOrCurrent" [words]="allOrCurrent === 'all' ? allCloudWords : currentHashCloudWords"
+    (cloudDrawn)="checkCloudDrawn($event)"></app-cloud-bottle>

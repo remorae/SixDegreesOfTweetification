@@ -7,9 +7,9 @@ import {
     EventEmitter,
     Output
 } from '@angular/core';
-import * as D3 from 'd3';
 import { CloudDataService } from '../services/cloud-data.service';
 import { CloudState } from '../word-cloud-page/word-cloud-page.component';
+import { schemeCategory10, select, ScaleOrdinal, scaleOrdinal } from 'd3';
 
 declare let d3: any;
 
@@ -29,6 +29,7 @@ export interface WeightedWord {
 })
 export class CloudBottleComponent implements OnInit, OnChanges {
     @Input() words: WeightedWord[];
+    @Input() allOrCurrent: boolean;
     cloudWords: WeightedWord[];
     cloudWidth: number;
     cloudHeight: number;
@@ -50,6 +51,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
      */
     ngOnChanges(changes: SimpleChanges): void {
         const wordChange = changes['words'];
+        const shownWordsChange = changes['allOrCurrent'];
         let drawn: CloudState = 'unchanged';
         if (
             wordChange.previousValue &&
@@ -67,6 +69,13 @@ export class CloudBottleComponent implements OnInit, OnChanges {
         }
 
         if (wordChange.isFirstChange()) {
+            drawn = 'empty';
+        }
+
+        if (
+            shownWordsChange &&
+            shownWordsChange.previousValue !== shownWordsChange.currentValue
+        ) {
             drawn = 'empty';
         }
         this.cloudDrawn.emit(drawn);
@@ -96,7 +105,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
      * @example Delete all elements corresponding to the wordcloud, then broadcast that the cloud has been cleared.
      */
     dropCloud(): void {
-        D3.select('div.bottle')
+        select('div.bottle')
             .selectAll('*')
             .remove();
         this.cloudDrawn.emit('empty');
@@ -105,10 +114,10 @@ export class CloudBottleComponent implements OnInit, OnChanges {
      * @example Convert the word orientation data into SVG text elements. Elements are colored based on a D3 Categorical Color Scale.
      */
     createCloud(): void {
-        const fill: D3.ScaleOrdinal<string, string> = D3.scaleOrdinal(
-            D3.schemeCategory10
+        const fill: ScaleOrdinal<string, string> = scaleOrdinal(
+            schemeCategory10
         );
-        D3.select('div.bottle')
+        select('div.bottle')
             .append('svg')
             .attr('class', 'stylable')
             .attr('height', '100%')
