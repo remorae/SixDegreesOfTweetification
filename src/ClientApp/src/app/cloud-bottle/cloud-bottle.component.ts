@@ -7,9 +7,9 @@ import {
     EventEmitter,
     Output
 } from '@angular/core';
-import * as D3 from 'd3';
 import { CloudDataService } from '../services/cloud-data.service';
 import { CloudState } from '../word-cloud-page/word-cloud-page.component';
+import { schemeCategory10, select, ScaleOrdinal, scaleOrdinal } from 'd3';
 
 declare let d3: any;
 
@@ -29,6 +29,7 @@ export interface WeightedWord {
 })
 export class CloudBottleComponent implements OnInit, OnChanges {
     @Input() words: WeightedWord[];
+    @Input() allOrCurrent: boolean;
     cloudWords: WeightedWord[];
     cloudWidth: number;
     cloudHeight: number;
@@ -39,7 +40,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
      * @example Acquires the dimensions of the svg element on component initialization
      */
     ngOnInit(): void {
-        const temp = document.querySelector('svg.bottle') as SVGElement;
+        const temp = document.querySelector('div.bottle') as HTMLDivElement;
         this.cloudHeight = temp.getBoundingClientRect().height;
         this.cloudWidth = temp.getBoundingClientRect().width;
     }
@@ -50,6 +51,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
      */
     ngOnChanges(changes: SimpleChanges): void {
         const wordChange = changes['words'];
+        const shownWordsChange = changes['allOrCurrent'];
         let drawn: CloudState = 'unchanged';
         if (
             wordChange.previousValue &&
@@ -58,7 +60,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
             this.cloudWords = this.words.map(word => ({ ...word }));
             this.dropCloud();
             this.buildLayout();
-            drawn = 'new';
+            drawn = 'empty';
             if (
                 wordChange.currentValue.length < wordChange.previousValue.length
             ) {
@@ -67,6 +69,13 @@ export class CloudBottleComponent implements OnInit, OnChanges {
         }
 
         if (wordChange.isFirstChange()) {
+            drawn = 'empty';
+        }
+
+        if (
+            shownWordsChange &&
+            shownWordsChange.previousValue !== shownWordsChange.currentValue
+        ) {
             drawn = 'empty';
         }
         this.cloudDrawn.emit(drawn);
@@ -96,7 +105,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
      * @example Delete all elements corresponding to the wordcloud, then broadcast that the cloud has been cleared.
      */
     dropCloud(): void {
-        D3.select('svg.bottle')
+        select('div.bottle')
             .selectAll('*')
             .remove();
         this.cloudDrawn.emit('empty');
@@ -105,10 +114,14 @@ export class CloudBottleComponent implements OnInit, OnChanges {
      * @example Convert the word orientation data into SVG text elements. Elements are colored based on a D3 Categorical Color Scale.
      */
     createCloud(): void {
-        const fill: D3.ScaleOrdinal<string, string> = D3.scaleOrdinal(
-            D3.schemeCategory10
+        const fill: ScaleOrdinal<string, string> = scaleOrdinal(
+            schemeCategory10
         );
-        D3.select('svg.bottle')
+        select('div.bottle')
+            .append('svg')
+            .attr('class', 'stylable')
+            .attr('height', '100%')
+            .attr('width', '100%')
             .append('g')
             .attr(
                 'transform',
@@ -129,7 +142,7 @@ export class CloudBottleComponent implements OnInit, OnChanges {
             )
             .text((d: WeightedWord) => d.text);
 
-        const cloudy = document.querySelector('.bottle') as SVGElement;
+        const cloudy = document.querySelector('svg.stylable') as SVGElement;
         cloudy.setAttribute(
             'style',
             'animation: grow-fade-in 0.75s cubic-bezier(0.17, 0.67, 0, 1)'
