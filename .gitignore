@@ -234,16 +234,16 @@ _Pvt_Extensions
 # FAKE - F# Make
 .fake/
 
-blacklist\.txt
-
 src/ClientApp/docs/**
 src/ClientApp/node_modules/**
 !.gitkeep
 
-_site/
-src/log\.txt
-src/api/
+blacklist\.txt
+_docs/
+log\.txt
+api/
 _exported_templates/
 src/ClientApp/package-lock\.json
 src/ClientApp/package\.json
 Properties/launchSettings\.json
+installers/
