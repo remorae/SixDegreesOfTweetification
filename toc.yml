@@ -1,0 +1,10 @@
+- name: Home
+  href: index.md
+- name: Back-End Documentation
+  href: api/
+  homepage: api/SixDegrees.yml
+- name: Articles
+  href: articles/
+  homepage: articles/Home.md
+- name: Project Setup
+  href: articles/Project-Setup.md

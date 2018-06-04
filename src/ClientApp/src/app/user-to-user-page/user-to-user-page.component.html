@@ -1,0 +1,13 @@
+<div class="clearfix mb-4">
+    <h1 class="mb-3 d-inline-block align-top">User to User</h1>
+    <app-dual-input (userSubmit)="onUserSubmit($event)" inputType="handle"></app-dual-input>
+</div>
+<div *ngIf="userRelationshipGraph" class="card mb-3">
+    <div class="card-body">
+
+        <button class="btn btn-primary" (click)="showModal()">Show connections for @{{latestSearchStart}} and @{{latestSearchEnd}}</button>
+
+    </div>
+</div>
+
+<app-graph-visualizer (modalOpen)="changeModal($event)" *ngIf="modalActive" [graph]="userRelationshipGraph" [whatToWhat]="'@' + latestSearchStart + ' to @' + latestSearchEnd"></app-graph-visualizer>

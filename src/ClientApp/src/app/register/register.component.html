@@ -1,0 +1,21 @@
+<div class="card">
+    <div class="card-body">
+        <h2 class="mb-3">
+            <i class="fa fa-user-circle mr-2"></i>Account Registration</h2>
+        <label class="d-block">
+            Email
+            <input class="form-control" [(ngModel)]="email" type="text">
+        </label>
+        <label class="d-block">
+            Password
+            <input class="form-control" [(ngModel)]="password" type="password">
+        </label>
+        <label class="d-block">
+            Confirm Password
+            <input class="form-control" [(ngModel)]="confirmPassword" type="password">
+        </label>
+        <button class="btn btn-primary mt-3" (click)="register()" role="button">Register</button>
+        <button class="btn btn-secondary mt-3" (click)="navToLogin()" role="button">I already have an account</button>
+        <br /> {{message}}
+    </div>
+</div>

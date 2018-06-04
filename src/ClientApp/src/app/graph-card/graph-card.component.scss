@@ -1,0 +1,37 @@
+.card-header {
+    font-size: 1.75rem;
+}
+
+.card {
+    max-width: 18rem;
+    min-width: 18rem;
+}
+
+.card-body {
+    height: 26rem;
+    overflow-y: auto;
+}
+
+.fauxTable {
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: space-between;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.fauxRow {
+    width: 100%;
+}
+.fauxCell {
+    display: flex;
+    flex-flow: row nowrap;
+    flex-grow: 1;
+    flex-basis: 0;
+    padding: 0.5rem 0.5rem 0.75rem;
+    word-break: break-word;
+}
+
+.fauxCell.font-weight-bold {
+    padding-bottom: 0;
+}

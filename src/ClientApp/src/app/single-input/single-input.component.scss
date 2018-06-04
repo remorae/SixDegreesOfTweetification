@@ -1,0 +1,11 @@
+@import '../../sass/styles.scss';
+
+.input-group {
+    max-width: 20rem;
+}
+
+.input-group-text {
+    background-color: $primary;
+    border-color: $primary;
+    color: $white;
+}

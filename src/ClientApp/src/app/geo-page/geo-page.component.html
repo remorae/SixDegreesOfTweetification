@@ -1,0 +1,20 @@
+<div class="clearfix mb-4">
+    <h1 class="mb-3 d-inline-block align-top">Geographical Statistics</h1>
+    <app-single-input (userSubmit)="onUserSubmit($event)" inputType="hashtag"></app-single-input>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+
+        <h3 *ngIf="!loading && places && !places.length" class="text-danger">No results found.</h3>
+        <h4 *ngIf="places && !!places.length">Hover over a marker to see its address!</h4>
+
+        <agm-map [latitude]="latitude" [longitude]="longitude" [zoom]="zoom">
+            <agm-marker *ngFor="let place of places" [latitude]="place.lat" [longitude]="place.lng" [title]="place.name">
+            </agm-marker>
+            <!-- [radius]="" <-- if agm-circle
+                [fillColor]=""
+                [fillOpacity]="" -->
+        </agm-map>
+    </div>
+</div>

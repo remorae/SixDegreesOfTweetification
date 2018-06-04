@@ -1,0 +1,37 @@
+<form [formGroup]="userForm" (ngSubmit)="onSubmit()" novalidate>
+    <div class="form-group">
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">{{labelText}}</span>
+            </div>
+            <input class="form-control" formControlName="firstSub" />
+        </div>
+        <div *ngIf="userForm.invalid && (userForm.dirty || userForm.touched)">
+            <small *ngIf="firstSub?.errors?.required && firstSub.touched" class="text-danger d-block">
+                Input is Required.
+            </small>
+            <small *ngIf="firstSub?.errors?.pattern && firstSub.touched" class="text-danger d-block" title="Leave out the {{inputType}} ({{labelText}}) symbol and make sure there are no spaces in the input.">
+                Input is not a valid {{inputType}}.
+            </small>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">{{labelText}}</span>
+            </div>
+            <input class="form-control" formControlName="secondSub" />
+        </div>
+        <div *ngIf="userForm.invalid && (userForm.dirty || userForm.touched)">
+            <small *ngIf="secondSub?.errors?.required && secondSub.touched" class="text-danger d-block">
+                Input is Required.
+            </small>
+            <small *ngIf="secondSub?.errors?.pattern && firstSub.touched" class="text-danger d-block" title="Leave out the {{inputType}} ({{labelText}}) symbol and make sure there are no spaces in the input.">
+                Input is not a valid {{inputType}}.
+            </small>
+        </div>
+    </div>
+
+    <button class="btn btn-primary d-block" [disabled]="userForm.invalid" type="submit">Go!</button>
+</form>
