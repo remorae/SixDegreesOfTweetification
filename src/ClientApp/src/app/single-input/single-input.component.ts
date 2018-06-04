@@ -1,7 +1,9 @@
 import { Component, OnInit, EventEmitter, Output, Input } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { UserInput, HashOrHandle } from '../models/userInput';
-
+/**
+ * @example Has the same behavior and functionality as the dual input component, but has only one input element in the template.
+ */
 @Component({
     selector: 'app-single-input',
     templateUrl: './single-input.component.html',

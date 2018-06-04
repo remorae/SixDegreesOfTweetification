@@ -3,8 +3,8 @@ import { SimulationLinkDatum, SimulationNodeDatum } from 'd3';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { UserResult } from '../models/UserResult';
 import { EndpointService } from './endpoint.service';
-import { TestData } from './testdata';
 import { map } from 'rxjs/operators/map';
+import { AlertService } from './alert.service';
 export interface Node extends SimulationNodeDatum {
     id: string;
     group: number;
@@ -42,15 +42,24 @@ export interface ConnectionMetaData {
     time: string;
     calls: number;
 }
-
+/**
+ * @example Transforms the data for a connected graph into a format that D3.js can render as a force vertlet simulation.
+ */
 @Injectable()
 export class GraphDataService {
-    testData: TestData = new TestData();
     userGraphSub: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
     hashGraphSub: BehaviorSubject<Graph> = new BehaviorSubject<Graph>(null);
-    constructor(private endpoint: EndpointService) {}
+    constructor(
+        private endpoint: EndpointService,
+        private alerts: AlertService
+    ) {}
 
-    getHashConnectionData(hashtag1: string, hashtag2: string) {
+    /**
+     * @example Fetches and runs the mapper function on a graph of hashtags.
+     * @param hashtag1
+     * @param hashtag2
+     */
+    getHashConnectionData(hashtag1: string, hashtag2: string): void {
         this.endpoint
             .getHashSixDegrees(hashtag1, hashtag2)
             .pipe(map(this.hashDegreesToGraph))
@@ -63,8 +72,12 @@ export class GraphDataService {
                 }
             );
     }
-
-    getUserConnectionData(user1: string, user2: string) {
+    /**
+     * @example Fetches and runs the mapper function on a graph of users.
+     * @param user1
+     * @param user2
+     */
+    getUserConnectionData(user1: string, user2: string): void {
         this.endpoint
             .getUserSixDegrees(user1, user2)
             .pipe(map(this.sixDegreesToGraph))
@@ -77,11 +90,15 @@ export class GraphDataService {
                 }
             );
     }
-
+    /**
+     * @example Provides a cached copy of the latest requested UserGraph
+     */
     getLatestUserData(): BehaviorSubject<Graph> {
         return this.userGraphSub;
     }
-
+    /**
+     * @example Provides a cached copy of the latest requested HashGraph.
+     */
     getLatestHashData(): BehaviorSubject<Graph> {
         return this.hashGraphSub;
     }
@@ -89,23 +106,47 @@ export class GraphDataService {
     hashDegreesToGraph = (data: SixDegreesConnection<string>) => {
         return this.mapToGraph(data, false);
     };
-
-    mapToGraph = (data: SixDegreesConnection<string>, isUserGraph: boolean) => {
+    mapToGraph = (
+        data: SixDegreesConnection<string | UserResult>,
+        isUserGraph: boolean
+    ) => {
         const nodeMap = new Map<string, Node>();
         const linkMap = new Map<string, Link>();
 
         const nodes = this.createNodes(data, nodeMap, isUserGraph);
         const links: Link[] = this.createLinks(data, linkMap);
-        const [start, end] = this.markPath(data, nodeMap, linkMap, links);
+        if (!this.hasGraphPath(data)) {
+            this.alerts.addError(
+                'Unable to create path between start and destination!'
+            );
+            return null;
+        }
+        const start: string = isUserGraph
+            ? (data.paths[0].path[0] as UserResult).id
+            : data.paths[0].path[0].toString();
         this.colorizeGraph(nodeMap, links, start);
         return { nodes, links, metadata: data.metadata, nodeMap, linkMap };
     };
 
+    /**
+     * @example Checks if the returned graph has at least one path connecting the start and end.
+     * @param data The graph data
+     */
+    hasGraphPath(data: SixDegreesConnection<string | UserResult>): boolean {
+        return !!data.paths[0];
+    }
+    /**
+     * @example Creates nodes from the graph data's connections entries, adds them to the nodeMap, and then
+     *          marks any nodes in the graph data's path entries as being on the path.
+     * @param data The graph data
+     * @param nodeMap A Map of Nodes where the keys are the nodes's id property.
+     * @param isUserGraph Whether or not the graph data corresponds to a graph of users or hashtags.
+     */
     createNodes(
         data: SixDegreesConnection<UserResult | string>,
         nodeMap: Map<string, Node>,
         isUserGraph
-    ) {
+    ): Node[] {
         const values = [].concat(
             ...Object.values(data.connections).concat(
                 Object.keys(data.connections)
@@ -125,14 +166,67 @@ export class GraphDataService {
                 nodeMap.set(e.id, e);
             }
         });
+
+        this.createNodesFromPath(isUserGraph, data, nodeMap);
         return Array.from(nodeMap.values());
     }
+    /**
+     * @example Creates nodes out of the path portion of the graph data if they don't already exist, and marks all
+     *          nodes in the path as such.
+     * @param isUserGraph Whether the graph is a graph of users or not.
+     * @param data The graph data
+     * @param nodeMap The map of already existing nodes.
+     */
+    createNodesFromPath(
+        isUserGraph: boolean,
+        data: SixDegreesConnection<string | UserResult>,
+        nodeMap: Map<string, Node>
+    ): void {
+        data.paths.forEach(linkPath => {
+            const pathPoints: string[] = Object.values(linkPath.path).map(
+                (e: any) => {
+                    if (e.screenName) {
+                        return e.id;
+                    } else {
+                        return e;
+                    }
+                }
+            );
 
+            for (let i = 0; i < pathPoints.length; i++) {
+                const nodeName = pathPoints[i];
+                if (nodeMap.has(nodeName)) {
+                    const node = nodeMap.get(nodeName);
+                    node.onPath = true;
+                    node.user = isUserGraph
+                        ? (linkPath.path[i] as UserResult)
+                        : null;
+                } else {
+                    const node: Node = {
+                        id: nodeName,
+                        group: 1,
+                        isShown: true,
+                        onPath: true,
+                        isUser: isUserGraph
+                    };
+                    node.user = isUserGraph
+                        ? (linkPath.path[i] as UserResult)
+                        : null;
+
+                    nodeMap.set(node.id, node);
+                }
+            }
+        });
+    }
+    /**
+     * @example Creates Links between Nodes in the data connections, adds them to the map, then creates Links from the path data.
+     * @param data data for the graph
+     * @param linkMap map of Links
+     */
     createLinks(
         data: SixDegreesConnection<string | UserResult>,
         linkMap: Map<string, Link>
-    ) {
-        const links: Link[] = [];
+    ): Link[] {
         for (const element of Object.keys(data.connections)) {
             data.connections[element].forEach((c: any) => {
                 let end: string = null;
@@ -151,35 +245,24 @@ export class GraphDataService {
                 const linkKey = `${link.source} ${link.target}`;
                 const reverse = `${link.target} ${link.source}`;
 
-                if (!linkMap.has(linkKey)) {
+                if (!linkMap.has(linkKey) && !linkMap.has(reverse)) {
                     linkMap.set(linkKey, link);
-                    links.push(link);
-                }
-
-                if (!linkMap.has(reverse)) {
-                    linkMap.set(reverse, link);
                 }
             });
         }
-        return links;
+        this.addLinksFromPath(data, linkMap);
+        return Array.from(linkMap.values());
     }
-
-    pointToNodeID(nodeMap: Map<string, Node>, pathPoint: any) {
-        const node = nodeMap.get(pathPoint);
-        return node.id;
-    }
-
-    markPath(
+    /**
+     * @param data the graph data
+     * @param linkMap the map of Links
+     */
+    addLinksFromPath(
         data: SixDegreesConnection<string | UserResult>,
-        nodeMap: Map<string, Node>,
-        linkMap: Map<string, Link>,
-        links: Link[]
-    ) {
-        const paths = data.paths;
-        let start: string = null;
-        let end: string = null;
-        paths.forEach(linkPath => {
-            const pathPoints: string[] = Object.values(linkPath.path).map(
+        linkMap: Map<string, Link>
+    ): void {
+        data.paths.forEach(linkPath => {
+            const route: string[] = Object.values(linkPath.path).map(
                 (e: any) => {
                     if (e.screenName) {
                         return e.id;
@@ -188,55 +271,53 @@ export class GraphDataService {
                     }
                 }
             );
-            start = this.pointToNodeID(nodeMap, pathPoints[0]);
-            end = this.pointToNodeID(
-                nodeMap,
-                pathPoints[pathPoints.length - 1]
-            );
 
-            for (let i = 1; i < pathPoints.length; i++) {
-                const sourceNode = pathPoints[i - 1];
-                const targetNode = pathPoints[i];
-                const linkKey = `${sourceNode} ${targetNode}`;
-                const reverseKey = `${targetNode} ${sourceNode}`;
-                const link = linkMap.get(linkKey) || linkMap.get(reverseKey);
-                const url = linkPath.links[i - 1]
-                    ? linkPath.links[i - 1]
-                    : null;
-
-                if (nodeMap.has(sourceNode) && nodeMap.has(targetNode)) {
-                    const source = nodeMap.get(sourceNode);
-                    const target = nodeMap.get(targetNode);
-                    source.onPath = true;
-                    source.user = (linkPath.path[i - 1] as UserResult)
-                        .screenName
-                        ? (linkPath.path[i - 1] as UserResult)
-                        : null;
-                    target.onPath = true;
-                    target.user = (linkPath.path[i] as UserResult).screenName
-                        ? (linkPath.path[i] as UserResult)
-                        : null;
-                }
-                if (link) {
-                    link.onPath = true;
-                    link.value = 4;
-                    link.linkUrl = url;
-                } else {
-                    const newLink: Link = {
-                        source: sourceNode,
-                        target: targetNode,
-                        value: 4,
-                        onPath: true
-                    };
-                    links.push(newLink);
-                    linkMap.set(linkKey, newLink);
-                }
+            for (let i = 1; i < route.length; i++) {
+                const sourceNode = route[i - 1];
+                const targetNode = route[i];
+                this.createLinkIfAbsent(sourceNode, targetNode, linkMap);
             }
         });
-        return [start, end];
     }
+    /**
+     *  @example Creates a path Link from the path data if it does not exist, and marks existing links as on the path.
+     * @param sourceNode The previous Node in the path.
+     * @param targetNode The next node in the path.
+     * @param linkMap The map of existing links.
+     */
+    createLinkIfAbsent(
+        sourceNode: string,
+        targetNode: string,
+        linkMap: Map<string, Link>
+    ): void {
+        const linkKey = `${sourceNode} ${targetNode}`;
+        const reverseKey = `${targetNode} ${sourceNode}`;
+        const link = linkMap.get(linkKey) || linkMap.get(reverseKey);
+        if (link) {
+            link.onPath = true;
+            link.value = 4;
+        } else {
+            const newLink: Link = {
+                source: sourceNode,
+                target: targetNode,
+                value: 4,
+                onPath: true
+            };
 
-    colorizeGraph(nodeMap: Map<string, Node>, links: Link[], start: string) {
+            linkMap.set(linkKey, newLink);
+        }
+    }
+    /**
+     * @example Marks how distant each node is from the start node via the group property
+     * @param nodeMap The map of nodes
+     * @param links The links in the graph
+     * @param start The node id corresponding to the first search term.
+     */
+    colorizeGraph(
+        nodeMap: Map<string, Node>,
+        links: Link[],
+        start: string
+    ): void {
         const queue: string[] = [];
         const visited = new Set<string>();
         const startNode = nodeMap.get(start);
@@ -259,17 +340,25 @@ export class GraphDataService {
                     visited.add(n.target);
                     queue.push(n.target);
                     target.group = currNode.group + 1;
+                } else if (target.group > currNode.group + 1) {
+                    target.group = currNode.group + 1;
                 }
                 const source = nodeMap.get(n.source);
                 if (!visited.has(n.source)) {
                     visited.add(n.source);
                     queue.push(n.source);
                     source.group = currNode.group + 1;
+                } else if (source.group > currNode.group + 1) {
+                    source.group = currNode.group + 1;
                 }
             });
         }
     }
-
+    /**
+     *  @example An unused utility function that removes elements that match a predicate from an array.
+     * @param array
+     * @param filter
+     */
     trimMatchingEntries<T>(array: T[], filter: (e, i) => boolean): T[] {
         let i = array.length;
         const deleted = [];

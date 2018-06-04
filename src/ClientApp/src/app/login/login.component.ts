@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthenticationService } from '../services/authentication.service';
 import { Router } from '@angular/router';
-
+/**
+ * @example Provides the UI for the initial login page of the app.
+ */
 @Component({
     selector: 'app-login',
     templateUrl: './login.component.html',
@@ -24,7 +26,10 @@ export class LoginComponent implements OnInit {
     }
 
     ngOnInit() {}
-
+    /**
+     * @example Logs the user in if they are registered on the server, and navigates them
+     *          to the home page if they are.
+     */
     login() {
         this.authService.login(this.email, this.password).subscribe(
             val => {
