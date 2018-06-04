@@ -29,7 +29,8 @@ Markdown articles will be turned into HTML when `docfx` is run in the root direc
 
 Front-end documentation will be generated when `npm run compodoc-serve` is run in the `src/ClientApp/` directory.
 
-## Links (For generated docs)
+## Links
+_These links are for generated docs and will not work from the .md file_
 **For project setup, please see [the setup guide](./articles/Project-Setup.html).**
 
 For a simplified description of the server API, see [here](./articles/Six-Degrees-API.html).
@@ -39,3 +40,5 @@ For an end-user guide, see [here](./articles/User-Guide.html).
 
 For more complete HTML documentation on the back-end, see [here](./api/SixDegrees.html).
 Please note that the generated docs for the back-end only contain publicly-visible classes and methods. Most non-public code should be sufficiently documented within the source code itself; the rest is trivial or consists of self-explanatory helper functions.
+
+For HTML documentation on the front-end, see [here](./client/index.html).
