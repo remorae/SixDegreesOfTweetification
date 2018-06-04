@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 
+/**
+ * @example A service that caches user inputs in order to persist data across navigation, as components lose their state when destroyed.
+ */
 @Injectable()
 export class InputCacheService {
     constructor() {}

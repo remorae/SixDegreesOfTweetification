@@ -2,6 +2,9 @@ import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { select } from 'd3-selection';
 import { selectAll } from 'd3-selection';
 import { timer } from 'd3';
+/**
+ * @example Currently unused in the project. It displays 3 rotating gears.
+ */
 @Component({
     selector: 'app-hash-visualizer',
     templateUrl: './hash-visualizer.component.html',

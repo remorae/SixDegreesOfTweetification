@@ -234,6 +234,10 @@ _Pvt_Extensions
 # FAKE - F# Make
 .fake/
 
+src/ClientApp/docs/**
+src/ClientApp/node_modules/**
+!.gitkeep
+
 blacklist\.txt
 _docs/
 log\.txt

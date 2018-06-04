@@ -5,7 +5,9 @@ import {
     ElementRef,
     AfterViewInit
 } from '@angular/core';
-
+/**
+ * @example This component demonstrates how to use an HTML5 canvas element with Angular 5+. It is currently not in-use in the app.
+ */
 @Component({
     selector: 'app-canvas',
     templateUrl: './canvas.component.html',

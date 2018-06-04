@@ -1,14 +1,14 @@
-import { Component, OnInit, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import {
-    NgModel,
-    FormControl,
-    Validators,
-    NgForm,
+    AbstractControl,
+    FormBuilder,
     FormGroup,
-    FormBuilder
+    Validators
 } from '@angular/forms';
-import { EventEmitter } from '@angular/core';
-import { UserInput, HashOrHandle } from '../models/userInput';
+import { HashOrHandle, UserInput } from '../models/userInput';
+/**
+ * @example A pair of validated input forms that accept only valid Twitter user handles, or valid Twitter hashtags.
+ */
 @Component({
     selector: 'app-dual-input',
     templateUrl: './dual-input.component.html',
@@ -21,19 +21,28 @@ export class DualInputComponent implements OnInit {
     @Output()
     userSubmit: EventEmitter<UserInput> = new EventEmitter<UserInput>();
     constructor(private builder: FormBuilder) {}
-    get firstSub() {
+    /**
+     * @returns The form control for the first input
+     */
+    get firstSub(): AbstractControl {
         return this.userForm.get('firstSub');
     }
-    get secondSub() {
+    /**
+     * @returns The form control for the second input
+     */
+    get secondSub(): AbstractControl {
         return this.userForm.get('secondSub');
     }
 
-    ngOnInit() {
+    ngOnInit(): void {
         this.createForm();
         this.labelText = this.inputType === 'hashtag' ? '#' : '@';
     }
-
-    createForm() {
+    /**
+     * @example Creates grouped FormControls using custom validators.
+     *      Both inputs must have a value that matches the input regular expression before submission is allowed.
+     */
+    createForm(): void {
         const regex: string =
             this.inputType === 'hashtag'
                 ? '[A-Za-z0-9]+\\w{0,138}'
@@ -43,8 +52,10 @@ export class DualInputComponent implements OnInit {
             secondSub: ['', [Validators.required, Validators.pattern(regex)]]
         });
     }
-
-    onSubmit() {
+    /**
+     * @example Emits the submitted values in both input elements to the parent component.
+     */
+    onSubmit(): void {
         const input = new UserInput(
             this.inputType,
             this.firstSub.value,
