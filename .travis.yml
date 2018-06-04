@@ -23,4 +23,6 @@ branches:
 notifications:
   email:
     on-success: change
-    on-failure: always  
+    on-failure: always
+git:
+  submodules: false
