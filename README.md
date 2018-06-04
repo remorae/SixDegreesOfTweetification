@@ -27,6 +27,8 @@ The back-end server is in charge of all Twitter API interaction. To improve func
 Generated documentation will be contained within the `_docs/` folder in the root directory (`index.html` is a good starting point).
 Markdown articles will be turned into HTML when `docfx` is run in the root directory.
 
+Front-end documentation will be generated when `npm run compodoc-serve` is run in the `src/ClientApp/` directory.
+
 ## Links (For generated docs)
 **For project setup, please see [the setup guide](./articles/Project-Setup.html).**
 
