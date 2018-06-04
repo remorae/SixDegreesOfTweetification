@@ -11,7 +11,7 @@
             "**/obj/**",
             "**/ClientApp/**"
           ],
-          "src": "../src"
+          "src": "src"
         }
       ],
       "dest": "api",
@@ -32,7 +32,7 @@
           "articles/**.md",
           "articles/**/toc.yml",
           "toc.yml",
-          "*.md"
+          "index.md"
         ]
       }
     ],
@@ -50,16 +50,15 @@
         ],
         "exclude": [
           "obj/**",
-          "_site/**"
+          "_docs/**"
         ]
       }
     ],
-    "dest": "../_site",
+    "dest": "_docs",
     "globalMetadataFiles": [],
     "fileMetadataFiles": [],
     "template": [
-      "default",
-      "../templates/main"
+      "templates/main"
     ],
     "postProcessors": [],
     "markdownEngineName": "markdig",
